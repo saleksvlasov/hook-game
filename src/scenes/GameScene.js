@@ -59,7 +59,8 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.existing(this.playerContainer);
     this.playerContainer.body.setSize(20, 28);
     this.playerContainer.body.setOffset(-10, -14);
-    this.playerContainer.body.setMaxVelocity(900, 1200);
+    // Ограничение горизонтальной скорости чтобы не улетал за экран
+    this.playerContainer.body.setMaxVelocity(500, 1200);
     this.player = this.playerContainer;
 
     // Coat animation state
@@ -485,10 +486,17 @@ export class GameScene extends Phaser.Scene {
     let nearest = null;
     let minDist = Infinity;
 
+    // Цепляемся за ближайший якорь — и выше, и ниже (при падении)
+    const isFalling = this.player.body.velocity.y > 50;
+
     for (const anchor of this.anchors) {
-      if (anchor.y >= py - 20) continue;
+      // При падении — цепляемся за любой якорь в радиусе
+      // При подъёме — только за якоря выше
+      if (!isFalling && anchor.y >= py - 20) continue;
       const dist = Phaser.Math.Distance.Between(px, py, anchor.x, anchor.y);
-      if (dist < minDist && dist < HOOK_RANGE) {
+      // Якоря выше — полный радиус, якоря ниже — уменьшенный
+      const range = anchor.y < py ? HOOK_RANGE : HOOK_RANGE * 0.6;
+      if (dist < minDist && dist < range) {
         minDist = dist;
         nearest = anchor;
       }
@@ -531,9 +539,10 @@ export class GameScene extends Phaser.Scene {
     this.isHooked = false;
     this.player.body.allowGravity = true;
 
+    // Скорость при отпускании — зажата чтобы не улетал за экран
     const speed = this.swingSpeed * this.ropeLength;
-    const vx = -speed * Math.sin(this.swingAngle);
-    const vy = speed * Math.cos(this.swingAngle);
+    const vx = Phaser.Math.Clamp(-speed * Math.sin(this.swingAngle), -500, 500);
+    const vy = Phaser.Math.Clamp(speed * Math.cos(this.swingAngle), -800, 800);
     this.player.body.setVelocity(vx, vy);
 
     if (this.currentAnchor) {
@@ -688,10 +697,11 @@ export class GameScene extends Phaser.Scene {
       this.swingSpeed += angularAccel * dt;
       this.swingSpeed *= 0.999;
 
-      // Ограничение скорости и угла маятника
-      this.swingSpeed = Phaser.Math.Clamp(this.swingSpeed, -3.0, 3.0);
+      // Ограничение скорости и угла маятника (±60° от вертикали)
+      this.swingSpeed = Phaser.Math.Clamp(this.swingSpeed, -2.5, 2.5);
       this.swingAngle += this.swingSpeed * dt;
-      this.swingAngle = Phaser.Math.Clamp(this.swingAngle, 0.05, Math.PI - 0.05);
+      // PI/2 = вниз, допуск ±60° = PI/2 ± PI/3 = ~0.52 .. ~2.62
+      this.swingAngle = Phaser.Math.Clamp(this.swingAngle, 0.52, 2.62);
 
       const newX = this.currentAnchor.x + Math.cos(this.swingAngle) * this.ropeLength;
       const newY = this.currentAnchor.y + Math.sin(this.swingAngle) * this.ropeLength;
@@ -702,6 +712,27 @@ export class GameScene extends Phaser.Scene {
       this.drawRope(this.currentAnchor.x, this.currentAnchor.y, newX, newY);
     } else {
       this.hookLine.clear();
+
+      // Мягкие стенки — возвращают игрока если улетел за край
+      const margin = 30;
+      const pushForce = 600;
+      const dt2 = delta / 1000;
+      if (this.player.x < margin) {
+        this.player.body.velocity.x += pushForce * dt2;
+      } else if (this.player.x > this.W - margin) {
+        this.player.body.velocity.x -= pushForce * dt2;
+      }
+    }
+
+    // Hard clamp — игрок никогда не уходит дальше чем на 20% за экран
+    const maxX = this.W * 1.2;
+    const minX = -this.W * 0.2;
+    if (this.player.x < minX) {
+      this.player.x = minX;
+      this.player.body.velocity.x = Math.abs(this.player.body.velocity.x) * 0.5;
+    } else if (this.player.x > maxX) {
+      this.player.x = maxX;
+      this.player.body.velocity.x = -Math.abs(this.player.body.velocity.x) * 0.5;
     }
 
     // Проверка смерти
