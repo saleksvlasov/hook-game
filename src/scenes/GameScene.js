@@ -655,30 +655,32 @@ export class GameScene extends Phaser.Scene {
   // ===================== UPDATE =====================
 
   update(time, delta) {
+    // Камера всегда следит за игроком (даже после смерти)
+    const targetX = this.player.x - 240;
+    const targetY = this.player.y - 400;
+    this.cameras.main.scrollX = Phaser.Math.Linear(
+      this.cameras.main.scrollX, targetX, 0.1
+    );
+    this.cameras.main.scrollY = Phaser.Math.Linear(
+      this.cameras.main.scrollY, targetY, 0.15
+    );
+
     if (this.isDead) {
       this.updateSwampBubbles(delta);
       return;
     }
 
-    // Камера — плавное следование по обеим осям
-    this.cameras.main.scrollX = Phaser.Math.Linear(
-      this.cameras.main.scrollX,
-      this.player.x - this.cameras.main.width / 2,
-      0.08
-    );
-    this.cameras.main.scrollY = Phaser.Math.Linear(
-      this.cameras.main.scrollY,
-      this.player.y - this.cameras.main.height / 2,
-      0.15
-    );
-
-    // Маятник — свободное раскачивание, без ограничений по X
+    // Маятник с ограничением раскачки
     if (this.isHooked && this.currentAnchor) {
       const dt = delta / 1000;
       const angularAccel = (GRAVITY / this.ropeLength) * Math.cos(this.swingAngle);
       this.swingSpeed += angularAccel * dt;
       this.swingSpeed *= 0.999;
+
+      // Ограничение скорости и угла маятника
+      this.swingSpeed = Phaser.Math.Clamp(this.swingSpeed, -3.0, 3.0);
       this.swingAngle += this.swingSpeed * dt;
+      this.swingAngle = Phaser.Math.Clamp(this.swingAngle, 0.05, Math.PI - 0.05);
 
       const newX = this.currentAnchor.x + Math.cos(this.swingAngle) * this.ropeLength;
       const newY = this.currentAnchor.y + Math.sin(this.swingAngle) * this.ropeLength;
