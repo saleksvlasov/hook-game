@@ -520,8 +520,8 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    // Верёвка не длиннее 300 — подтягиваем если далеко
-    this.ropeLength = Math.min(minDist, 300);
+    // Верёвка не длиннее 400
+    this.ropeLength = Math.min(minDist, 400);
 
     this.player.body.allowGravity = false;
     this.player.body.setVelocity(0, 0);
@@ -534,9 +534,9 @@ export class GameScene extends Phaser.Scene {
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    // Минимальный толчок только если совсем нет инерции (стоим на месте)
-    if (Math.abs(this.swingSpeed) < 0.3) {
-      this.swingSpeed = px < nearest.x ? -0.8 : 0.8;
+    // Начальный импульс если мало инерции
+    if (Math.abs(this.swingSpeed) < 0.5) {
+      this.swingSpeed = px < nearest.x ? -2.0 : 2.0;
     }
 
     this.highlightAnchor(nearest, true);
@@ -713,7 +713,7 @@ export class GameScene extends Phaser.Scene {
       const dt = delta / 1000;
       const angularAccel = (GRAVITY / this.ropeLength) * Math.cos(this.swingAngle);
       this.swingSpeed += angularAccel * dt;
-      this.swingSpeed *= 0.999;
+      this.swingSpeed *= 0.9995;
 
       // Только защита от переворота через верх
       this.swingAngle += this.swingSpeed * dt;
