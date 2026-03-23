@@ -30,6 +30,12 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
+  // Удалить HTML кнопки при остановке сцены
+  shutdown() {
+    const el = document.getElementById('game-over-buttons');
+    if (el) el.remove();
+  }
+
   create() {
     // Динамические размеры экрана
     const WORLD_WIDTH = this.scale.width;
@@ -417,53 +423,58 @@ export class GameScene extends Phaser.Scene {
       stroke: '#3B1A00', strokeThickness: 4,
     }).setOrigin(0.5));
 
-    // --- HTML DOM кнопки (надёжный клик поверх canvas) ---
+    // --- Чистые HTML кнопки поверх canvas (без Phaser DOM) ---
+    this.gameOverButtonsDiv = document.createElement('div');
+    this.gameOverButtonsDiv.id = 'game-over-buttons';
+    this.gameOverButtonsDiv.style.cssText = `
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 100;
+      pointer-events: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; padding-top: 15%;
+    `;
+
     const btnStyle = `
       font-family: Georgia, serif; cursor: pointer;
       border: none; outline: none; letter-spacing: 1px;
-      transition: background 0.15s;
+      pointer-events: auto;
     `;
 
     // CONTINUE (AD)
-    this.continueDom = this.add.dom(this.W / 2, this.H * 0.53).createFromHTML(`
-      <button id="btn-continue" style="
-        ${btnStyle} background: #3B1A00; color: #C8A96E;
-        border: 2px solid #7A4A1E; font-size: 15px; font-weight: bold;
-        padding: 10px 32px;
-      ">${t('continue_ad')}</button>
-    `).setScrollFactor(0).setDepth(31).setVisible(false);
-    this.continueDom.node.querySelector('#btn-continue').addEventListener('click', () => {
-      this.continueWithAd();
-    });
-    this.gameOverElements.push(this.continueDom);
+    this.continueBtn = document.createElement('button');
+    this.continueBtn.textContent = t('continue_ad');
+    this.continueBtn.style.cssText = `${btnStyle}
+      background: #3B1A00; color: #C8A96E;
+      border: 2px solid #7A4A1E; font-size: 15px; font-weight: bold;
+      padding: 10px 32px;`;
+    this.continueBtn.addEventListener('click', () => this.continueWithAd());
+    this.gameOverButtonsDiv.appendChild(this.continueBtn);
 
-    // RESTART — нативный DOM click для надёжности
-    this.restartDom = this.add.dom(this.W / 2, this.H * 0.59).createFromHTML(`
-      <button id="btn-restart" style="
-        ${btnStyle} background: #6B0F0F; color: #C8A96E;
-        border: 2px solid #C8A96E; font-size: 20px; font-weight: bold;
-        padding: 12px 44px;
-      ">${t('restart')}</button>
-    `).setScrollFactor(0).setDepth(31).setVisible(false);
-    this.restartDom.node.querySelector('#btn-restart').addEventListener('click', () => {
-      this.handleRestart();
-    });
-    this.gameOverElements.push(this.restartDom);
+    // RESTART
+    this.restartBtn = document.createElement('button');
+    this.restartBtn.textContent = t('restart');
+    this.restartBtn.style.cssText = `${btnStyle}
+      background: #6B0F0F; color: #C8A96E;
+      border: 2px solid #C8A96E; font-size: 20px; font-weight: bold;
+      padding: 12px 44px;`;
+    this.restartBtn.addEventListener('click', () => this.handleRestart());
+    this.gameOverButtonsDiv.appendChild(this.restartBtn);
 
-    // MENU — нативный DOM click
-    this.menuDom = this.add.dom(this.W / 2, this.H * 0.65).createFromHTML(`
-      <button id="btn-menu" style="
-        ${btnStyle} background: #1a0f00; color: #5B4020;
-        border: 1px solid #3B2A10; font-size: 14px;
-        padding: 8px 36px;
-      ">${t('menu')}</button>
-    `).setScrollFactor(0).setDepth(31).setVisible(false);
-    this.menuDom.node.querySelector('#btn-menu').addEventListener('click', () => {
+    // MENU
+    this.menuBtn = document.createElement('button');
+    this.menuBtn.textContent = t('menu');
+    this.menuBtn.style.cssText = `${btnStyle}
+      background: #1a0f00; color: #5B4020;
+      border: 1px solid #3B2A10; font-size: 14px;
+      padding: 8px 36px;`;
+    this.menuBtn.addEventListener('click', () => {
       trackGameEnd();
       this.scene.stop('GameScene');
       this.scene.start('MenuScene');
     });
-    this.gameOverElements.push(this.menuDom);
+    this.gameOverButtonsDiv.appendChild(this.menuBtn);
+
+    document.body.appendChild(this.gameOverButtonsDiv);
   }
 
   // ===================== INPUT =====================
@@ -588,18 +599,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(500, () => {
-      // DOM кнопки позиционируются в мировых координатах —
-      // нужно переместить их на текущую позицию камеры
-      const camX = this.cameras.main.scrollX + this.W / 2;
-      const camY = this.cameras.main.scrollY;
-      this.continueDom.setPosition(camX, camY + this.H * 0.53);
-      this.restartDom.setPosition(camX, camY + this.H * 0.59);
-      this.menuDom.setPosition(camX, camY + this.H * 0.65);
-
+      // Показать Phaser-тексты
       for (const el of this.gameOverElements) el.setVisible(true);
-      if (this.continueUsed) {
-        this.continueDom.setVisible(false);
-      }
+
+      // Показать HTML кнопки
+      this.gameOverButtonsDiv.style.display = 'flex';
+      this.continueBtn.style.display = this.continueUsed ? 'none' : 'block';
       if (!isNewBest || this.maxHeight === 0) {
         this.newBestText.setVisible(false);
       } else {
@@ -629,10 +634,14 @@ export class GameScene extends Phaser.Scene {
     playDeath();
   }
 
-  async continueWithAd() {
+  hideGameOver() {
     for (const el of this.gameOverElements) el.setVisible(false);
+    this.gameOverButtonsDiv.style.display = 'none';
+  }
+
+  async continueWithAd() {
+    this.hideGameOver();
     const rewarded = await showRewarded();
-    // Защита: если за время показа рекламы игрок уже респавнился
     if (!this.isDead) return;
     if (rewarded) {
       this.isDead = false;
@@ -643,26 +652,24 @@ export class GameScene extends Phaser.Scene {
       this.hintText.setText(t('click_hook'));
     } else {
       for (const el of this.gameOverElements) el.setVisible(true);
-      if (this.continueUsed) {
-        this.continueDom.setVisible(false);
-      }
+      this.gameOverButtonsDiv.style.display = 'flex';
+      this.continueBtn.style.display = this.continueUsed ? 'none' : 'block';
     }
   }
 
   async handleRestart() {
     trackGameEnd();
+    this.hideGameOver();
     if (shouldShowInterstitial()) {
-      for (const el of this.gameOverElements) el.setVisible(false);
       await showInterstitial();
     }
-    // Остановка + запуск — гарантированный чистый рестарт
     this.scene.stop('GameScene');
     this.scene.start('GameScene');
   }
 
   respawn() {
     this.isDead = false;
-    for (const el of this.gameOverElements) el.setVisible(false);
+    this.hideGameOver();
     this.maxHeight = 0;
     this.continueUsed = false;
     this.bountyShown = false;
