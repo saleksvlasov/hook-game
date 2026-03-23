@@ -14,6 +14,24 @@ When task starts with [CODE]:
 - Always add comments in Russian
 - After each change, describe what exactly was changed
 
+### ОБЯЗАТЕЛЬНОЕ ПРАВИЛО ДЛЯ [CODE] АГЕНТА:
+После КАЖДОГО изменения кода автоматически запускай [TEST] агента.
+
+Порядок работы:
+1. [CODE] вносит изменения
+2. [CODE] пишет краткий отчёт что изменил
+3. Автоматически запускает [TEST] со списком:
+   - Что именно нужно протестировать
+   - Какие edge cases проверить
+   - Ожидаемый результат
+
+Формат передачи тесту:
+```
+[TEST] Проверь после изменения: [описание изменения]
+Ожидаемое поведение: [что должно работать]
+Проверь edge cases: [список]
+```
+
 ## RESEARCH AGENT
 When task starts with [RESEARCH]:
 - Analyze code and find problems
@@ -127,7 +145,7 @@ hook-game/
 ```
 GRAVITY = 900           — сила тяжести маятника (не Phaser arcade gravity!)
 HOOK_RANGE = 500        — макс дистанция до якоря для зацепки
-WORLD_WIDTH = 480       — ширина игрового мира (= ширина canvas)
+WORLD_WIDTH = this.scale.width — динамический, = ширина экрана
 WORLD_HEIGHT = 8000     — высота мира
 ANCHOR_SPACING_Y = 280  — расстояние между якорями по вертикали
 GROUND_Y = 7990         — Y-координата зоны смерти (WORLD_HEIGHT - 10)
@@ -143,8 +161,9 @@ MOON_HEIGHT = 300       — высота для "MOONWALKER"
 
 ### Phaser конфиг (main.js)
 ```
-width: 480, height: 800
-Scale.FIT + CENTER_BOTH
+width: document.documentElement.clientWidth
+height: document.documentElement.clientHeight
+Scale.NONE + NO_CENTER
 arcade.gravity.y: 800   — глобальная гравитация Phaser (для свободного полёта)
 dom.createContainer: true — для HTML DOM кнопок
 ```
@@ -187,20 +206,36 @@ thehook_lang            — выбранный язык ('en' | 'ru')
 
 ### Архитектура
 - **Две сцены:** MenuScene → GameScene. Не добавлять промежуточных сцен
-- **Фиксированный размер:** 480x800 + Scale.FIT. Не переключать на RESIZE
+- **Динамический размер:** `document.documentElement.clientWidth/Height` + `Scale.NONE`. Все координаты через `this.W` / `this.H` из `this.scale.width/height`
 - **DOM кнопки:** Game Over использует `this.add.dom().createFromHTML()` с нативным `addEventListener('click')`. Не заменять на Phaser rectangles
 - **Маятник вручную:** Физика маятника считается через `swingAngle/swingSpeed`, не через Phaser joints или constraints
 
 ### Геймплей
 - **Toggle click:** один тап — зацепиться, второй — отпустить. Не hold/release
 - **Гравитация:** arcade gravity = 800 (свободный полёт), manual gravity = 900 (маятник)
-- **Камера:** ручной lerp по X (0.08) и Y (0.15) в update(). Не использовать startFollow
+- **Камера:** ручной lerp по X (0.1) и Y (0.15) в update(), scrollX зажат в `[-W*0.5, W*0.5]`. Не использовать startFollow
 - **Смерть:** проверяется ПОСЛЕ обновления позиции маятника, по `playerBottom >= GROUND_Y - 6`
 
 ### Стиль
 - **Hunt Showdown палитра** — не менять на другие стили
 - **Процедурная графика** — нет внешних спрайтов, всё через Phaser Graphics
 - **Процедурный звук** — нет аудиофайлов, всё через Web Audio API OscillatorNode
+
+### Процесс разработки
+- Обязательный цикл: **CODE → TEST → (при багах) → CODE → TEST**
+- Никогда не деплоить без прохождения TEST агента
+- TEST агент должен явно написать `✅ READY TO DEPLOY` или `❌ DEPLOY BLOCKED: [причина]` в конце отчёта
+
+### Чеклист перед деплоем (TEST агент проверяет):
+- [ ] Игра запускается без ошибок в консоли
+- [ ] RESTART работает
+- [ ] Камера следит за игроком по X и Y
+- [ ] Игрок не вылетает за видимую область
+- [ ] Смерть срабатывает в любом состоянии
+- [ ] Локализация RU/EN переключается
+- [ ] Рекорд сохраняется в localStorage
+- [ ] npm run build проходит без ошибок
+- [ ] Фон/болото не показывают пустые края при движении камеры
 
 ---
 
