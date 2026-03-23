@@ -378,7 +378,15 @@ export class GameScene extends Phaser.Scene {
   // ===================== HUD =====================
 
   createHUD() {
-    this.heightText = this.add.text(this.W / 2, 16, `0${t('unit_m')}`, {
+    // Отступ сверху для iPhone Dynamic Island / notch
+    // Читаем CSS env через вспомогательный div
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;';
+    document.body.appendChild(probe);
+    const safeTop = Math.max(probe.offsetTop, 10);
+    probe.remove();
+
+    this.heightText = this.add.text(this.W / 2, safeTop + 18, `0${t('unit_m')}`, {
       fontSize: '32px',
       color: GOLD,
       fontFamily: FONT,
@@ -387,7 +395,7 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 5,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
-    this.maxHeightText = this.add.text(this.W / 2, 52, `${t('record')}: 0${t('unit_m')}`, {
+    this.maxHeightText = this.add.text(this.W / 2, safeTop + 54, `${t('record')}: 0${t('unit_m')}`, {
       fontSize: '14px',
       color: '#6B5030',
       fontFamily: FONT,
@@ -396,14 +404,14 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
     // Label
-    this.add.text(this.W / 2, 2, t('depth'), {
+    this.add.text(this.W / 2, safeTop + 4, t('depth'), {
       fontSize: '10px',
       color: '#5B4020',
       fontFamily: FONT,
       letterSpacing: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
-    this.hintText = this.add.text(this.W / 2, 76, t('click_hook'), {
+    this.hintText = this.add.text(this.W / 2, safeTop + 76, t('click_hook'), {
       fontSize: '12px',
       color: '#4B3A20',
       fontFamily: FONT,
