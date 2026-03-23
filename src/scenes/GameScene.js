@@ -36,8 +36,8 @@ export class GameScene extends Phaser.Scene {
     this.W = WORLD_WIDTH;
     this.H = this.scale.height;
 
-    // Мир бесконечный по горизонтали
-    this.physics.world.setBounds(-10000, 0, 20000 + this.W, WORLD_HEIGHT, true, true, false, true);
+    // Мир бесконечный по горизонтали, ограничен только снизу
+    this.physics.world.setBounds(0, -999999, this.W, 999999 + this.H);
 
     this.isHooked = false;
     this.currentAnchor = null;
@@ -390,24 +390,24 @@ export class GameScene extends Phaser.Scene {
     makeUI(this.add.rectangle(this.W / 2, this.H / 2, this.W, this.H, 0x2d0000, 0.65));
 
     // Заголовок
-    makeUI(this.add.text(this.W / 2, 220, t('you_died'), {
+    makeUI(this.add.text(this.W / 2, this.H * 0.28, t('you_died'), {
       fontSize: '42px', color: DARK_RED, fontFamily: FONT, fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 8,
     }).setOrigin(0.5));
 
     // Высота
-    this.gameOverScore = makeUI(this.add.text(this.W / 2, 285, '', {
+    this.gameOverScore = makeUI(this.add.text(this.W / 2, this.H * 0.36, '', {
       fontSize: '18px', color: GOLD, fontFamily: FONT,
     }).setOrigin(0.5));
 
     // Рекорд
-    this.gameOverBest = makeUI(this.add.text(this.W / 2, 320, '', {
+    this.gameOverBest = makeUI(this.add.text(this.W / 2, this.H * 0.40, '', {
       fontSize: '26px', color: '#6B5030', fontFamily: FONT, fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
     // НОВЫЙ РЕКОРД
-    this.newBestText = makeUI(this.add.text(this.W / 2, 360, t('new_record'), {
+    this.newBestText = makeUI(this.add.text(this.W / 2, this.H * 0.45, t('new_record'), {
       fontSize: '20px', color: GOLD, fontFamily: FONT, fontStyle: 'bold italic',
       stroke: '#3B1A00', strokeThickness: 4,
     }).setOrigin(0.5));
@@ -420,7 +420,7 @@ export class GameScene extends Phaser.Scene {
     `;
 
     // CONTINUE (AD)
-    this.continueDom = this.add.dom(this.W / 2, 420).createFromHTML(`
+    this.continueDom = this.add.dom(this.W / 2, this.H * 0.53).createFromHTML(`
       <button id="btn-continue" style="
         ${btnStyle} background: #3B1A00; color: #C8A96E;
         border: 2px solid #7A4A1E; font-size: 15px; font-weight: bold;
@@ -433,7 +433,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverElements.push(this.continueDom);
 
     // RESTART — нативный DOM click для надёжности
-    this.restartDom = this.add.dom(this.W / 2, 472).createFromHTML(`
+    this.restartDom = this.add.dom(this.W / 2, this.H * 0.59).createFromHTML(`
       <button id="btn-restart" style="
         ${btnStyle} background: #6B0F0F; color: #C8A96E;
         border: 2px solid #C8A96E; font-size: 20px; font-weight: bold;
@@ -447,7 +447,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverElements.push(this.restartDom);
 
     // MENU — нативный DOM click
-    this.menuDom = this.add.dom(this.W / 2, 524).createFromHTML(`
+    this.menuDom = this.add.dom(this.W / 2, this.H * 0.65).createFromHTML(`
       <button id="btn-menu" style="
         ${btnStyle} background: #1a0f00; color: #5B4020;
         border: 1px solid #3B2A10; font-size: 14px;
@@ -661,7 +661,7 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     // Камера всегда следит за игроком (даже после смерти)
     const targetX = this.player.x - this.W / 2;
-    const targetY = this.player.y - this.H * 0.6;
+    const targetY = this.player.y - this.H * 0.55;
     this.cameras.main.scrollX = Phaser.Math.Linear(
       this.cameras.main.scrollX, targetX, 0.1
     );
