@@ -4,12 +4,13 @@ import { getBest, saveBest, getMoon, saveMoon } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { t } from '../i18n.js';
 
-const GRAVITY = 900;
+const GRAVITY = 800;
 const HOOK_RANGE = 500;
 const WORLD_HEIGHT = 100000;
 const ANCHOR_SPACING_Y = 280;
 const GROUND_Y = WORLD_HEIGHT - 10;
-const SPAWN_Y = WORLD_HEIGHT - 80;
+const SPAWN_Y = WORLD_HEIGHT - 200;
+const MIN_ROPE = 40;
 const TRAIL_SPEED_THRESHOLD = 150;
 
 const GOLD = '#C8A96E';
@@ -108,16 +109,17 @@ export class GameScene extends Phaser.Scene {
 
   createBackground() {
     if (this.textures.exists('bg-grad')) this.textures.remove('bg-grad');
-    const gradTex = this.textures.createCanvas('bg-grad', 1, WORLD_HEIGHT);
+    // Текстура 4000px — тайлится по вертикали через setDisplaySize
+    const bgH = 4000;
+    const gradTex = this.textures.createCanvas('bg-grad', 1, bgH);
     const gCtx = gradTex.getContext();
-    const grad = gCtx.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
+    const grad = gCtx.createLinearGradient(0, 0, 0, bgH);
     grad.addColorStop(0, '#15100a');
-    grad.addColorStop(0.2, '#1e150c');
-    grad.addColorStop(0.6, '#2a1c0e');
-    grad.addColorStop(0.85, '#3d2812');
-    grad.addColorStop(1, '#2a1c0e');
+    grad.addColorStop(0.3, '#1e150c');
+    grad.addColorStop(0.7, '#2a1c0e');
+    grad.addColorStop(1, '#3d2812');
     gCtx.fillStyle = grad;
-    gCtx.fillRect(0, 0, 1, WORLD_HEIGHT);
+    gCtx.fillRect(0, 0, 1, bgH);
     gradTex.refresh();
     // Фон шире экрана x5 — камера может двигаться по X без видимых краёв
     this.add.image(this.W / 2, WORLD_HEIGHT / 2, 'bg-grad')
@@ -277,6 +279,23 @@ export class GameScene extends Phaser.Scene {
       } while (Math.abs(x - this.prevAnchorX) < this.W * 0.15);
       this.prevAnchorX = x;
       this.addAnchor(x, this.highestAnchorY);
+    }
+  }
+
+  // Удаление якорей далеко ниже игрока (>3000px)
+  cleanupAnchors() {
+    const cutoff = this.player.y + 3000;
+    for (let i = this.anchors.length - 1; i >= 0; i--) {
+      if (this.anchors[i].y > cutoff) {
+        // Уничтожаем Phaser объекты
+        const anchor = this.anchors[i];
+        if (anchor._container) anchor._container.destroy();
+        anchor.destroy();
+        this.anchors.splice(i, 1);
+        if (this.anchorContainers[i]) {
+          this.anchorContainers.splice(i, 1);
+        }
+      }
     }
   }
 
@@ -526,7 +545,8 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    this.ropeLength = minDist;
+    // Минимум 40px чтобы избежать числовой нестабильности
+    this.ropeLength = Math.max(minDist, MIN_ROPE);
 
     this.player.body.allowGravity = false;
     this.player.body.setVelocity(0, 0);
@@ -764,6 +784,9 @@ export class GameScene extends Phaser.Scene {
 
     // Процедурная генерация — создаём крюки по мере подъёма
     this.generateAnchorsUpTo(this.player.y - 2000);
+
+    // Очистка старых якорей далеко ниже игрока (экономия памяти)
+    this.cleanupAnchors();
 
     // --- Пасхалка: BOUNTY CLAIMED при 100m ---
     if (currentHeight >= BOUNTY_HEIGHT && !this.bountyShown) {
