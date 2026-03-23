@@ -3,8 +3,6 @@ import { getBest, getMoon } from '../storage.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
 
-const W = 480;
-const H = 800;
 const GOLD = '#C8A96E';
 const GOLD_HEX = 0xC8A96E;
 const FONT = 'Georgia, serif';
@@ -15,7 +13,12 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create() {
-    // --- Фон: светлее для контраста ---
+    const W = this.scale.width;
+    const H = this.scale.height;
+    this.W = W;
+    this.H = H;
+
+    // --- Фон ---
     if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
     const gradTex = this.textures.createCanvas('menu-bg', 1, H);
     const ctx = gradTex.getContext();
@@ -32,12 +35,12 @@ export class MenuScene extends Phaser.Scene {
     // Луна
     const moon = this.add.graphics().setDepth(-8);
     moon.fillStyle(0x555544, 0.18);
-    moon.fillCircle(W * 0.75, 100, 60);
+    moon.fillCircle(W * 0.75, H * 0.12, 60);
     moon.fillStyle(0x666655, 0.12);
-    moon.fillCircle(W * 0.75 - 8, 95, 55);
+    moon.fillCircle(W * 0.75 - 8, H * 0.12 - 5, 55);
     moon.fillStyle(0x444433, 0.08);
-    moon.fillCircle(W * 0.75 + 15, 85, 12);
-    moon.fillCircle(W * 0.75 - 20, 110, 8);
+    moon.fillCircle(W * 0.75 + 15, H * 0.12 - 15, 12);
+    moon.fillCircle(W * 0.75 - 20, H * 0.12 + 10, 8);
 
     // Пепел
     this.ashParticles = [];
@@ -55,9 +58,9 @@ export class MenuScene extends Phaser.Scene {
 
     // Деревья
     const trees = this.add.graphics().setDepth(-6);
-    this.drawTreeSilhouettes(trees, H - 100, 0.2);
+    this.drawTreeSilhouettes(trees, H - 100, 0.2, W);
 
-    // Туман — менее плотный
+    // Туман
     const fog = this.add.graphics().setDepth(-3);
     fog.fillStyle(0x281405, 0.25);
     fog.fillRect(0, H - 150, W, 150);
@@ -68,9 +71,10 @@ export class MenuScene extends Phaser.Scene {
     this.createSwingingHunter();
 
     // --- Заголовок ---
+    const titleY = H * 0.19;
     const glowColors = [0x8B4513, 0x6B3410, 0x4B2408];
     for (let i = glowColors.length - 1; i >= 0; i--) {
-      const glow = this.add.text(W / 2, 150, 'THE HOOK', {
+      const glow = this.add.text(W / 2, titleY, 'THE HOOK', {
         fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
         color: '#' + glowColors[i].toString(16).padStart(6, '0'),
         stroke: '#' + glowColors[i].toString(16).padStart(6, '0'),
@@ -82,22 +86,21 @@ export class MenuScene extends Phaser.Scene {
       });
     }
 
-    const title = this.add.text(W / 2, 150, 'THE HOOK', {
+    const title = this.add.text(W / 2, titleY, 'THE HOOK', {
       fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
       color: GOLD, stroke: '#1a0e06', strokeThickness: 6,
     }).setOrigin(0.5).setDepth(11);
 
     this.tweens.add({
-      targets: title, y: 145, duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: title, y: titleY - 5, duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    // Подзаголовок
-    this.add.text(W / 2, 195, t('title_sub'), {
+    this.add.text(W / 2, titleY + 45, t('title_sub'), {
       fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#7B6040',
     }).setOrigin(0.5).setDepth(11);
 
-    // --- Кнопка HUNT ---
-    const btnY = 530;
+    // --- Кнопка ---
+    const btnY = H * 0.66;
     const btnGlow = this.add.rectangle(W / 2, btnY, 216, 70, 0x8B4513, 0.1).setDepth(12);
     this.tweens.add({
       targets: btnGlow, alpha: 0.2, scaleX: 1.04, scaleY: 1.04,
@@ -123,25 +126,23 @@ export class MenuScene extends Phaser.Scene {
     // Рекорд
     const best = getBest();
     if (best > 0) {
-      this.add.text(W / 2, 600, `${t('record')}: ${best}${t('unit_m')}`, {
+      this.add.text(W / 2, H * 0.75, `${t('record')}: ${best}${t('unit_m')}`, {
         fontSize: '16px', fontFamily: FONT, color: '#7B6040',
         stroke: '#1a0e06', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(11);
     }
 
-    // Луна
     if (getMoon()) {
-      this.add.text(W / 2, 625, t('moon_reached'), {
+      this.add.text(W / 2, H * 0.78, t('moon_reached'), {
         fontSize: '12px', fontFamily: FONT, fontStyle: 'italic', color: '#666655',
       }).setOrigin(0.5).setDepth(11);
     }
 
-    // Подсказка
     this.add.text(W / 2, H - 20, t('tap_to_hunt'), {
       fontSize: '11px', fontFamily: FONT, fontStyle: 'italic', color: '#4B3A20',
     }).setOrigin(0.5).setDepth(11);
 
-    // --- Переключатель языка ---
+    // Переключатель языка
     const langFlag = this.add.text(W - 40, 16, getLang() === 'ru' ? 'EN' : 'RU', {
       fontSize: '14px', fontFamily: FONT, fontStyle: 'bold', color: '#6B5030',
       backgroundColor: '#1a0e0688', padding: { x: 6, y: 3 },
@@ -149,10 +150,7 @@ export class MenuScene extends Phaser.Scene {
 
     langFlag.on('pointerover', () => langFlag.setColor(GOLD));
     langFlag.on('pointerout', () => langFlag.setColor('#6B5030'));
-    langFlag.on('pointerdown', () => {
-      setLang(getLang() === 'ru' ? 'en' : 'ru');
-      this.scene.restart();
-    });
+    langFlag.on('pointerdown', () => { setLang(getLang() === 'ru' ? 'en' : 'ru'); this.scene.restart(); });
 
     // Konami Code
     this.konamiSequence = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right'];
@@ -181,7 +179,7 @@ export class MenuScene extends Phaser.Scene {
 
   triggerKonami() {
     playOminous();
-    const txt = this.add.text(W / 2, H / 2, t('butcher'), {
+    const txt = this.add.text(this.W / 2, this.H / 2, t('butcher'), {
       fontSize: '28px', fontFamily: FONT, fontStyle: 'bold',
       color: GOLD, stroke: '#3B1A00', strokeThickness: 5, align: 'center',
     }).setOrigin(0.5).setDepth(50).setAlpha(0);
@@ -206,9 +204,9 @@ export class MenuScene extends Phaser.Scene {
     this.cameras.main.shake(200, 0.01);
   }
 
-  drawTreeSilhouettes(gfx, baseY, alpha) {
+  drawTreeSilhouettes(gfx, baseY, alpha, width) {
     gfx.fillStyle(0x150e05, alpha);
-    for (const tx of [20, 70, 140, 200, 280, 340, 400, 450]) {
+    for (let tx = 20; tx < width; tx += 50 + Math.random() * 30) {
       const h = 80 + Math.random() * 160;
       const w = 6 + Math.random() * 8;
       gfx.fillRect(tx - w / 2, baseY - h, w, h);
@@ -222,8 +220,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   createSwingingHunter() {
-    const anchorX = W / 2;
-    const anchorY = 280;
+    const anchorX = this.W / 2;
+    const anchorY = this.H * 0.35;
     const ropeLen = 120;
 
     this.menuHookGfx = this.add.graphics().setDepth(5);
@@ -236,52 +234,34 @@ export class MenuScene extends Phaser.Scene {
   }
 
   drawHunterGraphics(g) {
-    // Outline (золотой контур всей фигуры)
     g.lineStyle(1.5, GOLD_HEX, 0.4);
     g.strokeRoundedRect(-9, -21, 18, 46, 3);
-
-    // Пальто полы
     g.fillStyle(0x3d2010);
     g.fillTriangle(-10, 10, -14, 24, -4, 24);
     g.fillTriangle(10, 10, 14, 24, 4, 24);
-
-    // Тело
     g.fillStyle(0x3d2010);
     g.fillRoundedRect(-8, -2, 16, 18, 2);
-
-    // Пояс + пряжка
     g.fillStyle(0x7A4A1E);
     g.fillRect(-8, 8, 16, 2);
     g.fillStyle(GOLD_HEX, 0.7);
     g.fillRect(-2, 7, 4, 4);
-
-    // Шляпа — золотая для видимости
     g.fillStyle(GOLD_HEX, 0.8);
     g.fillEllipse(0, -12, 28, 7);
     g.fillStyle(0x3d2010);
     g.fillRoundedRect(-7, -21, 14, 11, 2);
     g.fillStyle(GOLD_HEX);
     g.fillRect(-7, -13, 14, 2);
-
-    // Лицо — светлый
     g.fillStyle(0xF0DDB0);
     g.fillRect(-4, -10, 8, 5);
-    // Глаза
     g.fillStyle(0x1a0e06);
     g.fillCircle(-2, -8, 1);
     g.fillCircle(2, -8, 1);
-
-    // Руки
     g.fillStyle(0x3d2010);
     g.fillRect(-12, 0, 4, 11);
     g.fillRect(8, 0, 4, 11);
-
-    // Ноги
     g.fillStyle(0x2a1a0a);
     g.fillRect(-6, 16, 5, 8);
     g.fillRect(1, 16, 5, 8);
-
-    // Сапоги
     g.fillStyle(0x3d2510);
     g.fillRect(-7, 22, 6, 4);
     g.fillRect(1, 22, 6, 4);
@@ -290,27 +270,19 @@ export class MenuScene extends Phaser.Scene {
   drawMenuHook(x, y) {
     this.menuHookGfx.clear();
     const g = this.menuHookGfx;
-    // Стержень
     g.lineStyle(3, GOLD_HEX, 0.6);
-    g.beginPath();
-    g.moveTo(x, y - 14);
-    g.lineTo(x, y - 4);
-    g.strokePath();
-    // Изгибы
+    g.beginPath(); g.moveTo(x, y - 14); g.lineTo(x, y - 4); g.strokePath();
     g.lineStyle(3, GOLD_HEX, 0.5);
-    g.beginPath();
-    g.arc(x + 6, y - 4, 6, Math.PI, 0, true);
-    g.strokePath();
-    g.beginPath();
-    g.arc(x - 4, y + 8, 5, 0, Math.PI, true);
-    g.strokePath();
-    // Остриё
+    g.beginPath(); g.arc(x + 6, y - 4, 6, Math.PI, 0, true); g.strokePath();
+    g.beginPath(); g.arc(x - 4, y + 8, 5, 0, Math.PI, true); g.strokePath();
     g.fillStyle(GOLD_HEX, 0.7);
     g.fillTriangle(x - 9, y + 8, x - 8, y + 14, x - 5, y + 8);
   }
 
   update(time, delta) {
     if (!this.menuSwing) return;
+    const W = this.W;
+    const H = this.H;
     const s = this.menuSwing;
     const dt = delta / 1000;
 
@@ -324,10 +296,8 @@ export class MenuScene extends Phaser.Scene {
 
     this.menuHunter.setPosition(px, py);
     this.menuHunter.setRotation((s.angle - Math.PI / 2) * 0.35);
-
     this.drawMenuHook(s.anchorX, s.anchorY);
 
-    // Верёвка
     this.menuRope.clear();
     const midX = (s.anchorX + px) / 2;
     const midY = (s.anchorY + py) / 2;
@@ -337,8 +307,7 @@ export class MenuScene extends Phaser.Scene {
     this.menuRope.beginPath();
     this.menuRope.moveTo(s.anchorX, s.anchorY);
     for (let i = 1; i <= 16; i++) {
-      const tt = i / 16;
-      const it = 1 - tt;
+      const tt = i / 16; const it = 1 - tt;
       this.menuRope.lineTo(
         it * it * s.anchorX + 2 * it * tt * cpX + tt * tt * px,
         it * it * s.anchorY + 2 * it * tt * cpY + tt * tt * py
@@ -346,7 +315,6 @@ export class MenuScene extends Phaser.Scene {
     }
     this.menuRope.strokePath();
 
-    // Пепел
     this.ashGfx.clear();
     for (const p of this.ashParticles) {
       p.y += p.speed * dt;

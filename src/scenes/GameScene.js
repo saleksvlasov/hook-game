@@ -6,7 +6,6 @@ import { t } from '../i18n.js';
 
 const GRAVITY = 900;
 const HOOK_RANGE = 500;
-const WORLD_WIDTH = 480;
 const WORLD_HEIGHT = 8000;
 const ANCHOR_SPACING_Y = 280;
 const GROUND_Y = WORLD_HEIGHT - 10;
@@ -32,8 +31,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // Мир бесконечный по горизонтали, ограничен только снизу
-    this.physics.world.setBounds(-10000, 0, 20000 + WORLD_WIDTH, WORLD_HEIGHT, true, true, false, true);
+    // Динамические размеры экрана
+    const WORLD_WIDTH = this.scale.width;
+    this.W = WORLD_WIDTH;
+    this.H = this.scale.height;
+
+    // Мир бесконечный по горизонтали
+    this.physics.world.setBounds(-10000, 0, 20000 + this.W, WORLD_HEIGHT, true, true, false, true);
 
     this.isHooked = false;
     this.currentAnchor = null;
@@ -50,7 +54,7 @@ export class GameScene extends Phaser.Scene {
     this.createBackground();
 
     // --- PLAYER (hunter) ---
-    this.playerContainer = this.add.container(WORLD_WIDTH / 2, SPAWN_Y).setDepth(5);
+    this.playerContainer = this.add.container(this.W / 2, SPAWN_Y).setDepth(5);
     this.drawHunter();
     this.physics.add.existing(this.playerContainer);
     this.playerContainer.body.setSize(20, 28);
@@ -108,19 +112,19 @@ export class GameScene extends Phaser.Scene {
     gCtx.fillStyle = grad;
     gCtx.fillRect(0, 0, 1, WORLD_HEIGHT);
     gradTex.refresh();
-    this.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 'bg-grad')
-      .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT).setDepth(-10);
+    this.add.image(this.W / 2, WORLD_HEIGHT / 2, 'bg-grad')
+      .setDisplaySize(this.W, WORLD_HEIGHT).setDepth(-10);
 
     // Moon (high up in the world)
     const moonGfx = this.add.graphics().setDepth(-9);
     const moonY = 300;
     moonGfx.fillStyle(0x444433, 0.12);
-    moonGfx.fillCircle(WORLD_WIDTH * 0.72, moonY, 70);
+    moonGfx.fillCircle(this.W * 0.72, moonY, 70);
     moonGfx.fillStyle(0x555544, 0.08);
-    moonGfx.fillCircle(WORLD_WIDTH * 0.72 - 10, moonY - 5, 62);
+    moonGfx.fillCircle(this.W * 0.72 - 10, moonY - 5, 62);
     moonGfx.fillStyle(0x333322, 0.06);
-    moonGfx.fillCircle(WORLD_WIDTH * 0.72 + 18, moonY - 15, 14);
-    moonGfx.fillCircle(WORLD_WIDTH * 0.72 - 22, moonY + 15, 9);
+    moonGfx.fillCircle(this.W * 0.72 + 18, moonY - 15, 14);
+    moonGfx.fillCircle(this.W * 0.72 - 22, moonY + 15, 9);
 
     // Parallax ash/ember layers
     this.ashLayers = [];
@@ -133,7 +137,7 @@ export class GameScene extends Phaser.Scene {
       const g = this.add.graphics().setDepth(-5);
       g.setScrollFactor(cfg.scrollFactor);
       for (let i = 0; i < cfg.count; i++) {
-        const x = Phaser.Math.Between(0, WORLD_WIDTH / cfg.scrollFactor);
+        const x = Phaser.Math.Between(0, this.W / cfg.scrollFactor);
         const y = Phaser.Math.Between(0, WORLD_HEIGHT / cfg.scrollFactor);
         const r = 0.3 + Math.random() * cfg.maxR;
         const a = cfg.alpha * (0.3 + Math.random() * 0.7);
@@ -145,15 +149,15 @@ export class GameScene extends Phaser.Scene {
 
     // Tree silhouettes (parallax)
     const treeFar = this.add.graphics().setDepth(-7).setScrollFactor(0.3);
-    this.drawTrees(treeFar, 0, WORLD_HEIGHT * 0.8, WORLD_WIDTH * 3, 0.08);
+    this.drawTrees(treeFar, 0, WORLD_HEIGHT * 0.8, this.W * 3, 0.08);
     const treeNear = this.add.graphics().setDepth(-6).setScrollFactor(0.5);
-    this.drawTrees(treeNear, 0, WORLD_HEIGHT * 0.6, WORLD_WIDTH * 2, 0.12);
+    this.drawTrees(treeNear, 0, WORLD_HEIGHT * 0.6, this.W * 2, 0.12);
 
     // Fog layers
     const fog = this.add.graphics().setDepth(-4).setScrollFactor(0.7);
     for (let y = WORLD_HEIGHT * 0.4; y < WORLD_HEIGHT; y += 300) {
       fog.fillStyle(0x281405, 0.05);
-      fog.fillRect(-50, y, WORLD_WIDTH + 100, 80);
+      fog.fillRect(-50, y, this.W + 100, 80);
     }
   }
 
@@ -246,12 +250,12 @@ export class GameScene extends Phaser.Scene {
   // ===================== ANCHORS (butcher hooks) =====================
 
   createAnchors() {
-    this.addAnchor(WORLD_WIDTH / 2 + 60, SPAWN_Y - 180);
+    this.addAnchor(this.W / 2 + 60, SPAWN_Y - 180);
 
     for (let y = SPAWN_Y - 180 - ANCHOR_SPACING_Y; y > 100; y -= ANCHOR_SPACING_Y) {
       const side = ((SPAWN_Y - y) / ANCHOR_SPACING_Y) % 2 === 0;
-      const baseX = side ? WORLD_WIDTH * 0.3 : WORLD_WIDTH * 0.7;
-      const x = Phaser.Math.Clamp(baseX + Phaser.Math.Between(-80, 80), 50, WORLD_WIDTH - 50);
+      const baseX = side ? this.W * 0.3 : this.W * 0.7;
+      const x = Phaser.Math.Clamp(baseX + Phaser.Math.Between(-80, 80), 50, this.W - 50);
       this.addAnchor(x, y);
     }
   }
@@ -317,12 +321,12 @@ export class GameScene extends Phaser.Scene {
   createSwamp() {
     const gfx = this.add.graphics().setDepth(1);
     gfx.fillStyle(0x0a0500);
-    gfx.fillRect(0, GROUND_Y - 10, WORLD_WIDTH, 30);
+    gfx.fillRect(0, GROUND_Y - 10, this.W, 30);
     gfx.fillStyle(0x1a0f00, 0.9);
-    gfx.fillRect(0, GROUND_Y - 16, WORLD_WIDTH, 6);
+    gfx.fillRect(0, GROUND_Y - 16, this.W, 6);
     gfx.fillStyle(0x1a2a00, 0.3);
-    gfx.fillRect(0, GROUND_Y - 14, WORLD_WIDTH, 4);
-    for (let x = 0; x < WORLD_WIDTH; x += 8) {
+    gfx.fillRect(0, GROUND_Y - 14, this.W, 4);
+    for (let x = 0; x < this.W; x += 8) {
       const h = 1 + Math.random() * 3;
       gfx.fillStyle(0x2a3a00, 0.15 + Math.random() * 0.15);
       gfx.fillRect(x, GROUND_Y - 16 - h, 6, h);
@@ -332,7 +336,7 @@ export class GameScene extends Phaser.Scene {
   // ===================== HUD =====================
 
   createHUD() {
-    this.heightText = this.add.text(WORLD_WIDTH / 2, 16, '0m', {
+    this.heightText = this.add.text(this.W / 2, 16, '0m', {
       fontSize: '32px',
       color: GOLD,
       fontFamily: FONT,
@@ -341,13 +345,13 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 5,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
-    this.heightArrow = this.add.text(WORLD_WIDTH / 2 - 60, 20, '\u2191', {
+    this.heightArrow = this.add.text(this.W / 2 - 60, 20, '\u2191', {
       fontSize: '22px',
       color: GOLD,
       fontFamily: FONT,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
-    this.maxHeightText = this.add.text(WORLD_WIDTH / 2, 52, `${t('record')}: 0${t('unit_m')}`, {
+    this.maxHeightText = this.add.text(this.W / 2, 52, `${t('record')}: 0${t('unit_m')}`, {
       fontSize: '14px',
       color: '#6B5030',
       fontFamily: FONT,
@@ -356,14 +360,14 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
     // Label
-    this.add.text(WORLD_WIDTH / 2, 2, t('depth'), {
+    this.add.text(this.W / 2, 2, t('depth'), {
       fontSize: '10px',
       color: '#5B4020',
       fontFamily: FONT,
       letterSpacing: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
-    this.hintText = this.add.text(WORLD_WIDTH / 2, 76, t('click_hook'), {
+    this.hintText = this.add.text(this.W / 2, 76, t('click_hook'), {
       fontSize: '12px',
       color: '#4B3A20',
       fontFamily: FONT,
@@ -383,27 +387,27 @@ export class GameScene extends Phaser.Scene {
     };
 
     // Затемнение
-    makeUI(this.add.rectangle(WORLD_WIDTH / 2, 400, WORLD_WIDTH, 800, 0x2d0000, 0.65));
+    makeUI(this.add.rectangle(this.W / 2, this.H / 2, this.W, this.H, 0x2d0000, 0.65));
 
     // Заголовок
-    makeUI(this.add.text(WORLD_WIDTH / 2, 220, t('you_died'), {
+    makeUI(this.add.text(this.W / 2, 220, t('you_died'), {
       fontSize: '42px', color: DARK_RED, fontFamily: FONT, fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 8,
     }).setOrigin(0.5));
 
     // Высота
-    this.gameOverScore = makeUI(this.add.text(WORLD_WIDTH / 2, 285, '', {
+    this.gameOverScore = makeUI(this.add.text(this.W / 2, 285, '', {
       fontSize: '18px', color: GOLD, fontFamily: FONT,
     }).setOrigin(0.5));
 
     // Рекорд
-    this.gameOverBest = makeUI(this.add.text(WORLD_WIDTH / 2, 320, '', {
+    this.gameOverBest = makeUI(this.add.text(this.W / 2, 320, '', {
       fontSize: '26px', color: '#6B5030', fontFamily: FONT, fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
     // НОВЫЙ РЕКОРД
-    this.newBestText = makeUI(this.add.text(WORLD_WIDTH / 2, 360, t('new_record'), {
+    this.newBestText = makeUI(this.add.text(this.W / 2, 360, t('new_record'), {
       fontSize: '20px', color: GOLD, fontFamily: FONT, fontStyle: 'bold italic',
       stroke: '#3B1A00', strokeThickness: 4,
     }).setOrigin(0.5));
@@ -416,7 +420,7 @@ export class GameScene extends Phaser.Scene {
     `;
 
     // CONTINUE (AD)
-    this.continueDom = this.add.dom(WORLD_WIDTH / 2, 420).createFromHTML(`
+    this.continueDom = this.add.dom(this.W / 2, 420).createFromHTML(`
       <button id="btn-continue" style="
         ${btnStyle} background: #3B1A00; color: #C8A96E;
         border: 2px solid #7A4A1E; font-size: 15px; font-weight: bold;
@@ -429,7 +433,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverElements.push(this.continueDom);
 
     // RESTART — нативный DOM click для надёжности
-    this.restartDom = this.add.dom(WORLD_WIDTH / 2, 472).createFromHTML(`
+    this.restartDom = this.add.dom(this.W / 2, 472).createFromHTML(`
       <button id="btn-restart" style="
         ${btnStyle} background: #6B0F0F; color: #C8A96E;
         border: 2px solid #C8A96E; font-size: 20px; font-weight: bold;
@@ -443,7 +447,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverElements.push(this.restartDom);
 
     // MENU — нативный DOM click
-    this.menuDom = this.add.dom(WORLD_WIDTH / 2, 524).createFromHTML(`
+    this.menuDom = this.add.dom(this.W / 2, 524).createFromHTML(`
       <button id="btn-menu" style="
         ${btnStyle} background: #1a0f00; color: #5B4020;
         border: 1px solid #3B2A10; font-size: 14px;
@@ -643,8 +647,8 @@ export class GameScene extends Phaser.Scene {
     this.continueUsed = false;
     this.bountyShown = false;
     this.moonReached = false;
-    this.player.setPosition(WORLD_WIDTH / 2, SPAWN_Y);
-    this.player.body.reset(WORLD_WIDTH / 2, SPAWN_Y);
+    this.player.setPosition(this.W / 2, SPAWN_Y);
+    this.player.body.reset(this.W / 2, SPAWN_Y);
     this.player.body.allowGravity = true;
     this.playerContainer.setAlpha(1);
     this.playerContainer.setRotation(0);
@@ -656,8 +660,8 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     // Камера всегда следит за игроком (даже после смерти)
-    const targetX = this.player.x - 240;
-    const targetY = this.player.y - 500;
+    const targetX = this.player.x - this.W / 2;
+    const targetY = this.player.y - this.H * 0.6;
     this.cameras.main.scrollX = Phaser.Math.Linear(
       this.cameras.main.scrollX, targetX, 0.1
     );
@@ -836,7 +840,7 @@ export class GameScene extends Phaser.Scene {
     // Spawn new bubbles near death zone
     if (Math.random() < 0.03) {
       this.swampBubbles.push({
-        x: Phaser.Math.Between(20, WORLD_WIDTH - 20),
+        x: Phaser.Math.Between(20, this.W - 20),
         y: GROUND_Y - 10,
         size: 1.5 + Math.random() * 3,
         life: 800 + Math.random() * 1200,
@@ -872,7 +876,7 @@ export class GameScene extends Phaser.Scene {
   showBountyBanner() {
     playBounty();
 
-    const banner = this.add.text(WORLD_WIDTH / 2, -40, t('bounty'), {
+    const banner = this.add.text(this.W / 2, -40, t('bounty'), {
       fontSize: '26px',
       fontFamily: FONT,
       fontStyle: 'bold',
@@ -913,7 +917,7 @@ export class GameScene extends Phaser.Scene {
     // Яркая вспышка луны (добавляем свечение через graphics на HUD-слое)
     const moonGlow = this.add.graphics().setScrollFactor(0).setDepth(24);
     moonGlow.fillStyle(0x888866, 0.0);
-    moonGlow.fillCircle(WORLD_WIDTH * 0.72, 80, 50);
+    moonGlow.fillCircle(this.W * 0.72, 80, 50);
 
     // Анимация свечения луны
     let glowAlpha = 0;
@@ -926,9 +930,9 @@ export class GameScene extends Phaser.Scene {
         glowAlpha = t.getValue() / 100;
         moonGlow.clear();
         moonGlow.fillStyle(0xCCCCAA, glowAlpha);
-        moonGlow.fillCircle(WORLD_WIDTH * 0.72, 80, 55);
+        moonGlow.fillCircle(this.W * 0.72, 80, 55);
         moonGlow.fillStyle(0xEEEECC, glowAlpha * 0.5);
-        moonGlow.fillCircle(WORLD_WIDTH * 0.72, 80, 35);
+        moonGlow.fillCircle(this.W * 0.72, 80, 35);
       },
       onComplete: () => {
         this.time.delayedCall(3000, () => {
@@ -943,7 +947,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Надпись "MOONWALKER"
-    const txt = this.add.text(WORLD_WIDTH / 2, 180, t('moonwalker'), {
+    const txt = this.add.text(this.W / 2, 180, t('moonwalker'), {
       fontSize: '20px',
       fontFamily: FONT,
       fontStyle: 'italic',
