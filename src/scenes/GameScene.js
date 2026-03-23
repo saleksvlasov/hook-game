@@ -66,7 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.playerContainer.body.setSize(20, 28);
     this.playerContainer.body.setOffset(-10, -14);
     // Ограничение горизонтальной скорости чтобы не улетал за экран
-    this.playerContainer.body.setMaxVelocity(500, 1200);
+    this.playerContainer.body.setMaxVelocity(900, 1200);
     this.player = this.playerContainer;
 
     // Coat animation state
@@ -712,11 +712,15 @@ export class GameScene extends Phaser.Scene {
       this.swingSpeed += angularAccel * dt;
       this.swingSpeed *= 0.999;
 
-      // Ограничение скорости и угла маятника (±60° от вертикали)
-      this.swingSpeed = Phaser.Math.Clamp(this.swingSpeed, -2.5, 2.5);
+      // Только защита от переворота через верх
       this.swingAngle += this.swingSpeed * dt;
-      // PI/2 = вниз, допуск ±60° = PI/2 ± PI/3 = ~0.52 .. ~2.62
-      this.swingAngle = Phaser.Math.Clamp(this.swingAngle, 0.52, 2.62);
+      if (this.swingAngle < 0.05) {
+        this.swingAngle = 0.05;
+        this.swingSpeed *= -0.3;
+      } else if (this.swingAngle > Math.PI - 0.05) {
+        this.swingAngle = Math.PI - 0.05;
+        this.swingSpeed *= -0.3;
+      }
 
       const newX = this.currentAnchor.x + Math.cos(this.swingAngle) * this.ropeLength;
       const newY = this.currentAnchor.y + Math.sin(this.swingAngle) * this.ropeLength;
