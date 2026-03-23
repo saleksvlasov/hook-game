@@ -378,13 +378,11 @@ export class GameScene extends Phaser.Scene {
   // ===================== HUD =====================
 
   createHUD() {
-    // Отступ сверху для iPhone Dynamic Island / notch
-    // Читаем CSS env через вспомогательный div
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;';
-    document.body.appendChild(probe);
-    const safeTop = Math.max(probe.offsetTop, 10);
-    probe.remove();
+    // Отступ для iPhone Dynamic Island / notch / статусбар
+    // iPhone с notch/island: screen.height >= 812 && devicePixelRatio >= 3 && standalone viewport
+    const isIphone = /iPhone/.test(navigator.userAgent);
+    const hasNotch = isIphone && screen.height >= 812;
+    const safeTop = hasNotch ? 60 : 10;
 
     this.heightText = this.add.text(this.W / 2, safeTop + 18, `0${t('unit_m')}`, {
       fontSize: '32px',
