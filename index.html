@@ -2,25 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>THE HOOK</title>
     <style>
-      * { margin: 0; padding: 0; }
-      html, body {
-        background: #0d0800;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        overflow: hidden;
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html {
+        height: 100%;
+        height: -webkit-fill-available;
       }
-      canvas { display: block; }
+      body {
+        width: 100vw;
+        height: 100vh;
+        height: -webkit-fill-available;
+        overflow: hidden;
+        background: #1a0e06;
+        display: block !important;
+      }
+      canvas {
+        display: block !important;
+        width: 100vw !important;
+        height: 100vh !important;
+      }
     </style>
 
     <!-- Yandex Games SDK — uncomment when deploying to Yandex Games -->
     <!-- <script src="https://yandex.ru/games/sdk/v2"></script> -->
-    <script type="module" crossorigin src="/hook-game/assets/index-D74gEtiX.js"></script>
+    <script type="module" crossorigin src="/hook-game/assets/index-DPGqmgNj.js"></script>
   </head>
   <body>
   </body>
