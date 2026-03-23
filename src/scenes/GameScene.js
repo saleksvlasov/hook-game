@@ -258,12 +258,18 @@ export class GameScene extends Phaser.Scene {
   // ===================== ANCHORS (butcher hooks) =====================
 
   createAnchors() {
-    this.addAnchor(this.W / 2 + 60, SPAWN_Y - 180);
+    // Первый якорь рядом со спавном
+    this.addAnchor(this.W / 2 + Phaser.Math.Between(-60, 60), SPAWN_Y - 180);
 
+    // Остальные — случайные позиции по X, не повторяют паттерн
+    let prevX = this.W / 2;
     for (let y = SPAWN_Y - 180 - ANCHOR_SPACING_Y; y > 100; y -= ANCHOR_SPACING_Y) {
-      const side = ((SPAWN_Y - y) / ANCHOR_SPACING_Y) % 2 === 0;
-      const baseX = side ? this.W * 0.3 : this.W * 0.7;
-      const x = Phaser.Math.Clamp(baseX + Phaser.Math.Between(-80, 80), 50, this.W - 50);
+      // Случайный X, но не слишком близко к предыдущему
+      let x;
+      do {
+        x = Phaser.Math.Between(60, this.W - 60);
+      } while (Math.abs(x - prevX) < this.W * 0.15);
+      prevX = x;
       this.addAnchor(x, y);
     }
   }
@@ -354,12 +360,6 @@ export class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
       stroke: BG_DARK,
       strokeThickness: 5,
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
-
-    this.heightArrow = this.add.text(this.W / 2 - 60, 20, '\u2191', {
-      fontSize: '22px',
-      color: GOLD,
-      fontFamily: FONT,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(20);
 
     this.maxHeightText = this.add.text(this.W / 2, 52, `${t('record')}: 0${t('unit_m')}`, {
@@ -520,7 +520,8 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    this.ropeLength = minDist;
+    // Верёвка не длиннее 300 — подтягиваем если далеко
+    this.ropeLength = Math.min(minDist, 300);
 
     this.player.body.allowGravity = false;
     this.player.body.setVelocity(0, 0);
@@ -529,11 +530,13 @@ export class GameScene extends Phaser.Scene {
     const dy = py - nearest.y;
     this.swingAngle = Math.atan2(dy, dx);
 
+    // Конвертируем инерцию полёта в угловую скорость маятника
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    if (Math.abs(this.swingSpeed) < 0.8) {
-      this.swingSpeed = px < nearest.x ? -1.5 : 1.5;
+    // Минимальный толчок только если совсем нет инерции (стоим на месте)
+    if (Math.abs(this.swingSpeed) < 0.3) {
+      this.swingSpeed = px < nearest.x ? -0.8 : 0.8;
     }
 
     this.highlightAnchor(nearest, true);
@@ -758,9 +761,8 @@ export class GameScene extends Phaser.Scene {
         playRecord();
       }
     }
-    this.heightText.setText(`${currentHeight}${t('unit_m')}`);
+    this.heightText.setText(`\u2191 ${currentHeight}${t('unit_m')}`);
     this.maxHeightText.setText(`${t('record')}: ${Math.max(this.maxHeight, this.sessionBest)}${t('unit_m')}`);
-    this.heightArrow.setX(this.heightText.x - this.heightText.width / 2 - 22);
 
     // --- Пасхалка: BOUNTY CLAIMED при 100m ---
     if (currentHeight >= BOUNTY_HEIGHT && !this.bountyShown) {
