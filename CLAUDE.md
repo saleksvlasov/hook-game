@@ -1,275 +1,180 @@
-# THE HOOK — Project Agents
+# THE HOOK — Agent System
 
-## DESIGN AGENT
-When task starts with [DESIGN]:
-- Focus only on visuals: colors, fonts, graphics, animations
-- Style: Hunt Showdown — dark gothic western
-- Palette: #1a0a00 (background), #8B4513 (brown), #C8A96E (gold), #2d0000 (dark red)
-- Never touch game logic
-
-## CODE AGENT
-When task starts with [CODE]:
-- Focus only on mechanics and game logic
-- Never touch visuals or styles
-- Always add comments in Russian
-- After each change, describe what exactly was changed
-
-### ОБЯЗАТЕЛЬНОЕ ПРАВИЛО ДЛЯ [CODE] АГЕНТА:
-После КАЖДОГО изменения кода автоматически запускай [TEST] агента.
-
-Порядок работы:
-1. [CODE] вносит изменения
-2. [CODE] пишет краткий отчёт что изменил
-3. Автоматически запускает [TEST] со списком:
-   - Что именно нужно протестировать
-   - Какие edge cases проверить
-   - Ожидаемый результат
-
-Формат передачи тесту:
-```
-[TEST] Проверь после изменения: [описание изменения]
-Ожидаемое поведение: [что должно работать]
-Проверь edge cases: [список]
-```
-
-## RESEARCH AGENT
-When task starts with [RESEARCH]:
-- Analyze code and find problems
-- Suggest improvements with justification
-- Compare with hyper-casual game best practices
-
-## TEST AGENT
-When task starts with [TEST]:
-- Check edge cases: what if no anchors nearby? what if player is off screen?
-- Write a list of found bugs with reproduction steps
-- Check performance (fps, memory leaks)
+## ГЛАВНОЕ ПРАВИЛО
+После каждого [CODE] изменения → автоматически [TEST].
+Никакого деплоя без "✅ READY TO DEPLOY" от TEST агента.
 
 ---
 
-# THE HOOK — Project Skill Guide
+## [CODE] — Инженер
+Когда задача начинается с [CODE]:
 
-## 1. ОПИСАНИЕ ПРОЕКТА
-
-**THE HOOK** — hyper-casual вертикальная аркада с механикой крюка-маятника.
-Игрок цепляется крюком за якоря над собой, раскачивается и летит вверх по инерции.
-Цель — набрать максимальную высоту. Визуальный стиль — Hunt: Showdown (тёмный готический вестерн, болота, ржавые крюки).
-
-**Стек:** Vite 5 + vanilla JS + Phaser 3 (arcade physics) + Web Audio API.
-**Без внешних ассетов** — вся графика через Phaser Graphics, все звуки через OscillatorNode.
-**Локализация:** EN / RU с автодетектом.
-**Монетизация:** заглушки для Yandex Ads SDK (interstitial + rewarded).
-
----
-
-## 2. СТРУКТУРА ФАЙЛОВ
-
-```
-hook-game/
-  index.html              — HTML shell, CSS центрирование, Yandex SDK placeholder
-  package.json            — Vite 5 + Phaser 3
-  CLAUDE.md               — Этот файл: агенты + полная документация проекта
-  src/
-    main.js               — Phaser конфиг (480x800, Scale.FIT, arcade physics, DOM enabled)
-    i18n.js               — Локализация EN/RU, автодетект языка, localStorage сохранение
-    storage.js            — localStorage: рекорд (thehook_best), луна (thehook_moon)
-    audio.js              — Web Audio API: 8 звуков (hook, attach, release, death, record, ominous, bounty, moonwalker)
-    ads.js                — Заглушки рекламы: interstitial (каждые 5 игр), rewarded (continue)
-    scenes/
-      MenuScene.js        — Главное меню: заголовок с glow, охотник на маятнике, кнопка CLIMB, переключатель языка, Konami code
-      GameScene.js        — Основная игра: маятник, крюки, смерть, Game Over с DOM-кнопками, пасхалки
-    assets/               — Неиспользуемые файлы от Vite template (hero.png, javascript.svg, vite.svg)
-    counter.js            — Неиспользуемый файл от Vite template
-    style.css             — Неиспользуемый файл от Vite template
-```
-
-### Ключевые модули
-
-| Файл | Экспорты | Назначение |
-|------|----------|------------|
-| `main.js` | — | Точка входа, создаёт `new Phaser.Game(config)` |
-| `MenuScene.js` | `MenuScene` | Phaser.Scene — меню с анимацией |
-| `GameScene.js` | `GameScene` | Phaser.Scene — вся игровая логика |
-| `audio.js` | `playHook, playAttach, playRelease, playDeath, playRecord, playOminous, playBounty, playMoonwalker` | Процедурные звуки |
-| `storage.js` | `getBest, saveBest, getMoon, saveMoon` | Персистентность |
-| `i18n.js` | `t, getLang, setLang, LANGS` | Локализация |
-| `ads.js` | `trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded` | Рекламные заглушки |
-
----
-
-## 3. АГЕНТЫ (подробно)
-
-### [DESIGN] — Визуал
-- Только цвета, шрифты, графика, анимации
-- Стиль: Hunt Showdown — тёмный готический вестерн
-- Никогда не трогает игровую логику (физику маятника, death check, input handling)
-- Персонаж рисуется в `drawHunterPose()`, вызывается каждый кадр для анимации пальто
-
-### [CODE] — Логика
-- Только механики: маятник, крюки, смерть, респаун, камера
+ПРИНЦИПЫ:
+- Итерируй маленькими шагами — один механизм за раз
+- Не трогай то что уже работает
 - Комментарии на русском
-- Никогда не трогает визуал
-- После изменений — описание что именно изменено
+- После изменений пиши что именно поменял и почему
+- Всегда запускай [TEST] после своей работы
 
-### [TEST] — Тестирование
-- Edge cases: нет якорей, игрок за экраном, рекорд = 0
-- Баги с шагами воспроизведения
-- Производительность: FPS, утечки памяти, размер массивов
+ЗАПРЕЩЕНО:
+- Менять WORLD_WIDTH/HEIGHT без обновления всех зависимостей
+- Менять Scale режим Phaser без полного тестирования
+- Добавлять hard clamp на физику — только мягкие стенки и демпинг
 
-### [RESEARCH] — Анализ
-- Проблемы в коде с обоснованием
-- Сравнение с лучшими практиками hyper-casual
-- Предложения по оптимизации
-
----
-
-## 4. ПАЛИТРА (Hunt Showdown)
-
-| Назначение | HEX | Переменная |
-|------------|-----|------------|
-| Фон (градиент) | `#15100a` → `#2a1c0e` → `#3d2812` | Gradient в `createBackground()` |
-| Фон (base) | `#1a0e06` | `BG_DARK`, backgroundColor в конфиге |
-| Золото (акцент) | `#C8A96E` | `GOLD` / `GOLD_HEX = 0xC8A96E` |
-| Тёмно-красный | `#6B0F0F` | `DARK_RED` / `DARK_RED_HEX` |
-| Ржавчина (крюки, верёвка) | `#7A4A1E` | `RUST = 0x7A4A1E` |
-| Тело охотника | `#5a3518` | `HUNTER_BODY` |
-| Лицо охотника | `#F0DDB0` | `HUNTER_FACE` |
-| Trail (угольки) | `#FF6B00` | `TRAIL_COLOR` |
-| Свечение крюка (active) | `#FFB84D` | Hardcoded в `drawButcherHook()` |
-| Шрифт | Georgia, serif | `FONT` |
-
----
-
-## 5. КОНСТАНТЫ
-
-### Мир и физика (GameScene.js)
+ФОРМАТ ОТЧЁТА:
 ```
-GRAVITY = 900           — сила тяжести маятника (не Phaser arcade gravity!)
-HOOK_RANGE = 500        — макс дистанция до якоря для зацепки
-WORLD_WIDTH = this.scale.width — динамический, = ширина экрана
-WORLD_HEIGHT = 8000     — высота мира
-ANCHOR_SPACING_Y = 280  — расстояние между якорями по вертикали
-GROUND_Y = 7990         — Y-координата зоны смерти (WORLD_HEIGHT - 10)
-SPAWN_Y = 7920          — Y-координата спавна (WORLD_HEIGHT - 80)
-TRAIL_SPEED_THRESHOLD = 150 — мин. скорость для появления trail-частиц
-```
-
-### Пасхалки
-```
-BOUNTY_HEIGHT = 100     — высота для "BOUNTY CLAIMED!"
-MOON_HEIGHT = 300       — высота для "MOONWALKER"
-```
-
-### Phaser конфиг (main.js)
-```
-width: document.documentElement.clientWidth
-height: document.documentElement.clientHeight
-Scale.NONE + NO_CENTER
-arcade.gravity.y: 800   — глобальная гравитация Phaser (для свободного полёта)
-dom.createContainer: true — для HTML DOM кнопок
-```
-
-### Реклама (ads.js)
-```
-INTERSTITIAL_EVERY = 5  — interstitial каждые N игр
-```
-
-### localStorage ключи (storage.js, ads.js, i18n.js)
-```
-thehook_best            — рекорд высоты (число)
-thehook_moon            — достигнута ли луна ('yes')
-thehook_games           — счётчик завершённых игр (число)
-thehook_lang            — выбранный язык ('en' | 'ru')
+✏️ Изменил: [что]
+📁 Файлы: [какие]
+🧪 Передаю тесту: [что проверить]
 ```
 
 ---
 
-## 6. ИЗВЕСТНЫЕ БАГИ
+## [DESIGN] — Арт директор
+Когда задача начинается с [DESIGN]:
 
-### Решённые
-- Маятник не качался — `setVelocity(0,0)` обнуляло скорость до считывания
-- Кнопки Game Over не кликались — `setScrollFactor(0)` в контейнере ломал hit testing
-- Смерть не срабатывала на крюке — death check был до pendulum update
-- Боковые "стенки" — `checkCollision.left/right` и `setCollideWorldBounds`
-- Canvas смещался — неправильный CSS (width:100% вместо 100vh)
-- RESTART вёл в меню — `scene.restart()` не очищал DOM элементы
-- Phaser.Scale.RESIZE ломал рендер — откат на Scale.FIT
+ПРИНЦИПЫ:
+- Стиль: Hunt Showdown — тёмный готический вестерн
+- Mobile-first: всё должно читаться на экране 4"
+- Контраст: персонаж всегда виден на фоне
+- Итерируй визуально: сначала опиши что меняешь, потом меняй
 
-### Потенциальные / Нерешённые
-- `drawHunterPose()` вызывается каждый кадр (~30 draw calls) — ок для мобиля, но при масштабировании стоит кэшировать в текстуру
-- `splice(i, 1)` в обратном цикле для trail/bubbles — O(n), при увеличении лимитов лучше swap-and-pop
-- DOM кнопки могут не удаляться при `scene.stop()` — Phaser должен чистить, но не протестировано при быстрых переключениях
-- Race condition: `continueWithAd()` async — добавлена проверка `!this.isDead`, но полный mutex отсутствует
+ПАЛИТРА (не менять без причины):
+```
+Фон:        #1a0e06 → #2a1c0e
+Золото:     #C8A96E
+Красный:    #6B0F0F
+Ржавчина:   #7A4A1E
+Охотник:    #5a3518 + outline #C8A96E
+Шрифт:      Georgia, serif
+```
+
+ЗАПРЕЩЕНО:
+- Менять game feel ради красоты
+- Добавлять эффекты которые снижают FPS ниже 60
+
+ФОРМАТ ОТЧЁТА:
+```
+🎨 Изменил: [что визуально]
+📱 Проверено на мобиле: [да/нет]
+🧪 Передаю тесту: [что проверить]
+```
 
 ---
 
-## 7. ПРАВИЛА — НЕ МЕНЯТЬ
+## [TEST] — QA инженер
+Когда задача начинается с [TEST]:
 
-### Архитектура
-- **Две сцены:** MenuScene → GameScene. Не добавлять промежуточных сцен
-- **Динамический размер:** `document.documentElement.clientWidth/Height` + `Scale.NONE`. Все координаты через `this.W` / `this.H` из `this.scale.width/height`
-- **DOM кнопки:** Game Over использует `this.add.dom().createFromHTML()` с нативным `addEventListener('click')`. Не заменять на Phaser rectangles
-- **Маятник вручную:** Физика маятника считается через `swingAngle/swingSpeed`, не через Phaser joints или constraints
+ПРИНЦИПЫ:
+- Тестируй edge cases: нет якорей, смерть на крюке, быстрые тапы, потеря фокуса
+- Проверяй на реальных размерах мобиле (375px, 390px, 414px)
+- Фиксируй баги с точными шагами воспроизведения
+- Проверяй производительность: ищи splice/push в update()
 
-### Геймплей
-- **Toggle click:** один тап — зацепиться, второй — отпустить. Не hold/release
-- **Гравитация:** arcade gravity = 800 (свободный полёт), manual gravity = 900 (маятник)
-- **Камера:** ручной lerp по X (0.1) и Y (0.15) в update(), scrollX зажат в `[-W*0.5, W*0.5]`. Не использовать startFollow
-- **Смерть:** проверяется ПОСЛЕ обновления позиции маятника, по `playerBottom >= GROUND_Y - 6`
-
-### Стиль
-- **Hunt Showdown палитра** — не менять на другие стили
-- **Процедурная графика** — нет внешних спрайтов, всё через Phaser Graphics
-- **Процедурный звук** — нет аудиофайлов, всё через Web Audio API OscillatorNode
-
-### Процесс разработки
-- Обязательный цикл: **CODE → TEST → (при багах) → CODE → TEST**
-- Никогда не деплоить без прохождения TEST агента
-- TEST агент должен явно написать `✅ READY TO DEPLOY` или `❌ DEPLOY BLOCKED: [причина]` в конце отчёта
-
-### Чеклист перед деплоем (TEST агент проверяет):
-- [ ] Игра запускается без ошибок в консоли
+ОБЯЗАТЕЛЬНЫЙ ЧЕКЛИСТ:
+- [ ] Консоль без ошибок
 - [ ] RESTART работает
-- [ ] Камера следит за игроком по X и Y
-- [ ] Игрок не вылетает за видимую область
-- [ ] Смерть срабатывает в любом состоянии
-- [ ] Локализация RU/EN переключается
-- [ ] Рекорд сохраняется в localStorage
-- [ ] npm run build проходит без ошибок
-- [ ] Фон/болото не показывают пустые края при движении камеры
+- [ ] Камера следит по X и Y
+- [ ] Игрок не уходит за край видимой области
+- [ ] Смерть в любом состоянии (hooked/free)
+- [ ] RU/EN локализация
+- [ ] localStorage рекорд сохраняется
+- [ ] npm run build без ошибок
+- [ ] Мобильный экран без полей
+
+ФОРМАТ ОТЧЁТА:
+```
+✅ РАБОТАЕТ: [список]
+❌ БАГ: [описание + строка кода]
+⚠️ РИСК: [потенциальная проблема]
+→ ИТОГ: ✅ READY TO DEPLOY | ❌ DEPLOY BLOCKED: [причина]
+```
 
 ---
 
-## 8. TODO
+## [RESEARCH] — Аналитик
+Когда задача начинается с [RESEARCH]:
 
-### Критическое
-- [ ] Деплой на Yandex Games (подключить SDK, заменить ad-заглушки)
-- [ ] Тест на реальном мобильном устройстве (touch events, performance)
-- [ ] Проверить что DOM кнопки корректно масштабируются при Scale.FIT
+ПРИНЦИПЫ:
+- Анализируй код перед тем как предлагать решение
+- Сравнивай с hyper-casual best practices
+- Предлагай решения от простого к сложному
+- Учитывай мобильную производительность
 
-### Монетизация
-- [ ] Подключить `YaGames.init()` в ads.js
-- [ ] Заменить `showInterstitial()` → `yaSDK.adv.showFullscreenAdv()`
-- [ ] Заменить `showRewarded()` → `yaSDK.adv.showRewardedVideo()`
-- [ ] Настроить частоту interstitial для прохождения модерации
+ФОРМАТ ОТЧЁТА:
+```
+🔍 Проблема: [описание]
+📊 Анализ: [что нашёл в коде]
+💡 Решение 1 (быстрое): [описание]
+💡 Решение 2 (правильное): [описание]
+→ Рекомендую: [что выбрать и почему]
+```
 
-### Геймплей
-- [ ] Туториал для первой игры (анимированная стрелка "нажми сюда")
-- [ ] Больше типов якорей (движущиеся, исчезающие)
-- [ ] Увеличение сложности с высотой (реже якоря, уже проходы)
-- [ ] Leaderboard через Yandex Games API
+---
 
-### Визуал
-- [ ] Кэшировать охотника в RenderTexture вместо перерисовки каждый кадр
-- [ ] Добавить фоновые элементы (вороны, летучие мыши на высоте)
-- [ ] Анимация зацепления крюка (лёгкий zoom + slow-mo на 100ms)
+## ЦИКЛ РАЗРАБОТКИ
+```
+[RESEARCH если непонятна причина]
+    ↓
+[CODE] → изменение
+    ↓
+[TEST] → проверка
+    ↓
+❌ баг → [CODE] снова
+✅ OK → git commit → npm run build → npm run deploy
+```
 
-### Дистрибуция
-- [ ] APK через Capacitor или PWA wrapper
-- [ ] Telegram Mini App
-- [ ] Open Graph meta-теги для шеринга
-- [ ] Favicon и иконки для PWA manifest
+---
 
-### Технический долг
-- [ ] Удалить неиспользуемые файлы (counter.js, style.css, assets/)
-- [ ] Добавить ESLint конфиг
-- [ ] Оптимизировать бандл (Phaser tree-shaking или отдельный chunk)
+# THE HOOK — Project Reference
+
+## ОПИСАНИЕ
+**THE HOOK** — hyper-casual вертикальная аркада с механикой крюка-маятника.
+Стек: Vite 5 + vanilla JS + Phaser 3 + Web Audio API. Без внешних ассетов.
+Локализация EN/RU. Заглушки Yandex Ads SDK.
+
+## СТРУКТУРА
+```
+src/
+  main.js          — Phaser конфиг (динамический размер, Scale.NONE, DOM enabled)
+  i18n.js          — EN/RU локализация, автодетект, localStorage
+  storage.js       — localStorage: рекорд, луна
+  audio.js         — 8 процедурных звуков через Web Audio API
+  ads.js           — Заглушки рекламы (interstitial каждые 5 игр, rewarded)
+  scenes/
+    MenuScene.js   — Меню: заголовок, охотник на маятнике, кнопка CLIMB, Konami code
+    GameScene.js   — Игра: маятник, крюки, смерть, Game Over (HTML кнопки), пасхалки
+```
+
+## КОНСТАНТЫ
+```
+GRAVITY = 900, HOOK_RANGE = 500, WORLD_HEIGHT = 8000
+ANCHOR_SPACING_Y = 280, GROUND_Y = 7990, SPAWN_Y = 7920
+MAX_ROPE_LENGTH = 300 (в shootHook)
+WORLD_WIDTH = this.scale.width (динамический)
+arcade.gravity.y = 800
+```
+
+## localStorage
+```
+thehook_best, thehook_moon, thehook_games, thehook_lang
+```
+
+## ПРАВИЛА — НЕ МЕНЯТЬ
+- Две сцены: MenuScene → GameScene
+- Динамический размер + Scale.NONE
+- Game Over кнопки — чистый HTML (position:fixed, z-index:100)
+- Маятник: swingAngle/swingSpeed, только защита от переворота
+- Toggle click: тап — зацепиться, тап — отпустить
+- Камера: ручной lerp X(0.1) Y(0.15), X зажат [-W*0.5, W*0.5]
+- Смерть после pendulum update: playerBottom >= GROUND_Y - 6
+- Hunt Showdown палитра, процедурная графика, процедурный звук
+
+## TODO
+- [ ] Деплой Yandex Games + SDK
+- [ ] Тест на мобиле
+- [ ] Туториал первой игры
+- [ ] Движущиеся якоря
+- [ ] Leaderboard
+- [ ] APK / Telegram Mini App
+- [ ] Удалить counter.js, style.css, assets/
