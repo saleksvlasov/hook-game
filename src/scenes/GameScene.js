@@ -6,7 +6,7 @@ import { t } from '../i18n.js';
 
 const GRAVITY = 900;
 const HOOK_RANGE = 500;
-const WORLD_HEIGHT = 8000;
+const WORLD_HEIGHT = 100000;
 const ANCHOR_SPACING_Y = 280;
 const GROUND_Y = WORLD_HEIGHT - 10;
 const SPAWN_Y = WORLD_HEIGHT - 80;
@@ -258,19 +258,25 @@ export class GameScene extends Phaser.Scene {
   // ===================== ANCHORS (butcher hooks) =====================
 
   createAnchors() {
-    // Первый якорь рядом со спавном
-    this.addAnchor(this.W / 2 + Phaser.Math.Between(-60, 60), SPAWN_Y - 180);
+    // Начальные якоря — от спавна вверх на несколько экранов
+    this.highestAnchorY = SPAWN_Y - 180;
+    this.prevAnchorX = this.W / 2;
+    this.addAnchor(this.W / 2 + Phaser.Math.Between(-60, 60), this.highestAnchorY);
 
-    // Остальные — случайные позиции по X, не повторяют паттерн
-    let prevX = this.W / 2;
-    for (let y = SPAWN_Y - 180 - ANCHOR_SPACING_Y; y > 100; y -= ANCHOR_SPACING_Y) {
-      // Случайный X, но не слишком близко к предыдущему
+    // Генерируем на 3000px вверх от спавна
+    this.generateAnchorsUpTo(SPAWN_Y - 3000);
+  }
+
+  // Процедурная генерация — добавляет якоря вверх до targetY
+  generateAnchorsUpTo(targetY) {
+    while (this.highestAnchorY - ANCHOR_SPACING_Y > targetY) {
+      this.highestAnchorY -= ANCHOR_SPACING_Y;
       let x;
       do {
         x = Phaser.Math.Between(60, this.W - 60);
-      } while (Math.abs(x - prevX) < this.W * 0.15);
-      prevX = x;
-      this.addAnchor(x, y);
+      } while (Math.abs(x - this.prevAnchorX) < this.W * 0.15);
+      this.prevAnchorX = x;
+      this.addAnchor(x, this.highestAnchorY);
     }
   }
 
@@ -520,8 +526,7 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    // Верёвка не длиннее 400
-    this.ropeLength = Math.min(minDist, 400);
+    this.ropeLength = minDist;
 
     this.player.body.allowGravity = false;
     this.player.body.setVelocity(0, 0);
@@ -715,15 +720,8 @@ export class GameScene extends Phaser.Scene {
       this.swingSpeed += angularAccel * dt;
       this.swingSpeed *= 0.9995;
 
-      // Только защита от переворота через верх
+      // Полные 360° — без ограничений угла
       this.swingAngle += this.swingSpeed * dt;
-      if (this.swingAngle < 0.05) {
-        this.swingAngle = 0.05;
-        this.swingSpeed *= -0.3;
-      } else if (this.swingAngle > Math.PI - 0.05) {
-        this.swingAngle = Math.PI - 0.05;
-        this.swingSpeed *= -0.3;
-      }
 
       const newX = this.currentAnchor.x + Math.cos(this.swingAngle) * this.ropeLength;
       const newY = this.currentAnchor.y + Math.sin(this.swingAngle) * this.ropeLength;
@@ -763,6 +761,9 @@ export class GameScene extends Phaser.Scene {
     }
     this.heightText.setText(`\u2191 ${currentHeight}${t('unit_m')}`);
     this.maxHeightText.setText(`${t('record')}: ${Math.max(this.maxHeight, this.sessionBest)}${t('unit_m')}`);
+
+    // Процедурная генерация — создаём крюки по мере подъёма
+    this.generateAnchorsUpTo(this.player.y - 2000);
 
     // --- Пасхалка: BOUNTY CLAIMED при 100m ---
     if (currentHeight >= BOUNTY_HEIGHT && !this.bountyShown) {
