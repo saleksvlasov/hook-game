@@ -539,10 +539,10 @@ export class GameScene extends Phaser.Scene {
     this.isHooked = false;
     this.player.body.allowGravity = true;
 
-    // Скорость при отпускании — зажата чтобы не улетал за экран
+    // Скорость при отпускании — касательная к дуге
     const speed = this.swingSpeed * this.ropeLength;
-    const vx = Phaser.Math.Clamp(-speed * Math.sin(this.swingAngle), -500, 500);
-    const vy = Phaser.Math.Clamp(speed * Math.cos(this.swingAngle), -800, 800);
+    const vx = -speed * Math.sin(this.swingAngle);
+    const vy = speed * Math.cos(this.swingAngle);
     this.player.body.setVelocity(vx, vy);
 
     if (this.currentAnchor) {
@@ -713,26 +713,13 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.hookLine.clear();
 
-      // Мягкие стенки — возвращают игрока если улетел за край
-      const margin = 30;
-      const pushForce = 600;
+      // Мягкие стенки — плавно возвращают к центру, сила растёт с удалением
       const dt2 = delta / 1000;
-      if (this.player.x < margin) {
-        this.player.body.velocity.x += pushForce * dt2;
-      } else if (this.player.x > this.W - margin) {
-        this.player.body.velocity.x -= pushForce * dt2;
+      if (this.player.x < 0) {
+        this.player.body.velocity.x += 400 * dt2 * (1 + Math.abs(this.player.x) / this.W);
+      } else if (this.player.x > this.W) {
+        this.player.body.velocity.x -= 400 * dt2 * (1 + (this.player.x - this.W) / this.W);
       }
-    }
-
-    // Hard clamp — игрок никогда не уходит дальше чем на 20% за экран
-    const maxX = this.W * 1.2;
-    const minX = -this.W * 0.2;
-    if (this.player.x < minX) {
-      this.player.x = minX;
-      this.player.body.velocity.x = Math.abs(this.player.body.velocity.x) * 0.5;
-    } else if (this.player.x > maxX) {
-      this.player.x = maxX;
-      this.player.body.velocity.x = -Math.abs(this.player.body.velocity.x) * 0.5;
     }
 
     // Проверка смерти
