@@ -112,8 +112,9 @@ export class GameScene extends Phaser.Scene {
     gCtx.fillStyle = grad;
     gCtx.fillRect(0, 0, 1, WORLD_HEIGHT);
     gradTex.refresh();
+    // Фон шире экрана x5 — камера может двигаться по X без видимых краёв
     this.add.image(this.W / 2, WORLD_HEIGHT / 2, 'bg-grad')
-      .setDisplaySize(this.W, WORLD_HEIGHT).setDepth(-10);
+      .setDisplaySize(this.W * 5, WORLD_HEIGHT).setDepth(-10);
 
     // Moon (high up in the world)
     const moonGfx = this.add.graphics().setDepth(-9);
@@ -157,7 +158,7 @@ export class GameScene extends Phaser.Scene {
     const fog = this.add.graphics().setDepth(-4).setScrollFactor(0.7);
     for (let y = WORLD_HEIGHT * 0.4; y < WORLD_HEIGHT; y += 300) {
       fog.fillStyle(0x281405, 0.05);
-      fog.fillRect(-50, y, this.W + 100, 80);
+      fog.fillRect(-this.W * 2, y, this.W * 5, 80);
     }
   }
 
@@ -320,13 +321,16 @@ export class GameScene extends Phaser.Scene {
 
   createSwamp() {
     const gfx = this.add.graphics().setDepth(1);
+    // Болото шире экрана чтобы камера не показывала края
+    const sx = -this.W * 2;
+    const sw = this.W * 5;
     gfx.fillStyle(0x0a0500);
-    gfx.fillRect(0, GROUND_Y - 10, this.W, 30);
+    gfx.fillRect(sx, GROUND_Y - 10, sw, 30);
     gfx.fillStyle(0x1a0f00, 0.9);
-    gfx.fillRect(0, GROUND_Y - 16, this.W, 6);
+    gfx.fillRect(sx, GROUND_Y - 16, sw, 6);
     gfx.fillStyle(0x1a2a00, 0.3);
-    gfx.fillRect(0, GROUND_Y - 14, this.W, 4);
-    for (let x = 0; x < this.W; x += 8) {
+    gfx.fillRect(sx, GROUND_Y - 14, sw, 4);
+    for (let x = sx; x < sx + sw; x += 8) {
       const h = 1 + Math.random() * 3;
       gfx.fillStyle(0x2a3a00, 0.15 + Math.random() * 0.15);
       gfx.fillRect(x, GROUND_Y - 16 - h, 6, h);
@@ -658,8 +662,12 @@ export class GameScene extends Phaser.Scene {
   // ===================== UPDATE =====================
 
   update(time, delta) {
-    // Камера всегда следит за игроком (даже после смерти)
-    const targetX = this.player.x - this.W / 2;
+    // Камера следит по обеим осям, X зажат чтобы не показывать пустоту
+    const targetX = Phaser.Math.Clamp(
+      this.player.x - this.W / 2,
+      -this.W * 0.5,  // макс сдвиг влево
+      this.W * 0.5    // макс сдвиг вправо
+    );
     const targetY = this.player.y - this.H * 0.55;
     this.cameras.main.scrollX = Phaser.Math.Linear(
       this.cameras.main.scrollX, targetX, 0.1
