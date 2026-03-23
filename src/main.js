@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 
-const W = window.innerWidth;
-const H = window.innerHeight;
+const W = document.documentElement.clientWidth;
+const H = document.documentElement.clientHeight;
 
 const config = {
   type: Phaser.AUTO,
@@ -13,7 +13,7 @@ const config = {
   parent: document.body,
   scale: {
     mode: Phaser.Scale.NONE,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    autoCenter: Phaser.Scale.NO_CENTER,
   },
   physics: {
     default: 'arcade',

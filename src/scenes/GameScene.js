@@ -336,7 +336,7 @@ export class GameScene extends Phaser.Scene {
   // ===================== HUD =====================
 
   createHUD() {
-    this.heightText = this.add.text(this.W / 2, 16, '0m', {
+    this.heightText = this.add.text(this.W / 2, 16, `0${t('unit_m')}`, {
       fontSize: '32px',
       color: GOLD,
       fontFamily: FONT,
@@ -441,7 +441,6 @@ export class GameScene extends Phaser.Scene {
       ">${t('restart')}</button>
     `).setScrollFactor(0).setDepth(31).setVisible(false);
     this.restartDom.node.querySelector('#btn-restart').addEventListener('click', () => {
-      console.log('RESTART FIXED');
       this.handleRestart();
     });
     this.gameOverElements.push(this.restartDom);
