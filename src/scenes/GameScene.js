@@ -588,6 +588,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(500, () => {
+      // DOM кнопки позиционируются в мировых координатах —
+      // нужно переместить их на текущую позицию камеры
+      const camX = this.cameras.main.scrollX + this.W / 2;
+      const camY = this.cameras.main.scrollY;
+      this.continueDom.setPosition(camX, camY + this.H * 0.53);
+      this.restartDom.setPosition(camX, camY + this.H * 0.59);
+      this.menuDom.setPosition(camX, camY + this.H * 0.65);
+
       for (const el of this.gameOverElements) el.setVisible(true);
       if (this.continueUsed) {
         this.continueDom.setVisible(false);
