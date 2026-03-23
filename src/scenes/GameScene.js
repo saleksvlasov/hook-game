@@ -657,7 +657,7 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     // Камера всегда следит за игроком (даже после смерти)
     const targetX = this.player.x - 240;
-    const targetY = this.player.y - 400;
+    const targetY = this.player.y - 500;
     this.cameras.main.scrollX = Phaser.Math.Linear(
       this.cameras.main.scrollX, targetX, 0.1
     );
