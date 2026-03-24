@@ -2,6 +2,7 @@ import { GOLD, FONT, BOUNTY_HEIGHT, MOON_HEIGHT, Z } from '../constants.js';
 import { playBounty, playMoonwalker } from '../audio.js';
 import { saveMoon } from '../storage.js';
 import { t } from '../i18n.js';
+import { drawWantedPosterFrame, createEmberBurst } from '../managers/UIFactory.js';
 
 // Пасхалки: Bounty Claimed (100m) и Moonwalker (300m)
 export class EasterEggs {
@@ -32,6 +33,12 @@ export class EasterEggs {
     playBounty();
     const W = this.scene.W;
 
+    // Рамка розыскного плаката как фон
+    const posterFrame = this.scene.add.graphics()
+      .setScrollFactor(0)
+      .setDepth(Z.EASTER_TEXT - 1);
+    drawWantedPosterFrame(posterFrame, W / 2, -40, 240, 60);
+
     const banner = this.scene.add.text(W / 2, -40, t('bounty'), {
       fontSize: '26px',
       fontFamily: FONT,
@@ -39,25 +46,38 @@ export class EasterEggs {
       color: GOLD,
       stroke: '#3B1A00',
       strokeThickness: 5,
-      backgroundColor: '#1a0f00cc',
       padding: { x: 20, y: 10 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT);
 
-    // Влетает сверху
+    // Влетает сверху — рамка
+    this.scene.tweens.add({
+      targets: posterFrame,
+      y: 170,
+      duration: 500,
+      ease: 'Back.easeOut',
+    });
+
+    // Влетает сверху — текст
     this.scene.tweens.add({
       targets: banner,
       y: 130,
       duration: 500,
       ease: 'Back.easeOut',
       onComplete: () => {
+        // Искры при появлении
+        createEmberBurst(this.scene, W / 2, 130, 8, Z.EASTER_TEXT);
+
         this.scene.time.delayedCall(2000, () => {
           this.scene.tweens.add({
-            targets: banner,
-            y: -60,
+            targets: [banner, posterFrame],
+            y: '-=190',
             alpha: 0,
             duration: 400,
             ease: 'Cubic.easeIn',
-            onComplete: () => banner.destroy(),
+            onComplete: () => {
+              banner.destroy();
+              posterFrame.destroy();
+            },
           });
         });
       },
@@ -83,7 +103,7 @@ export class EasterEggs {
         const glowAlpha = tw.getValue() / 100;
         moonGlow.clear();
         moonGlow.fillStyle(0xCCCCAA, glowAlpha);
-        moonGlow.fillCircle(W * 0.72, 80, 55);
+        moonGlow.fillCircle(W * 0.72, 80, 70);
         moonGlow.fillStyle(0xEEEECC, glowAlpha * 0.5);
         moonGlow.fillCircle(W * 0.72, 80, 35);
       },
@@ -101,10 +121,10 @@ export class EasterEggs {
 
     // Надпись "MOONWALKER"
     const txt = this.scene.add.text(W / 2, 180, t('moonwalker'), {
-      fontSize: '20px',
+      fontSize: '22px',
       fontFamily: FONT,
       fontStyle: 'italic',
-      color: '#AAAAAA',
+      color: '#CCBB88',
       stroke: '#0d0800',
       strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT).setAlpha(0);

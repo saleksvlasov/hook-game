@@ -27,6 +27,14 @@ export const HUNTER_BODY = 0x5a3518;
 export const HUNTER_FACE = 0xF0DDB0;
 export const TRAIL_COLOR = 0xFF6B00;
 
+// Расширенная палитра — UI редизайн
+export const BLOOD_RED_HEX = 0x8B0000;
+export const BRASS_HEX = 0xB8964E;
+export const LEATHER_DARK = 0x2A1508;
+export const LEATHER_LIGHT = 0x3D2010;
+export const HINT_COLOR = '#9B8050';
+export const RECORD_COLOR = '#8B7040';
+
 // Шрифт
 export const FONT = 'Georgia, serif';
 
@@ -47,6 +55,8 @@ export const Z = {
   HUD:        20,
   EASTER:     24,
   EASTER_TEXT: 25,
+  BLOOD:      29,
   GAME_OVER:  30,
+  TRANSITION: 50,
   HTML_BUTTONS: 100,
 };

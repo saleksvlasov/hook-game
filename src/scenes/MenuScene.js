@@ -2,10 +2,14 @@ import Phaser from 'phaser';
 import { getBest, getMoon } from '../storage.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
-
-const GOLD = '#C8A96E';
-const GOLD_HEX = 0xC8A96E;
-const FONT = 'Georgia, serif';
+import {
+  drawOrnamentalButton, drawRopeDecoration, drawWantedPosterFrame,
+  createTypewriterText, createEmberBurst,
+} from '../managers/UIFactory.js';
+import {
+  LEATHER_DARK, LEATHER_LIGHT, BRASS_HEX,
+  GOLD, GOLD_HEX, FONT,
+} from '../constants.js';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -17,6 +21,9 @@ export class MenuScene extends Phaser.Scene {
     const H = this.scale.height;
     this.W = W;
     this.H = H;
+
+    // Все UI элементы для stagger-анимации
+    this._uiElements = [];
 
     // --- Фон ---
     if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
@@ -79,78 +86,196 @@ export class MenuScene extends Phaser.Scene {
         color: '#' + glowColors[i].toString(16).padStart(6, '0'),
         stroke: '#' + glowColors[i].toString(16).padStart(6, '0'),
         strokeThickness: 14 + i * 6,
-      }).setOrigin(0.5).setAlpha(0.12 + i * 0.06).setDepth(10);
+      }).setOrigin(0.5).setAlpha(0).setDepth(10);
       this.tweens.add({
-        targets: glow, alpha: glow.alpha + 0.06,
+        targets: glow, alpha: 0.12 + i * 0.06,
         duration: 1800 + i * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        delay: 400,
       });
     }
 
-    const title = this.add.text(W / 2, titleY, 'THE HOOK', {
+    const title = this.add.text(W / 2, titleY + 20, 'THE HOOK', {
       fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
       color: GOLD, stroke: '#1a0e06', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(11);
+    }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
     this.tweens.add({
       targets: title, y: titleY - 5, duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      delay: 500,
     });
 
-    this.add.text(W / 2, titleY + 45, t('title_sub'), {
-      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#7B6040',
-    }).setOrigin(0.5).setDepth(11);
+    // Stagger: заголовок 0ms
+    this._addStaggerEntry(title, titleY, 0);
 
-    // --- Кнопка ---
+    // --- Трещина под заголовком ---
+    const crackGfx = this.add.graphics().setDepth(11).setAlpha(0);
+    crackGfx.lineStyle(1.5, GOLD_HEX, 0.3);
+    crackGfx.beginPath();
+    const crackLeft = W * 0.25;
+    const crackRight = W * 0.75;
+    const crackY = titleY + 35;
+    crackGfx.moveTo(crackLeft, crackY);
+    const crackSegments = 20;
+    for (let i = 1; i <= crackSegments; i++) {
+      const sx = crackLeft + (crackRight - crackLeft) * (i / crackSegments);
+      const sy = crackY + (Math.random() - 0.5) * 4;
+      crackGfx.lineTo(sx, sy);
+    }
+    crackGfx.strokePath();
+    this._addStaggerFade(crackGfx, 0);
+
+    // --- Верёвочные украшения у подзаголовка ---
+    const subtitleY = titleY + 48;
+    const ropeGfx = this.add.graphics().setDepth(11).setAlpha(0);
+    drawRopeDecoration(ropeGfx, W * 0.2, subtitleY, W * 0.38, subtitleY);
+    drawRopeDecoration(ropeGfx, W * 0.62, subtitleY, W * 0.8, subtitleY);
+    this._addStaggerFade(ropeGfx, 200);
+
+    // --- Подзаголовок — typewriter ---
+    const subtitleText = createTypewriterText(this, W / 2, subtitleY, t('title_sub'), {
+      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#7B6040',
+    }, 50);
+    subtitleText.setDepth(11).setAlpha(0);
+    this._addStaggerEntry(subtitleText, subtitleY, 200);
+
+    // Stagger: охотник 300ms (контейнер menuHunter)
+    if (this.menuHunter) {
+      this.menuHunter.setAlpha(0);
+      this._addStaggerEntry(this.menuHunter, this.menuHunter.y, 300);
+    }
+
+    // --- Кнопка CLIMB (ornamental) ---
     const btnY = H * 0.66;
-    const btnGlow = this.add.rectangle(W / 2, btnY, 216, 70, 0x8B4513, 0.1).setDepth(12);
+    const btnW = 220;
+    const btnH = 60;
+
+    // Glow пульсация вокруг кнопки
+    const btnGlow = this.add.rectangle(W / 2, btnY, btnW + 16, btnH + 16, 0x8B4513, 0.1).setDepth(12);
     this.tweens.add({
       targets: btnGlow, alpha: 0.2, scaleX: 1.04, scaleY: 1.04,
       duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    const btnBg = this.add.rectangle(W / 2, btnY, 200, 54, 0x3B1A00)
-      .setInteractive({ useHandCursor: true }).setDepth(13);
-    this.add.rectangle(W / 2, btnY, 200, 54).setStrokeStyle(2, GOLD_HEX).setDepth(13);
+    // Graphics для ornamental кнопки
+    const btnGfx = this.add.graphics().setDepth(13);
+    drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH);
 
+    // Текст кнопки
     const btnText = this.add.text(W / 2, btnY, t('play'), {
       fontSize: '28px', fontFamily: FONT, fontStyle: 'bold',
       color: GOLD, stroke: '#1a0e06', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(14);
+    }).setOrigin(0.5).setDepth(14).setAlpha(0);
 
-    btnBg.on('pointerover', () => { btnBg.setFillStyle(0x5B2A00); btnText.setScale(1.05); });
-    btnBg.on('pointerout', () => { btnBg.setFillStyle(0x3B1A00); btnText.setScale(1); });
-    btnBg.on('pointerdown', () => {
+    // Невидимая зона для интерактива
+    const btnZone = this.add.zone(W / 2, btnY, btnW, btnH).setInteractive({ useHandCursor: true }).setDepth(15);
+
+    btnZone.on('pointerover', () => {
+      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH, {
+        fillTop: 0x3D2010, fillBot: 0x5B2A00,
+      });
+      btnText.setScale(1.05);
+    });
+
+    btnZone.on('pointerout', () => {
+      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH);
+      btnText.setScale(1);
+    });
+
+    btnZone.on('pointerdown', () => {
+      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH, {
+        pressed: true, fillTop: 0x1a0a00, fillBot: 0x2A1508,
+      });
+      btnText.setY(btnY + 2);
+      createEmberBurst(this, W / 2, btnY, 6);
+    });
+
+    btnZone.on('pointerup', () => {
+      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH);
+      btnText.setY(btnY);
+      // Запуск игры
+      createEmberBurst(this, W / 2, btnY, 20);
       this.cameras.main.fadeOut(400, 26, 14, 6);
       this.time.delayedCall(400, () => this.scene.start('GameScene'));
     });
 
-    // Рекорд
+    // Stagger: кнопка 500ms (Graphics не двигаем по Y — рисунок в абсолютных координатах)
+    btnGlow.setAlpha(0);
+    btnGfx.setAlpha(0);
+    this._addStaggerFade(btnGlow, 500);
+    this._addStaggerFade(btnGfx, 500);
+    this._addStaggerEntry(btnText, btnY, 500);
+
+    // --- Рекорд ---
     const best = getBest();
+    const recordY = H * 0.75;
     if (best > 0) {
-      this.add.text(W / 2, H * 0.75, `${t('record')}: ${best}${t('unit_m')}`, {
-        fontSize: '16px', fontFamily: FONT, color: '#7B6040',
+      // Wanted poster рамка
+      const posterGfx = this.add.graphics().setDepth(10).setAlpha(0);
+      drawWantedPosterFrame(posterGfx, W / 2, recordY, 200, 50);
+
+      // Верёвки сверху и снизу постера
+      const ropeRecordGfx = this.add.graphics().setDepth(10).setAlpha(0);
+      drawRopeDecoration(ropeRecordGfx, W / 2 - 100, recordY - 28, W / 2 + 100, recordY - 28);
+      drawRopeDecoration(ropeRecordGfx, W / 2 - 100, recordY + 28, W / 2 + 100, recordY + 28);
+
+      const recordText = this.add.text(W / 2, recordY, `${t('record')}: ${best}${t('unit_m')}`, {
+        fontSize: '18px', fontFamily: FONT, color: GOLD,
         stroke: '#1a0e06', strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(11);
+      }).setOrigin(0.5).setDepth(11).setAlpha(0);
+
+      // Stagger: рекорд 700ms
+      this._addStaggerFade(posterGfx, 700);
+      this._addStaggerFade(ropeRecordGfx, 700);
+      this._addStaggerEntry(recordText, recordY, 700);
     }
 
     if (getMoon()) {
-      this.add.text(W / 2, H * 0.78, t('moon_reached'), {
+      const moonText = this.add.text(W / 2, H * 0.78, t('moon_reached'), {
         fontSize: '12px', fontFamily: FONT, fontStyle: 'italic', color: '#666655',
-      }).setOrigin(0.5).setDepth(11);
+      }).setOrigin(0.5).setDepth(11).setAlpha(0);
+      this._addStaggerEntry(moonText, H * 0.78, 700);
     }
 
-    this.add.text(W / 2, H - 20, t('tap_to_hunt'), {
-      fontSize: '11px', fontFamily: FONT, fontStyle: 'italic', color: '#4B3A20',
-    }).setOrigin(0.5).setDepth(11);
+    // --- Подсказка внизу ---
+    const hintText = this.add.text(W / 2, H - 20, t('tap_to_hunt'), {
+      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#7B6040',
+    }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
-    // Переключатель языка
-    const langFlag = this.add.text(W - 40, 16, getLang() === 'ru' ? 'EN' : 'RU', {
-      fontSize: '14px', fontFamily: FONT, fontStyle: 'bold', color: '#6B5030',
-      backgroundColor: '#1a0e0688', padding: { x: 6, y: 3 },
-    }).setOrigin(0.5, 0).setDepth(15).setInteractive({ useHandCursor: true });
+    // Пульсация подсказки
+    this.tweens.add({
+      targets: hintText, alpha: { from: 0.4, to: 0.8 },
+      duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      delay: 800,
+    });
+    this._addStaggerEntry(hintText, H - 20, 800);
 
-    langFlag.on('pointerover', () => langFlag.setColor(GOLD));
-    langFlag.on('pointerout', () => langFlag.setColor('#6B5030'));
-    langFlag.on('pointerdown', () => { setLang(getLang() === 'ru' ? 'en' : 'ru'); this.scene.restart(); });
+    // --- Переключатель языка (ornamental button) ---
+    const langX = W - 44;
+    // Safe area для iPhone Dynamic Island / notch
+    const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
+    const langY = Math.max(envTop, 10) + 16;
+    const langGfx = this.add.graphics().setDepth(15);
+    drawOrnamentalButton(langGfx, langX, langY, 50, 28);
+
+    const langText = this.add.text(langX, langY, getLang() === 'ru' ? 'EN' : 'RU', {
+      fontSize: '16px', fontFamily: FONT, fontStyle: 'bold', color: GOLD,
+    }).setOrigin(0.5).setDepth(16);
+
+    const langZone = this.add.zone(langX, langY, 50, 28).setInteractive({ useHandCursor: true }).setDepth(17);
+
+    langZone.on('pointerover', () => {
+      drawOrnamentalButton(langGfx, langX, langY, 50, 28, {
+        fillTop: 0x3D2010, fillBot: 0x5B2A00,
+      });
+    });
+    langZone.on('pointerout', () => {
+      drawOrnamentalButton(langGfx, langX, langY, 50, 28);
+    });
+    langZone.on('pointerdown', () => {
+      createEmberBurst(this, langX, langY, 4);
+      setLang(getLang() === 'ru' ? 'en' : 'ru');
+      this.scene.restart();
+    });
 
     // Konami Code
     this.konamiSequence = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right'];
@@ -158,7 +283,38 @@ export class MenuScene extends Phaser.Scene {
     this.konamiTriggered = false;
     this.input.keyboard.on('keydown', (event) => this.checkKonami(event));
 
-    this.cameras.main.fadeIn(600, 26, 14, 6);
+    // --- Stagger entry анимация (вместо fadeIn) ---
+    this._playStaggerEntries();
+  }
+
+  // Регистрация элемента для stagger-анимации (с Y-движением)
+  _addStaggerEntry(target, finalY, delay) {
+    this._uiElements.push({ target, finalY, delay, fadeOnly: false });
+  }
+
+  // Только fade (для Graphics с абсолютными координатами)
+  _addStaggerFade(target, delay) {
+    this._uiElements.push({ target, finalY: null, delay, fadeOnly: true });
+  }
+
+  // Запуск всех stagger-анимаций
+  _playStaggerEntries() {
+    for (const { target, finalY, delay, fadeOnly } of this._uiElements) {
+      if (target.setAlpha) target.setAlpha(0);
+
+      if (fadeOnly) {
+        // Только alpha — для Graphics с абсолютными координатами
+        this.tweens.add({
+          targets: target, alpha: 1, duration: 400, delay, ease: 'Cubic.easeOut',
+        });
+      } else {
+        // Alpha + Y-движение
+        if (target.setY) target.setY(finalY + 20);
+        this.tweens.add({
+          targets: target, alpha: 1, y: finalY, duration: 400, delay, ease: 'Cubic.easeOut',
+        });
+      }
+    }
   }
 
   checkKonami(event) {

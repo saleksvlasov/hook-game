@@ -1,7 +1,11 @@
-import { GOLD, DARK_RED, FONT, Z } from '../constants.js';
+import { GOLD, DARK_RED, FONT, Z, BLOOD_RED_HEX } from '../constants.js';
 import { t } from '../i18n.js';
+import {
+  drawBloodSplatter, drawWantedPosterFrame,
+  drawRopeDecoration, createEmberBurst,
+} from '../managers/UIFactory.js';
 
-// Менеджер Game Over экрана — Phaser тексты + HTML кнопки
+// Менеджер Game Over экрана — premium Hunt: Showdown стиль
 export class GameOverUI {
   constructor(scene) {
     this.scene = scene;
@@ -13,6 +17,11 @@ export class GameOverUI {
     this.scoreText = null;
     this.bestText = null;
     this.newBestText = null;
+
+    // Доп. графические слои
+    this.bloodGfx = null;
+    this.posterGfx = null;
+    this.overlayRect = null;
 
     // Callbacks
     this.onContinue = null;
@@ -33,11 +42,13 @@ export class GameOverUI {
       return obj;
     };
 
-    // Затемнение
-    makeUI(this.scene.add.rectangle(W / 2, H / 2, W, H, 0x2d0000, 0.65));
+    // Затемнение — отдельная ссылка для индивидуального tween
+    this.overlayRect = makeUI(
+      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x2d0000, 0.65)
+    );
 
-    // Заголовок
-    makeUI(this.scene.add.text(W / 2, H * 0.28, t('you_died'), {
+    // Заголовок "YOU FELL"
+    this.titleText = makeUI(this.scene.add.text(W / 2, H * 0.28, t('you_died'), {
       fontSize: '42px', color: DARK_RED, fontFamily: FONT, fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 8,
     }).setOrigin(0.5));
@@ -68,48 +79,120 @@ export class GameOverUI {
       pointer-events: none;
       flex-direction: column; align-items: center; justify-content: center;
       gap: 12px; padding-top: 15%;
-    `;
-
-    const btnStyle = `
-      font-family: Georgia, serif; cursor: pointer;
-      border: none; outline: none; letter-spacing: 1px;
-      pointer-events: auto;
+      opacity: 0; transition: opacity 0.3s ease;
     `;
 
     // CONTINUE (AD)
-    this.continueBtn = document.createElement('button');
-    this.continueBtn.textContent = t('continue_ad');
-    this.continueBtn.style.cssText = `${btnStyle}
-      background: #3B1A00; color: #C8A96E;
-      border: 2px solid #7A4A1E; font-size: 15px; font-weight: bold;
-      padding: 10px 32px;`;
-    this.continueBtn.addEventListener('click', () => this.onContinue?.());
+    this.continueBtn = this._createButton(t('continue_ad'), 'continue');
     this.buttonsDiv.appendChild(this.continueBtn);
 
     // RESTART
-    this.restartBtn = document.createElement('button');
-    this.restartBtn.textContent = t('restart');
-    this.restartBtn.style.cssText = `${btnStyle}
-      background: #6B0F0F; color: #C8A96E;
-      border: 2px solid #C8A96E; font-size: 20px; font-weight: bold;
-      padding: 12px 44px;`;
-    this.restartBtn.addEventListener('click', () => this.onRestart?.());
+    this.restartBtn = this._createButton(t('restart'), 'restart');
     this.buttonsDiv.appendChild(this.restartBtn);
 
     // MENU
-    this.menuBtn = document.createElement('button');
-    this.menuBtn.textContent = t('menu');
-    this.menuBtn.style.cssText = `${btnStyle}
-      background: #1a0f00; color: #5B4020;
-      border: 1px solid #3B2A10; font-size: 14px;
-      padding: 8px 36px;`;
-    this.menuBtn.addEventListener('click', () => this.onMenu?.());
+    this.menuBtn = this._createButton(t('menu'), 'menu');
     this.buttonsDiv.appendChild(this.menuBtn);
 
     document.body.appendChild(this.buttonsDiv);
   }
 
+  // Создание кнопки с premium стилями
+  _createButton(label, type) {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+
+    const base = `font-family: Georgia, serif; cursor: pointer;
+      outline: none; letter-spacing: 2px; pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;`;
+
+    if (type === 'restart') {
+      btn.style.cssText = `${base}
+        background: linear-gradient(180deg, #5B1A1A 0%, #3B0808 100%);
+        color: #C8A96E;
+        border: 2px solid #C8A96E;
+        font-size: 20px; font-weight: bold;
+        padding: 14px 48px;
+        border-radius: 2px;
+        box-shadow: 0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        transition: transform 0.1s, box-shadow 0.1s;
+      `;
+      // Active press effect
+      const onDown = () => {
+        btn.style.transform = 'translateY(3px)';
+        btn.style.boxShadow = '0 1px 0 #1a0500';
+      };
+      const onUp = () => {
+        btn.style.transform = '';
+        btn.style.boxShadow = '0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15)';
+      };
+      btn.addEventListener('touchstart', onDown, { passive: true });
+      btn.addEventListener('mousedown', onDown);
+      btn.addEventListener('touchend', onUp, { passive: true });
+      btn.addEventListener('mouseup', onUp);
+      btn.addEventListener('click', () => this.onRestart?.());
+
+    } else if (type === 'continue') {
+      btn.style.cssText = `${base}
+        background: linear-gradient(180deg, #5B1A1A 0%, #3B0808 100%);
+        color: #C8A96E;
+        border: 2px solid #7A4A1E;
+        font-size: 15px; font-weight: bold;
+        padding: 10px 36px;
+        border-radius: 2px;
+        box-shadow: 0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        transition: transform 0.1s, box-shadow 0.1s;
+      `;
+      const onDown = () => {
+        btn.style.transform = 'translateY(3px)';
+        btn.style.boxShadow = '0 1px 0 #1a0500';
+      };
+      const onUp = () => {
+        btn.style.transform = '';
+        btn.style.boxShadow = '0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15)';
+      };
+      btn.addEventListener('touchstart', onDown, { passive: true });
+      btn.addEventListener('mousedown', onDown);
+      btn.addEventListener('touchend', onUp, { passive: true });
+      btn.addEventListener('mouseup', onUp);
+      btn.addEventListener('click', () => this.onContinue?.());
+
+    } else if (type === 'menu') {
+      btn.style.cssText = `${base}
+        background: transparent;
+        color: #7B6040;
+        border: none;
+        border-bottom: 1px solid transparent;
+        font-size: 14px;
+        padding: 8px 36px;
+        transition: border-bottom-color 0.2s, color 0.2s, transform 0.1s;
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.borderBottomColor = '#7A4A1E';
+        btn.style.color = '#C8A96E';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.borderBottomColor = 'transparent';
+        btn.style.color = '#7B6040';
+      });
+      const onDown = () => { btn.style.transform = 'scale(0.97)'; };
+      const onUp = () => { btn.style.transform = ''; };
+      btn.addEventListener('touchstart', onDown, { passive: true });
+      btn.addEventListener('mousedown', onDown);
+      btn.addEventListener('touchend', onUp, { passive: true });
+      btn.addEventListener('mouseup', onUp);
+      btn.addEventListener('click', () => this.onMenu?.());
+    }
+
+    return btn;
+  }
+
   show(score, best, isNewBest, continueUsed) {
+    const W = this.scene.W;
+    const H = this.scene.H;
+
     this.scoreText.setText(`${t('depth_label')}: ${score}${t('unit_m')}`);
     this.bestText.setText(`${t('record_label')}: ${best}${t('unit_m')}`);
 
@@ -120,41 +203,147 @@ export class GameOverUI {
       this.bestText.setColor('#6B5030');
     }
 
-    this.scene.time.delayedCall(500, () => {
-      for (const el of this.elements) el.setVisible(true);
-      this.buttonsDiv.style.display = 'flex';
-      this.continueBtn.style.display = continueUsed ? 'none' : 'block';
+    // === Кровавые брызги на фоне (depth Z.BLOOD) ===
+    this.bloodGfx = this.scene.add.graphics()
+      .setScrollFactor(0).setDepth(Z.BLOOD).setAlpha(0);
+    drawBloodSplatter(this.bloodGfx, W / 2, H * 0.5, 120, 0.8);
 
-      if (!isNewBest) {
-        this.newBestText.setVisible(false);
-      } else {
-        this.newBestText.setVisible(true);
-        this.newBestText.setScale(0.3).setAlpha(0);
-        this.scene.tweens.add({
-          targets: this.newBestText,
-          scale: 1.15,
-          alpha: 1,
-          duration: 500,
-          delay: 200,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            this.scene.tweens.add({
-              targets: this.newBestText,
-              scale: 1.0,
-              duration: 700,
-              yoyo: true,
-              repeat: -1,
-              ease: 'Sine.easeInOut',
-            });
-          },
-        });
-      }
+    // === Рамка розыскного плаката за счётом ===
+    this.posterGfx = this.scene.add.graphics()
+      .setScrollFactor(0).setDepth(Z.GAME_OVER).setAlpha(0);
+    drawWantedPosterFrame(this.posterGfx, W / 2, H * 0.38, 200, 80);
+    // Верёвки сверху и снизу постера
+    drawRopeDecoration(this.posterGfx, W / 2 - 100, H * 0.38 - 44, W / 2 + 100, H * 0.38 - 44);
+    drawRopeDecoration(this.posterGfx, W / 2 - 100, H * 0.38 + 44, W / 2 + 100, H * 0.38 + 44);
+
+    // --- Stagger анимации ---
+
+    // 0ms: кровь alpha 0 → 0.6
+    this.scene.tweens.add({
+      targets: this.bloodGfx,
+      alpha: 0.6,
+      duration: 300,
+      ease: 'Linear',
     });
+
+    // 0ms: overlay alpha 0 → 0.65 (400ms)
+    this.overlayRect.setVisible(true).setAlpha(0);
+    this.scene.tweens.add({
+      targets: this.overlayRect,
+      alpha: 0.65,
+      duration: 400,
+      ease: 'Linear',
+    });
+
+    // 300ms: "YOU FELL" — dramatic scale 2 → 1, alpha 0 → 1
+    this.titleText.setVisible(true).setScale(2.0).setAlpha(0);
+    this.scene.tweens.add({
+      targets: this.titleText,
+      scale: 1.0,
+      alpha: 1,
+      duration: 500,
+      delay: 300,
+      ease: 'Back.easeOut',
+    });
+
+    // 500ms: poster + score/record fade in (y +30 → 0, alpha 0 → 1)
+    this.posterGfx.setAlpha(0);
+    this.scoreText.setVisible(true).setAlpha(0).setY(H * 0.36 + 30);
+    this.bestText.setVisible(true).setAlpha(0).setY(H * 0.40 + 30);
+
+    this.scene.tweens.add({
+      targets: this.posterGfx,
+      alpha: 1,
+      duration: 400,
+      delay: 500,
+      ease: 'Cubic.easeOut',
+    });
+    this.scene.tweens.add({
+      targets: [this.scoreText, this.bestText],
+      alpha: 1,
+      y: (target) => target === this.scoreText ? H * 0.36 : H * 0.40,
+      duration: 400,
+      delay: 500,
+      ease: 'Cubic.easeOut',
+    });
+
+    // 700ms: HTML кнопки opacity 0 → 1
+    this.buttonsDiv.style.display = 'flex';
+    this.buttonsDiv.style.opacity = '0';
+    this.continueBtn.style.display = continueUsed ? 'none' : 'block';
+
+    this.scene.time.delayedCall(700, () => {
+      this.buttonsDiv.style.opacity = '1';
+    });
+
+    // Новый рекорд: пульсация + искры
+    if (isNewBest) {
+      this.newBestText.setVisible(true).setScale(0.3).setAlpha(0);
+      this.scene.tweens.add({
+        targets: this.newBestText,
+        scale: 1.15,
+        alpha: 1,
+        duration: 500,
+        delay: 500,
+        ease: 'Back.easeOut',
+        onComplete: () => {
+          this.scene.tweens.add({
+            targets: this.newBestText,
+            scale: 1.0,
+            duration: 700,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+        },
+      });
+      // 600ms: искры вокруг рекорда
+      this.scene.time.delayedCall(600, () => {
+        createEmberBurst(this.scene, W / 2, H * 0.40, 15);
+      });
+    }
   }
 
   hide() {
-    for (const el of this.elements) el.setVisible(false);
-    this.buttonsDiv.style.display = 'none';
+    // Анимированное скрытие Phaser-элементов
+    const allTargets = this.elements.filter(el => el && el.active);
+    if (allTargets.length > 0) {
+      this.scene.tweens.add({
+        targets: allTargets,
+        alpha: 0,
+        duration: 200,
+        ease: 'Linear',
+      });
+    }
+
+    // Poster и blood — тоже fade out
+    if (this.posterGfx) {
+      this.scene.tweens.add({
+        targets: this.posterGfx,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => { this.posterGfx.destroy(); this.posterGfx = null; },
+      });
+    }
+
+    if (this.bloodGfx) {
+      this.scene.tweens.add({
+        targets: this.bloodGfx,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => { this.bloodGfx.destroy(); this.bloodGfx = null; },
+      });
+    }
+
+    // HTML кнопки — fade out, потом hide
+    this.buttonsDiv.style.opacity = '0';
+    setTimeout(() => {
+      this.buttonsDiv.style.display = 'none';
+      // Сбрасываем видимость Phaser-элементов после fade
+      for (const el of this.elements) {
+        if (el && el.active) el.setVisible(false).setAlpha(1);
+      }
+    }, 200);
   }
 
   showContinueBtn(visible) {
@@ -162,6 +351,8 @@ export class GameOverUI {
   }
 
   destroy() {
+    if (this.bloodGfx) { this.bloodGfx.destroy(); this.bloodGfx = null; }
+    if (this.posterGfx) { this.posterGfx.destroy(); this.posterGfx = null; }
     const el = document.getElementById('game-over-buttons');
     if (el) el.remove();
   }
