@@ -7,7 +7,7 @@ import { t } from '../i18n.js';
 import {
   GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
   MIN_ROPE, SWING_FRICTION, RELEASE_BOOST, HOOK_COOLDOWN,
-  FALL_SPEED_PENALTY_START, FALL_SPEED_PENALTY_MAX, HOOK_RANGE_FALLING_MIN, Z,
+  FALL_SPEED_PENALTY_START, FALL_SPEED_PENALTY_MAX, HOOK_RANGE_FALLING_MIN, MIN_SWING_SPEED, Z,
 } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -28,6 +28,7 @@ export class GameScene extends Phaser.Scene {
   // Удалить HTML кнопки при остановке сцены
   shutdown() {
     this.gameOverUI.destroy();
+    this.biome.destroy();
   }
 
   create() {
@@ -176,9 +177,9 @@ export class GameScene extends Phaser.Scene {
     this.swingSpeed = tangent / this.ropeLength;
 
     // Начальный толчок — достаточный для раскачки, но не для перелёта
-    if (Math.abs(this.swingSpeed) < 1.5) {
+    if (Math.abs(this.swingSpeed) < MIN_SWING_SPEED) {
       const dir = Math.sign(this.swingSpeed) || (px < nearest.x ? -1 : 1);
-      this.swingSpeed = dir * 1.5;
+      this.swingSpeed = dir * MIN_SWING_SPEED;
     }
 
     this.anchorMgr.highlightAnchor(nearest, true);
@@ -250,6 +251,7 @@ export class GameScene extends Phaser.Scene {
       ? await purchaseContinue()
       : await showRewarded();
     if (!this.isDead) return;
+    if (!this.scene.isActive()) return;
     if (rewarded) {
       this.isDead = false;
       this.continueUsed = true;

@@ -278,7 +278,8 @@ export class MenuScene extends Phaser.Scene {
     this.konamiSequence = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right'];
     this.konamiIndex = 0;
     this.konamiTriggered = false;
-    this.input.keyboard.on('keydown', (event) => this.checkKonami(event));
+    this._konamiHandler = (event) => this.checkKonami(event);
+    this.input.keyboard.on('keydown', this._konamiHandler);
 
     // --- Stagger entry анимация ---
     this._playStaggerEntries();
@@ -309,6 +310,12 @@ export class MenuScene extends Phaser.Scene {
           targets: target, alpha: 1, y: finalY, duration: 400, delay, ease: 'Cubic.easeOut',
         });
       }
+    }
+  }
+
+  shutdown() {
+    if (this._konamiHandler) {
+      this.input.keyboard.off('keydown', this._konamiHandler);
     }
   }
 

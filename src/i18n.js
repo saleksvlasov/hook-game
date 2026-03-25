@@ -67,7 +67,7 @@ export function getLang() {
 
 export function setLang(code) {
   currentLang = code;
-  localStorage.setItem(LANG_KEY, code);
+  try { localStorage.setItem(LANG_KEY, code); } catch(e) { /* quota exceeded */ }
 }
 
 export function t(key) {

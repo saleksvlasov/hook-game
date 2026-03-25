@@ -387,6 +387,23 @@ export class BiomeManager {
 
   // ===================== HELPERS =====================
 
+  destroy() {
+    for (let i = 0; i < this.layers.length; i++) {
+      const layer = this.layers[i];
+      if (layer.bgImage) layer.bgImage.destroy();
+      if (layer.parallaxFar) layer.parallaxFar.destroy();
+      if (layer.parallaxNear) layer.parallaxNear.destroy();
+      if (layer.fogGfx) layer.fogGfx.destroy();
+      for (const p of layer.particles) {
+        if (p.gfx) p.gfx.destroy();
+      }
+      // Remove canvas texture
+      const key = `bg-biome-${i}`;
+      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
+    }
+    this.layers = [];
+  }
+
   _setLayerAlpha(layer, alpha) {
     layer.bgImage.setAlpha(alpha);
     layer.parallaxFar.setAlpha(alpha);

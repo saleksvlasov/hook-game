@@ -9,6 +9,14 @@ if (window.Telegram?.WebApp) {
   tg.expand();
 }
 
+// Safe area: set CSS variable from env() for JS access
+const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');
+if (!sat || sat === '0px') {
+  // Fallback: check if we're on iPhone with notch (screen height >= 812)
+  const isNotched = /iPhone/.test(navigator.userAgent) && screen.height >= 812;
+  document.documentElement.style.setProperty('--sat', isNotched ? '47px' : '0px');
+}
+
 const W = document.documentElement.clientWidth;
 const H = document.documentElement.clientHeight;
 

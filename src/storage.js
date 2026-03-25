@@ -8,7 +8,7 @@ export function getBest() {
 export function saveBest(value) {
   const current = getBest();
   if (value > current) {
-    localStorage.setItem(KEY, String(value));
+    try { localStorage.setItem(KEY, String(value)); } catch(e) { /* quota exceeded */ }
     return true;
   }
   return false;
@@ -19,5 +19,5 @@ export function getMoon() {
 }
 
 export function saveMoon() {
-  localStorage.setItem(MOON_KEY, 'yes');
+  try { localStorage.setItem(MOON_KEY, 'yes'); } catch(e) { /* quota exceeded */ }
 }

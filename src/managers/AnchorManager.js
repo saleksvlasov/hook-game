@@ -6,7 +6,6 @@ export class AnchorManager {
   constructor(scene) {
     this.scene = scene;
     this.anchors = [];
-    this.anchorContainers = [];
     this.highestAnchorY = SPAWN_Y - 120;  // Было -180 — первый якорь ближе к спавну
     this.prevAnchorX = scene.W / 2;
   }
@@ -42,9 +41,6 @@ export class AnchorManager {
         if (anchor._container) anchor._container.destroy();
         anchor.destroy();
         this.anchors.splice(i, 1);
-        if (this.anchorContainers[i]) {
-          this.anchorContainers.splice(i, 1);
-        }
       }
     }
   }
@@ -54,8 +50,6 @@ export class AnchorManager {
     const g = this.scene.add.graphics();
     this.drawButcherHook(g, false);
     c.add(g);
-    this.anchorContainers.push(c);
-
     const dot = this.scene.add.circle(x, y, 12, 0xffffff, 0).setDepth(Z.ANCHORS);
     dot._container = c;
     this.anchors.push(dot);
@@ -114,6 +108,5 @@ export class AnchorManager {
       anchor.destroy();
     }
     this.anchors.length = 0;
-    this.anchorContainers.length = 0;
   }
 }
