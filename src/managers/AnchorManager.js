@@ -7,7 +7,7 @@ export class AnchorManager {
     this.scene = scene;
     this.anchors = [];
     this.anchorContainers = [];
-    this.highestAnchorY = SPAWN_Y - 180;
+    this.highestAnchorY = SPAWN_Y - 120;  // Было -180 — первый якорь ближе к спавну
     this.prevAnchorX = scene.W / 2;
   }
 

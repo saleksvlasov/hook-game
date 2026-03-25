@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { playHook, playAttach, playRelease, playDeath, playRecord } from '../audio.js';
 import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
+import { isTelegram, purchaseContinue } from '../telegram.js';
 import { t } from '../i18n.js';
 import {
   GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
-  MIN_ROPE, SWING_FRICTION, Z,
+  MIN_ROPE, SWING_FRICTION, RELEASE_BOOST, Z,
 } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -158,9 +159,11 @@ export class GameScene extends Phaser.Scene {
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    // Мягкий начальный импульс только если совсем без инерции (первый крюк)
-    if (Math.abs(this.swingSpeed) < 0.3) {
-      this.swingSpeed = px < nearest.x ? -0.8 : 0.8;
+    // Минимальная раскачка — без неё маятник еле шевелится (±20°)
+    const MIN_SWING = 3.0;
+    if (Math.abs(this.swingSpeed) < MIN_SWING) {
+      const dir = Math.sign(this.swingSpeed) || (px < nearest.x ? -1 : 1);
+      this.swingSpeed = dir * MIN_SWING;
     }
 
     this.anchorMgr.highlightAnchor(nearest, true);
@@ -177,8 +180,8 @@ export class GameScene extends Phaser.Scene {
     this.isHooked = false;
     this.player.body.allowGravity = true;
 
-    // Скорость при отпускании — касательная к дуге
-    const speed = this.swingSpeed * this.ropeLength;
+    // Скорость при отпускании — касательная к дуге + boost для game feel
+    const speed = this.swingSpeed * this.ropeLength * RELEASE_BOOST;
     const vx = -speed * Math.sin(this.swingAngle);
     const vy = speed * Math.cos(this.swingAngle);
     this.player.body.setVelocity(vx, vy);
@@ -221,7 +224,10 @@ export class GameScene extends Phaser.Scene {
 
   async continueWithAd() {
     this.gameOverUI.hide();
-    const rewarded = await showRewarded();
+    // В Telegram — оплата Stars, иначе — rewarded ad
+    const rewarded = isTelegram()
+      ? await purchaseContinue()
+      : await showRewarded();
     if (!this.isDead) return;
     if (rewarded) {
       this.isDead = false;
@@ -254,7 +260,7 @@ export class GameScene extends Phaser.Scene {
   async handleRestart() {
     trackGameEnd();
     this.gameOverUI.hide();
-    if (shouldShowInterstitial()) {
+    if (!isTelegram() && shouldShowInterstitial()) {
       await showInterstitial();
     }
     this.scene.stop('GameScene');

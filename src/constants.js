@@ -2,17 +2,18 @@
 
 // Физика
 export const GRAVITY = 980;              // Было 1200 — легче раскачиваться
-export const HOOK_RANGE = 300;           // Радиус зацепа
-export const MAX_ROPE_LENGTH = 280;      // Было 160 — верёвка = реальное расстояние, без телепорта
+export const HOOK_RANGE = 380;           // Было 300 — увеличен чтобы доставать до следующего якоря
+export const MAX_ROPE_LENGTH = 220;      // Короче = быстрее качания, меньше выброс за экран
 export const MIN_ROPE = 50;
-export const SWING_FRICTION = 0.9985;    // Было 0.997 — маятник дольше держит энергию
+export const SWING_FRICTION = 0.9996;    // Потеря 2.4%/сек — маятник держит энергию, третье качание -7% от первого
+export const RELEASE_BOOST = 1.4;        // Snap при отпускании как в Stickman Hook
 export const TRAIL_SPEED_THRESHOLD = 150;
 
 // Мир
 export const WORLD_HEIGHT = 100000;
 export const ANCHOR_SPACING_Y = 240;     // Было 280 — крюки ближе, достижимы раскачкой
 export const GROUND_Y = WORLD_HEIGHT - 10;
-export const SPAWN_Y = WORLD_HEIGHT - 200;
+export const SPAWN_Y = WORLD_HEIGHT - 400;  // Было -200 — выше от земли, игрок успевает зацепиться
 
 // Пасхалки
 export const BOUNTY_HEIGHT = 100;

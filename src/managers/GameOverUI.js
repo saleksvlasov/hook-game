@@ -1,5 +1,6 @@
 import { GOLD, DARK_RED, FONT, Z } from '../constants.js';
 import { t } from '../i18n.js';
+import { isTelegram } from '../telegram.js';
 import {
   drawBloodSplatter, drawWantedPosterFrame,
   drawRopeDecoration, createEmberBurst,
@@ -82,8 +83,9 @@ export class GameOverUI {
       opacity: 0; transition: opacity 0.3s ease;
     `;
 
-    // CONTINUE (AD)
-    this.continueBtn = this._createButton(t('continue_ad'), 'continue');
+    // CONTINUE — Stars в Telegram, AD вне Telegram
+    const continueLabel = isTelegram() ? t('continue_star') : t('continue_ad');
+    this.continueBtn = this._createButton(continueLabel, 'continue');
     this.buttonsDiv.appendChild(this.continueBtn);
 
     // RESTART
