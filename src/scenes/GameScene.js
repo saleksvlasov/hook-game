@@ -221,8 +221,8 @@ export class GameScene extends Phaser.Scene {
     const isNewBest = saveBest(this.maxHeight);
     this.sessionBest = getBest();
 
-    // Сохраняем рекорд онлайн (fire-and-forget)
-    if (isNewBest && this.maxHeight > 0) {
+    // Сохраняем рекорд онлайн ВСЕГДА — сервер сам решает обновлять ли
+    if (this.maxHeight > 0) {
       saveScoreOnline(this.maxHeight);
     }
 
