@@ -194,17 +194,18 @@ export class ObstacleManager {
       const sway = Math.sin(time * 0.003 + obs.x * 0.1) * 3;
       obs.container.setY(obs.baseY + sway);
 
-      // Firefly — пульсация glow (перерисовка каждые ~10 кадров для экономии)
-      if (obs.type === 3 && Math.floor(time / 160) % 1 === 0) {
+      // Firefly — пульсация glow каждые ~10 кадров
+      if (obs.type === 3 && Math.floor(time / 160) % 10 === 0) {
         const pulse = 0.5 + 0.5 * Math.sin(time * 0.005 + obs.x);
         obs.container.setAlpha(0.7 + pulse * 0.3);
       }
     }
 
-    // Cleanup далеко ниже игрока
+    // Cleanup: далеко ниже игрока ИЛИ уже hit (destroyed)
     for (let i = this.active.length - 1; i >= 0; i--) {
-      if (this.active[i].baseY > playerY + 3000) {
-        this.active[i].container.destroy();
+      const obs = this.active[i];
+      if (obs.hit || obs.baseY > playerY + 3000) {
+        if (!obs.hit && obs.container) obs.container.destroy();
         this.active.splice(i, 1);
       }
     }

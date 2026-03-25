@@ -26,11 +26,17 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  // Удалить HTML кнопки при остановке сцены
+  // Полная очистка при остановке сцены
   shutdown() {
+    this.input.off('pointerdown');
     this.gameOverUI.destroy();
     this.biome.destroy();
     this.obstacles.destroy();
+    this.trail.destroy();
+    this.rope.destroy();
+    this.swamp.destroy();
+    this.hunter.destroy();
+    this.anchorMgr.destroy();
   }
 
   create() {
