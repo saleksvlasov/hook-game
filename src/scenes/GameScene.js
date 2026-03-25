@@ -256,22 +256,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   async continueWithAd() {
-    this.gameOverUI.hide();
-    // В Telegram — оплата Stars, иначе — rewarded ad
+    // НЕ скрываем UI до результата — просто ждём ответ
     const rewarded = isTelegram()
       ? await purchaseContinue()
       : await showRewarded();
     if (!this.isDead) return;
     if (!this.scene.isActive()) return;
+
     if (rewarded) {
+      // Успех — скрываем UI и респавним
+      this.gameOverUI.hide();
       this.isDead = false;
       this.continueUsed = true;
 
-      // Респавн на высоте текущей попытки (где только что умер)
       const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
       const targetY = GROUND_Y - targetHeight * 10;
 
-      // Генерируем якоря до этой высоты чтобы было за что цепляться
       this.anchorMgr.generateAnchorsUpTo(targetY - 1500);
       this.obstacles.generateUpTo(targetY - 1500, this.anchorMgr.anchors);
 
@@ -281,15 +281,10 @@ export class GameScene extends Phaser.Scene {
       this.player.body.setVelocity(0, -300);
       this.playerContainer.setAlpha(1);
 
-      // Камера сразу на новую позицию
       this.cameras.main.scrollY = targetY - this.H * 0.55;
-
       this.hud.setHint('click_hook');
-    } else {
-      for (const el of this.gameOverUI.elements) el.setVisible(true);
-      this.gameOverUI.buttonsDiv.style.display = 'flex';
-      this.gameOverUI.continueBtn.style.display = this.continueUsed ? 'none' : 'block';
     }
+    // Отмена — ничего не делаем, кнопки уже видны
   }
 
   async handleRestart() {
