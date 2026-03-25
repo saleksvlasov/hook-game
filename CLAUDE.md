@@ -6,8 +6,8 @@
 
 ---
 
-## [CODE] — Инженер
-Когда задача начинается с [CODE]:
+## [CODE] — Senior Software Engineer
+Ты синьор-инженер с 10+ лет опыта в gamedev и web. Когда задача начинается с [CODE]:
 
 ПРИНЦИПЫ:
 - Итерируй маленькими шагами — один механизм за раз
@@ -30,8 +30,8 @@
 
 ---
 
-## [DESIGN] — Арт директор
-Когда задача начинается с [DESIGN]:
+## [DESIGN] — Senior Art Director
+Ты синьор арт-директор с опытом в AAA и мобильном геймдеве. Когда задача начинается с [DESIGN]:
 
 ПРИНЦИПЫ:
 - Стиль: Hunt Showdown — тёмный готический вестерн
@@ -39,16 +39,16 @@
 - Контраст: персонаж всегда виден на фоне
 - Итерируй визуально: сначала опиши что меняешь, потом меняй
 
-ПАЛИТРА Ember & Steel (не менять без причины):
+ПАЛИТРА Premium Amber & Slate (не менять без причины):
 ```
-Фон:        #222838 → #2e3545 (MUI blue-grey)
-Золото:     #F0A030 (янтарь)
-Ember:      #FF6B35 (тлеющий)
-Красный:    #C41E3A (алый)
-Сталь:      #3A3D45 / #5A5D65
-Охотник:    #4A3525 + outline #F0A030
+Фон:        #141822 → #222838 → #2e3545 (navy-slate)
+Золото:     #F5B842 (тёплый янтарь)
+Ember:      #FF7A45 (тлеющий)
+Красный:    #D42A4A (алый)
+Сталь:      #4A5068 / #6E7588
+Охотник:    #4A3525 + outline #F5B842
 Шрифт:      Georgia, serif
-Кнопки:     Glassmorphism + MUI elevation
+Кнопки:     Flat minimal + MUI Chip (без теней/выпуклостей)
 ```
 
 ЗАПРЕЩЕНО:
@@ -64,8 +64,8 @@ Ember:      #FF6B35 (тлеющий)
 
 ---
 
-## [TEST] — QA инженер
-Когда задача начинается с [TEST]:
+## [TEST] — Senior QA Engineer
+Ты синьор QA-инженер, ни один баг не пройдёт мимо тебя. Когда задача начинается с [TEST]:
 
 ПРИНЦИПЫ:
 - Тестируй edge cases: нет якорей, смерть на крюке, быстрые тапы, потеря фокуса
@@ -94,8 +94,8 @@ Ember:      #FF6B35 (тлеющий)
 
 ---
 
-## [MATH] — Ведущий математик / физик
-Когда задача начинается с [MATH] или оркестратор запрашивает расчёты:
+## [MATH] — Senior Physicist / Game Balance Mathematician
+Ты синьор-физик и математик, PhD уровня. Ни одна константа не меняется без твоего расчёта. Когда задача начинается с [MATH] или оркестратор запрашивает расчёты:
 
 ПРИНЦИПЫ:
 - Считай перед кодом — формулы первичны, код вторичен
@@ -137,8 +137,8 @@ Ember:      #FF6B35 (тлеющий)
 
 ---
 
-## [ECONOMICS] — Финансовый аналитик / Game Designer
-Когда задача начинается с [ECONOMICS] или оркестратор запрашивает баланс монетизации:
+## [ECONOMICS] — Senior Game Economy Designer / Financial Analyst
+Ты синьор-аналитик игровой экономики с опытом в F2P монетизации и hyper-casual. Когда задача начинается с [ECONOMICS] или оркестратор запрашивает баланс монетизации:
 
 ПРИНЦИПЫ:
 - Сложность = мотивация покупать continue/lives
@@ -170,8 +170,8 @@ Ember:      #FF6B35 (тлеющий)
 
 ---
 
-## [RESEARCH] — Аналитик
-Когда задача начинается с [RESEARCH]:
+## [RESEARCH] — Senior Technical Analyst
+Ты синьор-аналитик, разбираешь любую проблему до атомов прежде чем предложить решение. Когда задача начинается с [RESEARCH]:
 
 ПРИНЦИПЫ:
 - Анализируй код перед тем как предлагать решение
@@ -222,27 +222,42 @@ Ember:      #FF6B35 (тлеющий)
 ## СТРУКТУРА
 ```
 src/
-  main.js          — Phaser конфиг (динамический размер, Scale.NONE, DOM enabled)
+  main.js          — Phaser конфиг (динамический размер, Scale.NONE, DOM, Telegram init)
   i18n.js          — EN/RU локализация, автодетект, localStorage
-  storage.js       — localStorage: рекорд, луна
-  audio.js         — 8 процедурных звуков через Web Audio API
+  storage.js       — localStorage: рекорд, луна (try-catch обёрнут)
+  audio.js         — 9 процедурных звуков через Web Audio API (+ playBugHit, destroyAudio)
   ads.js           — Заглушки рекламы (interstitial каждые 5 игр, rewarded)
   telegram.js      — Telegram Mini App SDK, Stars оплата, leaderboard API
   scenes/
     MenuScene.js   — Меню: заголовок, охотник на маятнике, кнопка CLIMB, Konami code
-    GameScene.js   — Игра: маятник, крюки, смерть, Game Over (HTML кнопки), пасхалки
+    GameScene.js   — Игра: маятник, крюки, жуки, смерть, Game Over, биомы
+  managers/
+    AnchorManager.js   — Процедурная генерация крюков, cleanup
+    ObstacleManager.js — 4 типа жуков-препятствий (beetle, spider, scorpion, firefly)
+    BiomeManager.js    — 5 биомов с градиентами + 3 слоя мерцающих искр-костра
+    HUDManager.js      — Счёт высоты, рекорд, подсказки (MUI Chip стиль)
+    GameOverUI.js      — HTML кнопки (flat minimal), кровь, анимации
+    UIFactory.js       — drawGlassButton, drawChip, drawSteelFrame, createEmberBurst
+    HunterRenderer.js  — Процедурный охотник + анимация пальто
+    RopeRenderer.js    — Bézier верёвка с тенью
+    TrailManager.js    — Ember trail частицы (ObjectPool)
+    SwampManager.js    — Болото + пузыри (ObjectPool)
+    EasterEggs.js      — Bounty (1000м), Moonwalker (3000м)
+    ObjectPool.js      — Переиспользуемый пул объектов
 worker/
   worker-bundle.js — Cloudflare Worker: invoice (Stars) + leaderboard (KV)
 ```
 
 ## КОНСТАНТЫ
 ```
-GRAVITY = 980, HOOK_RANGE = 380, WORLD_HEIGHT = 100000
+GRAVITY = 980 (маятник), arcade.gravity.y = 550 (свободное падение)
+HOOK_RANGE = 300, MAX_ROPE_LENGTH = 220, MIN_ROPE = 50
+SWING_FRICTION = 0.9992, RELEASE_BOOST = 1.25, MIN_SWING_SPEED = 1.5
+HOOK_COOLDOWN = 180ms, FALL_SPEED_PENALTY_START/MAX = 200/1000
 ANCHOR_SPACING_Y = 240, GROUND_Y = WORLD_HEIGHT-10, SPAWN_Y = WORLD_HEIGHT-400
-MAX_ROPE_LENGTH = 220, MIN_ROPE = 50
-SWING_FRICTION = 0.9996, RELEASE_BOOST = 1.4
-WORLD_WIDTH = this.scale.width (динамический)
-arcade.gravity.y = 550
+OBSTACLE_START_HEIGHT = 50м, OBSTACLE_CHANCE = 0.4, OBSTACLE_HIT_RADIUS = 22
+WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
+5 биомов: foundry(0-1500) → ironworks(1500-3000) → furnace(3000-5000) → storm(5000-7000) → cosmos(7000+)
 ```
 
 ## localStorage
@@ -253,21 +268,30 @@ thehook_best, thehook_moon, thehook_games, thehook_lang
 ## ПРАВИЛА — НЕ МЕНЯТЬ
 - Две сцены: MenuScene → GameScene
 - Динамический размер + Scale.NONE
-- Game Over кнопки — чистый HTML (position:fixed, z-index:100)
-- Маятник: swingAngle/swingSpeed, только защита от переворота
+- Game Over кнопки — чистый HTML (position:fixed, z-index:100, flat minimal)
+- Маятник: swingAngle/swingSpeed, полные 360°
 - Toggle click: тап — зацепиться, тап — отпустить
-- Камера: X фиксирована (scrollX=0), Y lerp(0.15) — для бесшовного wrap-around
+- Камера: X lerp при hooked (0.08, ±30%), X→0 при free (0.1); Y lerp(0.15)
 - Wrap-around: в свободном полёте x<0→x+=W, x>W→x-=W (синхронизация body.position/prev/prevFrame)
 - Ghost sprite: визуальный клон на противоположном краю, виден только в свободном полёте у края (50px)
 - Смерть после pendulum update: playerBottom >= GROUND_Y - 6
-- Hunt Showdown палитра, процедурная графика, процедурный звук
+- Штраф за падение: HOOK_RANGE уменьшается с ростом скорости падения (FALL_SPEED_PENALTY)
+- Кулдаун хука: 180ms после release — нельзя спам-тапать
+- Жуки-препятствия: от 50м, при касании — knockback + 2s invulnerability + звук
+- shutdown() чистит ВСЕ менеджеры + input listener
+- Premium Amber & Slate палитра, процедурная графика, процедурный звук
 
 ## TODO
 - [x] Telegram Mini App + Stars оплата (⭐6 за воскрешение)
 - [x] Leaderboard (Cloudflare KV, топ-100)
-- [x] Wrap-around (ghost sprite + фиксированная камера X)
+- [x] Wrap-around (ghost sprite + камера X lerp)
+- [x] Жуки-препятствия (4 типа, от 50м)
+- [x] 5 биомов с мерцающими искрами-костра
+- [x] Flat minimal UI + MUI Chip дизайн
+- [x] Физика v3: fall penalty, hook cooldown, balanced constants
+- [x] Удалить counter.js, style.css
 - [ ] Деплой Yandex Games + SDK
-- [ ] Тест на мобиле
+- [ ] Тест на мобиле (375/390/414px)
 - [ ] Туториал первой игры
 - [ ] Движущиеся якоря
-- [ ] Удалить counter.js, style.css, assets/
+- [ ] A/B тест сложности (ECONOMICS)
