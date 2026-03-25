@@ -9,7 +9,7 @@ const config = {
   type: Phaser.AUTO,
   width: W,
   height: H,
-  backgroundColor: '#1a0e06',
+  backgroundColor: '#141820',
   parent: document.body,
   scale: {
     mode: Phaser.Scale.NONE,

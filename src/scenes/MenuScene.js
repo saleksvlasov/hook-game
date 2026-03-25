@@ -30,10 +30,10 @@ export class MenuScene extends Phaser.Scene {
     const gradTex = this.textures.createCanvas('menu-bg', 1, H);
     const ctx = gradTex.getContext();
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#080a10');
-    grad.addColorStop(0.4, '#0d0f12');
-    grad.addColorStop(0.8, '#1a1c20');
-    grad.addColorStop(1, '#0d0f12');
+    grad.addColorStop(0, '#121620');
+    grad.addColorStop(0.4, '#1a1e28');
+    grad.addColorStop(0.8, '#252a35');
+    grad.addColorStop(1, '#1a1e28');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1, H);
     gradTex.refresh();

@@ -227,9 +227,8 @@ export class GameScene extends Phaser.Scene {
       this.isDead = false;
       this.continueUsed = true;
 
-      // Респавн на высоте прошлого рекорда (до этой сессии)
-      // sessionBest сохранён при create() — это рекорд ДО текущей игры
-      const targetHeight = this.sessionBest > 0 ? this.sessionBest : 20;
+      // Респавн на высоте текущей попытки (где только что умер)
+      const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
       const targetY = GROUND_Y - targetHeight * 10;
 
       // Генерируем якоря до этой высоты чтобы было за что цепляться
