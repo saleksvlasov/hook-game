@@ -1,13 +1,13 @@
-import { GOLD, DARK_RED, FONT, Z } from '../constants.js';
-import { t, getLang } from '../i18n.js';
+import { Z } from '../constants.js';
+import { t } from '../i18n.js';
 import { ChallengeManager } from './ChallengeManager.js';
 import { SKINS } from './SkinRenderer.js';
-import { tf } from '../i18n.js';
-import { isTelegram, fetchLeaderboard, getTelegramUserId } from '../telegram.js';
+import { isTelegram } from '../telegram.js';
 import {
   drawBloodSplatter, drawWantedPosterFrame,
   drawRopeDecoration, createEmberBurst,
 } from '../managers/UIFactory.js';
+import { LeaderboardUI } from './LeaderboardUI.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN = '#00F5D4';
@@ -15,7 +15,6 @@ const NEON_PINK = '#FF2E63';
 const NEON_AMBER = '#FFB800';
 const NEON_BG = '#0A0E1A';
 const NEON_STEEL = '#4A5580';
-const NEON_STEEL_MUTED = '#2A3050';
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 
 // Менеджер Game Over экрана — neon western glassmorphism
@@ -36,7 +35,8 @@ export class GameOverUI {
     this.posterGfx = null;
     this.overlayRect = null;
 
-    this.leaderboardDiv = null;
+    // Лидерборд — отдельный модуль
+    this.leaderboardUI = new LeaderboardUI();
 
     // Callbacks
     this.onContinue = null;
@@ -120,7 +120,7 @@ export class GameOverUI {
     document.body.appendChild(this.buttonsDiv);
 
     // Панель лидерборда (HTML overlay)
-    this._createLeaderboardPanel();
+    this.leaderboardUI.create();
   }
 
   // Neon glass стиль кнопок — все кнопки одинаковая база, цвет зависит от типа
@@ -204,108 +204,11 @@ export class GameOverUI {
       restart: () => this.onRestart?.(),
       continue: () => this.onContinue?.(),
       menu: () => this.onMenu?.(),
-      leaderboard: () => this._showLeaderboard(),
+      leaderboard: () => this.leaderboardUI.show(),
     };
     btn.addEventListener('click', () => handlers[type]?.());
 
     return btn;
-  }
-
-  _createLeaderboardPanel() {
-    this.leaderboardDiv = document.createElement('div');
-    this.leaderboardDiv.id = 'leaderboard-panel';
-    this.leaderboardDiv.style.cssText = `
-      display: none; position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%; z-index: ${Z.HTML_BUTTONS + 10};
-      background: rgba(5, 8, 16, 0.96);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      flex-direction: column; align-items: center;
-      padding: 40px 16px 20px;
-      overflow-y: auto;
-      opacity: 0; transition: opacity 0.3s ease;
-    `;
-
-    // Кнопка закрытия — neon cyan
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = '\u2715';
-    closeBtn.style.cssText = `
-      position: absolute; top: 12px; right: 16px;
-      background: none; border: none; color: ${NEON_STEEL};
-      font-size: 26px; cursor: pointer; pointer-events: auto;
-      -webkit-tap-highlight-color: transparent;
-      transition: color 0.15s ease;
-    `;
-    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.color = NEON_CYAN; });
-    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.color = NEON_STEEL; });
-    closeBtn.addEventListener('click', () => this._hideLeaderboard());
-    this.leaderboardDiv.appendChild(closeBtn);
-
-    // Заголовок — neon amber
-    const title = document.createElement('div');
-    title.textContent = `\uD83C\uDFC6 ${t('leaderboard')}`;
-    title.style.cssText = `
-      font-family: ${NEON_FONT}; font-size: 26px; font-weight: bold;
-      color: ${NEON_AMBER}; margin-bottom: 24px; letter-spacing: 3px;
-      text-transform: uppercase;
-    `;
-    this.leaderboardDiv.appendChild(title);
-
-    // Контейнер для списка
-    this.lbList = document.createElement('div');
-    this.lbList.style.cssText = `
-      width: 100%; max-width: 360px;
-    `;
-    this.leaderboardDiv.appendChild(this.lbList);
-
-    document.body.appendChild(this.leaderboardDiv);
-  }
-
-  async _showLeaderboard() {
-    const lb = await fetchLeaderboard();
-    const myId = getTelegramUserId();
-
-    this.lbList.innerHTML = '';
-
-    if (lb.length === 0) {
-      this.lbList.innerHTML = `<div style="color:${NEON_STEEL};font-family:${NEON_FONT};text-align:center;padding:40px 0;font-size:16px">${t('lb_empty')}</div>`;
-    } else {
-      lb.forEach((entry, i) => {
-        const isMe = myId && entry.userId === myId;
-        const row = document.createElement('div');
-        row.style.cssText = `
-          display: flex; align-items: center; padding: 12px 14px;
-          margin-bottom: 6px; border-radius: 10px;
-          background: ${isMe ? 'rgba(0, 245, 212, 0.08)' : 'rgba(10, 14, 26, 0.70)'};
-          border: 1px solid ${isMe ? 'rgba(0, 245, 212, 0.30)' : 'rgba(42, 48, 80, 0.40)'};
-          font-family: ${NEON_FONT};
-        `;
-
-        const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
-        const rank = medal || `${i + 1}`;
-
-        row.innerHTML = `
-          <span style="width:36px;text-align:center;font-size:${medal ? '20px' : '15px'};color:${NEON_STEEL}">${rank}</span>
-          <span style="flex:1;color:${isMe ? NEON_CYAN : '#E0F0FF'};font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${entry.name}${isMe ? ` <span style="font-size:12px;color:${NEON_CYAN}">${t('lb_you')}</span>` : ''}
-          </span>
-          <span style="color:${NEON_AMBER};font-size:16px;font-weight:bold">${entry.score}${t('unit_m')}</span>
-        `;
-        this.lbList.appendChild(row);
-      });
-    }
-
-    this.leaderboardDiv.style.display = 'flex';
-    requestAnimationFrame(() => {
-      this.leaderboardDiv.style.opacity = '1';
-    });
-  }
-
-  _hideLeaderboard() {
-    this.leaderboardDiv.style.opacity = '0';
-    setTimeout(() => {
-      this.leaderboardDiv.style.display = 'none';
-    }, 300);
   }
 
   show(score, best, isNewBest, continueUsed) {
@@ -337,56 +240,40 @@ export class GameOverUI {
 
     // --- Stagger анимации ---
 
-    // 0ms: кровь alpha 0 → 0.6
+    // 0ms: кровь alpha 0 -> 0.6
     this.scene.tweens.add({
-      targets: this.bloodGfx,
-      alpha: 0.6,
-      duration: 300,
-      ease: 'Linear',
+      targets: this.bloodGfx, alpha: 0.6, duration: 300, ease: 'Linear',
     });
 
-    // 0ms: overlay alpha 0 → 0.85 (400ms)
+    // 0ms: overlay alpha 0 -> 0.85 (400ms)
     this.overlayRect.setVisible(true).setAlpha(0);
     this.scene.tweens.add({
-      targets: this.overlayRect,
-      alpha: 0.85,
-      duration: 400,
-      ease: 'Linear',
+      targets: this.overlayRect, alpha: 0.85, duration: 400, ease: 'Linear',
     });
 
-    // 300ms: "YOU FELL" — dramatic scale 2.2 → 1, alpha 0 → 1
+    // 300ms: "YOU FELL" — dramatic scale 2.2 -> 1, alpha 0 -> 1
     this.titleText.setVisible(true).setScale(2.2).setAlpha(0);
     this.scene.tweens.add({
-      targets: this.titleText,
-      scale: 1.0,
-      alpha: 1,
-      duration: 500,
-      delay: 300,
-      ease: 'Back.easeOut',
+      targets: this.titleText, scale: 1.0, alpha: 1,
+      duration: 500, delay: 300, ease: 'Back.easeOut',
     });
 
-    // 500ms: poster + score/record fade in (y +30 → 0, alpha 0 → 1)
+    // 500ms: poster + score/record fade in (y +30 -> 0, alpha 0 -> 1)
     this.posterGfx.setAlpha(0);
     this.scoreText.setVisible(true).setAlpha(0).setY(H * 0.35 + 30);
     this.bestText.setVisible(true).setAlpha(0).setY(H * 0.39 + 30);
 
     this.scene.tweens.add({
-      targets: this.posterGfx,
-      alpha: 1,
-      duration: 400,
-      delay: 500,
-      ease: 'Cubic.easeOut',
+      targets: this.posterGfx, alpha: 1, duration: 400, delay: 500, ease: 'Cubic.easeOut',
     });
     this.scene.tweens.add({
       targets: [this.scoreText, this.bestText],
       alpha: 1,
       y: (target) => target === this.scoreText ? H * 0.35 : H * 0.39,
-      duration: 400,
-      delay: 500,
-      ease: 'Cubic.easeOut',
+      duration: 400, delay: 500, ease: 'Cubic.easeOut',
     });
 
-    // 700ms: HTML кнопки opacity 0 → 1
+    // 700ms: HTML кнопки opacity 0 -> 1
     this.buttonsDiv.style.display = 'flex';
     this.buttonsDiv.style.opacity = '0';
     this.continueBtn.style.display = continueUsed ? 'none' : 'block';
@@ -399,20 +286,12 @@ export class GameOverUI {
     if (isNewBest) {
       this.newBestText.setVisible(true).setScale(0.3).setAlpha(0);
       this.scene.tweens.add({
-        targets: this.newBestText,
-        scale: 1.15,
-        alpha: 1,
-        duration: 500,
-        delay: 500,
-        ease: 'Back.easeOut',
+        targets: this.newBestText, scale: 1.15, alpha: 1,
+        duration: 500, delay: 500, ease: 'Back.easeOut',
         onComplete: () => {
           this.scene.tweens.add({
-            targets: this.newBestText,
-            scale: 1.0,
-            duration: 700,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
+            targets: this.newBestText, scale: 1.0,
+            duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
           });
         },
       });
@@ -455,28 +334,21 @@ export class GameOverUI {
     const allTargets = this.elements.filter(el => el && el.active);
     if (allTargets.length > 0) {
       this.scene.tweens.add({
-        targets: allTargets,
-        alpha: 0,
-        duration: 200,
-        ease: 'Linear',
+        targets: allTargets, alpha: 0, duration: 200, ease: 'Linear',
       });
     }
 
     // Poster и blood — тоже fade out
     if (this.posterGfx) {
       this.scene.tweens.add({
-        targets: this.posterGfx,
-        alpha: 0,
-        duration: 200,
+        targets: this.posterGfx, alpha: 0, duration: 200,
         onComplete: () => { this.posterGfx.destroy(); this.posterGfx = null; },
       });
     }
 
     if (this.bloodGfx) {
       this.scene.tweens.add({
-        targets: this.bloodGfx,
-        alpha: 0,
-        duration: 200,
+        targets: this.bloodGfx, alpha: 0, duration: 200,
         onComplete: () => { this.bloodGfx.destroy(); this.bloodGfx = null; },
       });
     }
@@ -506,7 +378,6 @@ export class GameOverUI {
     if (this.posterGfx) { this.posterGfx.destroy(); this.posterGfx = null; }
     const el = document.getElementById('game-over-buttons');
     if (el) el.remove();
-    const lb = document.getElementById('leaderboard-panel');
-    if (lb) lb.remove();
+    this.leaderboardUI.destroy();
   }
 }

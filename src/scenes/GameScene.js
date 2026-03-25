@@ -4,11 +4,7 @@ import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, saveScoreOnline, saveChallengeOnline } from '../telegram.js';
 import { t } from '../i18n.js';
-import {
-  GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
-  MIN_ROPE, SWING_FRICTION, RELEASE_BOOST, HOOK_COOLDOWN,
-  FALL_SPEED_PENALTY_START, FALL_SPEED_PENALTY_MAX, HOOK_RANGE_FALLING_MIN, MIN_SWING_SPEED, Z,
-} from '../constants.js';
+import { GROUND_Y, SPAWN_Y, Z } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
 import { TrailManager } from '../managers/TrailManager.js';
@@ -21,6 +17,7 @@ import { EasterEggs } from '../managers/EasterEggs.js';
 import { BiomeManager } from '../managers/BiomeManager.js';
 import { ObstacleManager } from '../managers/ObstacleManager.js';
 import { ChallengeManager } from '../managers/ChallengeManager.js';
+import { SwingPhysics } from '../managers/SwingPhysics.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -62,6 +59,9 @@ export class GameScene extends Phaser.Scene {
     this.continueUsed = false;
     this.lastReleaseTime = 0;    // Кулдаун хука
     this.bugHitCooldown = 0;     // Защита от повторных ударов жуков
+
+    // Физика маятника — чистые расчёты
+    this.physics_ = new SwingPhysics();
 
     this.biome = new BiomeManager(this);
     this.biome.create();
@@ -130,6 +130,9 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', () => this.handlePointerDown());
 
     this.cameras.main.fadeIn(400, 13, 15, 18);
+
+    // Регистрация cleanup при остановке сцены
+    this.events.once('shutdown', () => this.shutdown());
   }
 
   // ===================== INPUT =====================
@@ -146,62 +149,29 @@ export class GameScene extends Phaser.Scene {
   // ===================== HOOK MECHANICS =====================
 
   shootHook() {
-    // Кулдаун — нельзя мгновенно перецепиться
-    if (this.time.now - this.lastReleaseTime < HOOK_COOLDOWN) return;
-
     const px = this.player.x;
     const py = this.player.y;
+    const vx = this.player.body.velocity.x;
     const vy = this.player.body.velocity.y;
 
-    // Штраф за падение: чем быстрее падаешь, тем меньше радиус зацепа
-    const fallSpeed = Math.max(0, vy);
-    const penalty = Phaser.Math.Clamp(
-      (fallSpeed - FALL_SPEED_PENALTY_START) / (FALL_SPEED_PENALTY_MAX - FALL_SPEED_PENALTY_START),
-      0, 1
+    const result = this.physics_.tryHook(
+      px, py, vx, vy,
+      this.anchorMgr.anchors, this.time.now, this.lastReleaseTime
     );
-    const effectiveRange = HOOK_RANGE * (1 - penalty * (1 - HOOK_RANGE_FALLING_MIN));
 
-    let nearest = null;
-    let minDist = Infinity;
-
-    for (const anchor of this.anchorMgr.anchors) {
-      // Якоря выше — полный радиус, якоря ниже — уменьшенный (но не запрещены)
-      const isBelow = anchor.y > py + 50;
-      const range = isBelow ? effectiveRange * 0.5 : effectiveRange;
-      const dist = Phaser.Math.Distance.Between(px, py, anchor.x, anchor.y);
-      if (dist < minDist && dist < range) {
-        minDist = dist;
-        nearest = anchor;
-      }
-    }
-
-    // Промах — нет якорей в радиусе
-    if (!nearest) return;
-
-    const vx = this.player.body.velocity.x;
+    // Промах — нет якорей в радиусе или кулдаун
+    if (!result) return;
 
     this.isHooked = true;
-    this.currentAnchor = nearest;
-    this.ropeLength = Phaser.Math.Clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
+    this.currentAnchor = result.anchor;
+    this.ropeLength = result.ropeLength;
+    this.swingAngle = result.swingAngle;
+    this.swingSpeed = result.swingSpeed;
 
     this.player.body.allowGravity = false;
     this.player.body.setVelocity(0, 0);
 
-    const dx = px - nearest.x;
-    const dy = py - nearest.y;
-    this.swingAngle = Math.atan2(dy, dx);
-
-    // Конвертируем инерцию полёта в угловую скорость маятника
-    const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
-    this.swingSpeed = tangent / this.ropeLength;
-
-    // Начальный толчок — достаточный для раскачки, но не для перелёта
-    if (Math.abs(this.swingSpeed) < MIN_SWING_SPEED) {
-      const dir = Math.sign(this.swingSpeed) || (px < nearest.x ? -1 : 1);
-      this.swingSpeed = dir * MIN_SWING_SPEED;
-    }
-
-    this.anchorMgr.highlightAnchor(nearest, true);
+    this.anchorMgr.highlightAnchor(result.anchor, true);
 
     playHook();
     this.time.delayedCall(80, () => playAttach());
@@ -216,11 +186,9 @@ export class GameScene extends Phaser.Scene {
     this.player.body.allowGravity = true;
     this.lastReleaseTime = this.time.now; // Старт кулдауна
 
-    // Скорость при отпускании — касательная к дуге + boost для game feel
-    const speed = this.swingSpeed * this.ropeLength * RELEASE_BOOST;
-    const vx = -speed * Math.sin(this.swingAngle);
-    const vy = speed * Math.cos(this.swingAngle);
-    this.player.body.setVelocity(vx, vy);
+    // Скорость при отпускании — касательная к дуге + boost
+    const vel = this.physics_.calcRelease(this.swingAngle, this.swingSpeed, this.ropeLength);
+    this.player.body.setVelocity(vel.vx, vel.vy);
 
     if (this.currentAnchor) {
       this.anchorMgr.highlightAnchor(this.currentAnchor, false);
@@ -338,8 +306,8 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     // ===== 1. Wrap-around (только в свободном полёте) =====
     if (!this.isDead && !this.isHooked) {
-      if (this.player.x < 0 || this.player.x > this.W) {
-        const offset = this.player.x < 0 ? this.W : -this.W;
+      const offset = this.physics_.wrapX(this.player.x, this.W);
+      if (offset !== 0) {
         const body = this.player.body;
         this.player.x += offset;
         body.position.x += offset;
@@ -398,19 +366,19 @@ export class GameScene extends Phaser.Scene {
     // ===== 4. Физика маятника =====
     if (this.isHooked && this.currentAnchor) {
       const dt = delta / 1000;
-      const angularAccel = (GRAVITY / this.ropeLength) * Math.cos(this.swingAngle);
-      this.swingSpeed += angularAccel * dt;
-      this.swingSpeed *= SWING_FRICTION;
+      const result = this.physics_.updatePendulum(dt, this.currentAnchor, {
+        angle: this.swingAngle,
+        speed: this.swingSpeed,
+        ropeLen: this.ropeLength,
+      });
 
-      this.swingAngle += this.swingSpeed * dt;
+      this.swingAngle = result.angle;
+      this.swingSpeed = result.speed;
 
-      const newX = this.currentAnchor.x + Math.cos(this.swingAngle) * this.ropeLength;
-      const newY = this.currentAnchor.y + Math.sin(this.swingAngle) * this.ropeLength;
+      this.player.setPosition(result.x, result.y);
+      this.player.body.reset(result.x, result.y);
 
-      this.player.setPosition(newX, newY);
-      this.player.body.reset(newX, newY);
-
-      this.rope.draw(this.currentAnchor.x, this.currentAnchor.y, newX, newY, this.ropeLength);
+      this.rope.draw(this.currentAnchor.x, this.currentAnchor.y, result.x, result.y, this.ropeLength);
     } else {
       this.rope.clear();
     }
