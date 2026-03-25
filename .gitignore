@@ -28,3 +28,6 @@ dist-ssr
 
 # Unused default assets
 src/assets/
+
+# Cloudflare Worker (deployed separately)
+worker/
