@@ -3,11 +3,11 @@ import { SKINS } from './SkinRenderer.js';
 
 // Пул типов испытаний
 const CHALLENGE_TYPES = [
-  { type: 'reach', genTarget: (w) => 1000 + w * 100 },         // набрать Xм за одну игру
-  { type: 'total', genTarget: (w) => 3000 + w * 500 },         // суммарно Xм за неделю
-  { type: 'no_hit', genTarget: (w) => 500 + w * 100 },         // Xм без столкновений с жуками
-  { type: 'games', genTarget: (w) => 20 + w * 5 },             // сыграть X игр за неделю
-  { type: 'streak', genTarget: (w) => 300 + w * 50, count: 3 }, // набрать Xм 3 раза подряд
+  { type: 'reach', genTarget: (w) => 6000 + w * 200 },          // набрать Xм за одну игру
+  { type: 'total', genTarget: (w) => 8000 + w * 1000 },         // суммарно Xм за неделю
+  { type: 'no_hit', genTarget: (w) => 5500 + w * 200 },         // Xм без столкновений с жуками
+  { type: 'games', genTarget: (w) => 30 + w * 5 },              // сыграть X игр за неделю
+  { type: 'streak', genTarget: (w) => 5300 + w * 100, count: 3 }, // набрать Xм 3 раза подряд
 ];
 
 export class ChallengeManager {
@@ -15,6 +15,7 @@ export class ChallengeManager {
     this.week = getCurrentWeek();
     this.data = getChallenges();
     this._ensureWeekChallenge();
+    this.cleanupOldWeeks(); // Чистим старые недели при каждом запуске
   }
 
   // Генерация испытания для текущей недели (детерминированная по номеру недели)

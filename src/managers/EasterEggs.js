@@ -1,4 +1,6 @@
-import { GOLD, FONT, BOUNTY_HEIGHT, MOON_HEIGHT, Z } from '../constants.js';
+import { BOUNTY_HEIGHT, MOON_HEIGHT, Z } from '../constants.js';
+
+const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 import { playBounty, playMoonwalker } from '../audio.js';
 import { saveMoon } from '../storage.js';
 import { t } from '../i18n.js';
@@ -42,7 +44,7 @@ export class EasterEggs {
     // Текст — neon amber с тёмной обводкой
     const banner = this.scene.add.text(W / 2, -40, t('bounty'), {
       fontSize: '26px',
-      fontFamily: FONT,
+      fontFamily: NEON_FONT,
       fontStyle: 'bold',
       color: '#FFB800',
       stroke: '#0A0E1A',
@@ -124,7 +126,7 @@ export class EasterEggs {
     // Надпись "MOONWALKER" — neon cyan
     const txt = this.scene.add.text(W / 2, 180, t('moonwalker'), {
       fontSize: '22px',
-      fontFamily: FONT,
+      fontFamily: NEON_FONT,
       fontStyle: 'italic',
       color: '#00F5D4',
       stroke: '#0A0E1A',

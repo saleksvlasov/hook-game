@@ -1,4 +1,4 @@
-import { FONT, Z } from '../constants.js';
+import { Z } from '../constants.js';
 import { t } from '../i18n.js';
 import { ChallengeManager } from './ChallengeManager.js';
 import { tf } from '../i18n.js';

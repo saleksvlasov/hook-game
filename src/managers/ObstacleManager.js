@@ -70,14 +70,17 @@ export class ObstacleManager {
       }
     }
 
-    // Cleanup: далеко ниже игрока ИЛИ уже hit (destroyed)
-    for (let i = this.active.length - 1; i >= 0; i--) {
+    // Cleanup: writeIdx pattern (без splice — O(n) вместо O(n²))
+    let writeIdx = 0;
+    for (let i = 0; i < this.active.length; i++) {
       const obs = this.active[i];
       if (obs.hit || obs.baseY > playerY + 3000) {
         if (!obs.hit && obs.container) obs.container.destroy();
-        this.active.splice(i, 1);
+        continue;
       }
+      this.active[writeIdx++] = obs;
     }
+    this.active.length = writeIdx;
   }
 
   // Проверка коллизии с игроком — вызывается из GameScene

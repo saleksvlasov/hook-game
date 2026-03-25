@@ -1,4 +1,4 @@
-import { GOLD_HEX, Z } from '../constants.js';
+import { Z } from '../constants.js';
 
 // Рендер верёвки — Bezier кривая с неоновым cyan свечением
 export class RopeRenderer {

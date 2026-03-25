@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ANCHOR_SPACING_Y, SPAWN_Y, GOLD_HEX, RUST, EMBER_HEX, AMBER_GLOW, Z } from '../constants.js';
+import { ANCHOR_SPACING_Y, SPAWN_Y, Z } from '../constants.js';
 
 // Менеджер якорей — процедурная генерация, отрисовка, cleanup
 // Neon Western: cyan неактивные крюки, amber активные, pink ржавчина
