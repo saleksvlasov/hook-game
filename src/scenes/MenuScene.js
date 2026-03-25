@@ -410,24 +410,39 @@ export class MenuScene extends Phaser.Scene {
       });
 
       dragZone.on('dragend', (pointer) => {
-        // Инерция свайпа
-        const vx = pointer.velocity ? pointer.velocity.x : 0;
-        if (Math.abs(vx) > 50 && this._isDragging) {
-          const target = Phaser.Math.Clamp(
-            this._skinScrollX + vx * 0.3,
-            W - totalW - 10,
-            10
-          );
-          this._inertiaTween = this.tweens.add({
-            targets: { val: this._skinScrollX },
-            val: target,
-            duration: 300,
-            ease: 'Cubic.easeOut',
-            onUpdate: (_tween, obj) => {
-              this._skinScrollX = obj.val;
-              this._repositionSkins();
-            },
-          });
+        if (!this._isDragging) {
+          // Тап — определяем какой скин по X координатам
+          const tapX = pointer.x;
+          const tapY = pointer.y;
+          if (Math.abs(tapY - y) < 35) {
+            for (const item of (this._skinItems || [])) {
+              const skinX = this._skinScrollX + item.index * cellW + cellW / 2;
+              if (Math.abs(tapX - skinX) < cellW / 2) {
+                this._showSkinTooltip(item.index, skinX, y);
+                break;
+              }
+            }
+          }
+        } else {
+          // Инерция свайпа
+          const vx = pointer.velocity ? pointer.velocity.x : 0;
+          if (Math.abs(vx) > 50) {
+            const target = Phaser.Math.Clamp(
+              this._skinScrollX + vx * 0.3,
+              W - totalW - 10,
+              10
+            );
+            this._inertiaTween = this.tweens.add({
+              targets: { val: this._skinScrollX },
+              val: target,
+              duration: 300,
+              ease: 'Cubic.easeOut',
+              onUpdate: (_tween, obj) => {
+                this._skinScrollX = obj.val;
+                this._repositionSkins();
+              },
+            });
+          }
         }
       });
 
@@ -463,16 +478,9 @@ export class MenuScene extends Phaser.Scene {
         this.skinSelectorElements.push(frame);
       }
 
-      // Зона клика — тултип только если не было свайпа
-      const zone = this.add.zone(x, y, 40, 52).setInteractive().setDepth(20);
-      zone.on('pointerup', () => {
-        if (!this._isDragging) {
-          this._showSkinTooltip(i, x, y);
-        }
-      });
-
-      this._skinItems.push({ container, zone, frame, index: i });
-      this.skinSelectorElements.push(container, zone);
+      // Тап обрабатывается в dragend на dragZone — по координатам
+      this._skinItems.push({ container, frame, index: i });
+      this.skinSelectorElements.push(container);
     }
 
     // Подсказка — свайп для навигации
