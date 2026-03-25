@@ -2,7 +2,7 @@ const KEY = 'thehook_best';
 const MOON_KEY = 'thehook_moon';
 const CHALLENGES_KEY = 'thehook_challenges';
 const SKIN_KEY = 'thehook_skin';
-const LAUNCH_DATE = 1742860800000; // 2025-03-25T00:00:00Z
+const LAUNCH_DATE = 1773792000000; // 2026-03-18T00:00:00Z — неделя 1 = 2026-03-25
 
 export function getBest() {
   return parseInt(localStorage.getItem(KEY) || '0', 10);

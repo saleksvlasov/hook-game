@@ -3,11 +3,11 @@ import { SKINS } from './SkinRenderer.js';
 
 // Пул типов испытаний
 const CHALLENGE_TYPES = [
-  { type: 'reach', genTarget: (w) => 150 + w * 50 },         // набрать Xм за одну игру
-  { type: 'total', genTarget: (w) => 500 + w * 200 },        // суммарно Xм за неделю
-  { type: 'no_hit', genTarget: (w) => 80 + w * 30 },         // Xм без столкновений с жуками
-  { type: 'games', genTarget: (w) => 10 + w * 3 },           // сыграть X игр за неделю
-  { type: 'streak', genTarget: (w) => 50 + w * 25, count: 3 }, // набрать Xм 3 раза подряд
+  { type: 'reach', genTarget: (w) => 1000 + w * 100 },         // набрать Xм за одну игру
+  { type: 'total', genTarget: (w) => 3000 + w * 500 },         // суммарно Xм за неделю
+  { type: 'no_hit', genTarget: (w) => 500 + w * 100 },         // Xм без столкновений с жуками
+  { type: 'games', genTarget: (w) => 20 + w * 5 },             // сыграть X игр за неделю
+  { type: 'streak', genTarget: (w) => 300 + w * 50, count: 3 }, // набрать Xм 3 раза подряд
 ];
 
 export class ChallengeManager {

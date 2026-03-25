@@ -343,167 +343,136 @@ export class MenuScene extends Phaser.Scene {
   // Открыть/закрыть горизонтальный селектор скинов
   _toggleSkinSelector() {
     if (this.skinSelectorOpen) {
-      // Закрыть
       for (const el of this.skinSelectorElements) {
         if (el && el.destroy) el.destroy();
       }
       this.skinSelectorElements = [];
+      this._skinItems = [];
       this.skinSelectorOpen = false;
+      // Убрать pointer listeners
+      if (this._skinPointerDown) this.input.off('pointerdown', this._skinPointerDown);
+      if (this._skinPointerMove) this.input.off('pointermove', this._skinPointerMove);
+      if (this._skinPointerUp) this.input.off('pointerup', this._skinPointerUp);
+      this._skinPointerDown = null;
+      this._skinPointerMove = null;
+      this._skinPointerUp = null;
       return;
     }
 
     this.skinSelectorOpen = true;
     const W = this.W;
     const H = this.H;
-    const y = H * 0.90;
     const cellW = 56;
+    const y = H * 0.88;
     const activeSkin = getActiveSkin();
-
-    // Активный скин — центрируем на нём
     const activeIdx = SKINS.findIndex(s => s.id === activeSkin);
     const totalW = SKINS.length * cellW;
 
-    // Скролл-контейнер — видимая область = экран, содержимое шире
     // Начальный offset — центрируем на активном скине
     const centerOffset = W / 2 - (activeIdx >= 0 ? activeIdx : 0) * cellW - cellW / 2;
-    this._skinScrollX = Phaser.Math.Clamp(centerOffset, W - totalW - 10, 10);
+    this._skinScrollX = Phaser.Math.Clamp(centerOffset, W - totalW, 0);
+
+    // Состояние свайпа
+    let dragging = false;
+    let dragStartX = 0;
+    let totalDragDist = 0;
 
     // Фон полоса
     const bgStrip = this.add.graphics().setDepth(18);
-    bgStrip.fillStyle(BG_DARK_NEON, 0.90);
+    bgStrip.fillStyle(0x0A0E1A, 0.92);
     bgStrip.fillRect(0, y - 35, W, 70);
-    bgStrip.lineStyle(1, NEON_CYAN, 0.15);
+    bgStrip.lineStyle(1, 0x00F5D4, 0.15);
     bgStrip.lineBetween(0, y - 35, W, y - 35);
     this.skinSelectorElements.push(bgStrip);
 
-    // Свайп-зона для drag-скролла
-    if (totalW > W) {
-      const dragZone = this.add.zone(W / 2, y, W, 70)
-        .setInteractive({ draggable: true }).setDepth(17);
-      this._isDragging = false;
-      this._dragStartX = 0;
-
-      // Phaser требует scene-level drag listener
-      this.input.on('dragstart', () => {});
-
-      dragZone.on('dragstart', (pointer) => {
-        this._isDragging = false;
-        this._dragStartX = pointer.x;
-        // Остановить инерционный tween если есть
-        if (this._inertiaTween) {
-          this._inertiaTween.stop();
-          this._inertiaTween = null;
-        }
-      });
-
-      dragZone.on('drag', (pointer) => {
-        const dx = pointer.x - this._dragStartX;
-        if (Math.abs(dx) > 10) this._isDragging = true;
-
-        this._skinScrollX = Phaser.Math.Clamp(
-          this._skinScrollX + (pointer.x - this._dragStartX) * 0.5,
-          W - totalW - 10,
-          10
-        );
-        this._dragStartX = pointer.x;
-        this._repositionSkins();
-      });
-
-      dragZone.on('dragend', (pointer) => {
-        if (!this._isDragging) {
-          // Тап — определяем какой скин по X координатам
-          const tapX = pointer.x;
-          const tapY = pointer.y;
-          if (Math.abs(tapY - y) < 35) {
-            for (const item of (this._skinItems || [])) {
-              const skinX = this._skinScrollX + item.index * cellW + cellW / 2;
-              if (Math.abs(tapX - skinX) < cellW / 2) {
-                this._showSkinTooltip(item.index, skinX, y);
-                break;
-              }
-            }
-          }
-        } else {
-          // Инерция свайпа
-          const vx = pointer.velocity ? pointer.velocity.x : 0;
-          if (Math.abs(vx) > 50) {
-            const target = Phaser.Math.Clamp(
-              this._skinScrollX + vx * 0.3,
-              W - totalW - 10,
-              10
-            );
-            this._inertiaTween = this.tweens.add({
-              targets: { val: this._skinScrollX },
-              val: target,
-              duration: 300,
-              ease: 'Cubic.easeOut',
-              onUpdate: (_tween, obj) => {
-                this._skinScrollX = obj.val;
-                this._repositionSkins();
-              },
-            });
-          }
-        }
-      });
-
-      this.skinSelectorElements.push(dragZone);
-    }
-
-    // Массив скин-элементов для скролла
+    // Скины
     this._skinItems = [];
-
     for (let i = 0; i < SKINS.length; i++) {
       const skin = SKINS[i];
       const x = this._skinScrollX + i * cellW + cellW / 2;
       const unlocked = isSkinUnlocked(skin.id);
       const isActive = skin.id === activeSkin;
 
-      // Миниатюра скина
       const container = this.add.container(x, y).setDepth(19);
       const gfx = this.add.graphics();
       drawSkinPose(gfx, i, 0);
       container.add(gfx);
       container.setScale(0.65);
+      if (!unlocked) container.setAlpha(0.25);
 
-      if (!unlocked) {
-        container.setAlpha(0.2);
-      }
-
-      // Рамка активного
       let frame = null;
       if (isActive) {
-        frame = this.add.graphics().setDepth(18);
-        frame.lineStyle(1.5, NEON_CYAN, 0.6);
-        frame.strokeRoundedRect(x - 20, y - 26, 40, 52, 6);
+        frame = this.add.graphics().setDepth(20);
+        frame.lineStyle(2, 0x00F5D4, 0.7);
+        frame.strokeRoundedRect(x - 22, y - 28, 44, 56, 6);
         this.skinSelectorElements.push(frame);
       }
 
-      // Тап обрабатывается в dragend на dragZone — по координатам
       this._skinItems.push({ container, frame, index: i });
       this.skinSelectorElements.push(container);
     }
 
-    // Подсказка — свайп для навигации
-    const hint = this.add.text(W / 2, y + 30, '← swipe to browse →', {
-      fontSize: '10px', fontFamily: "'Inter', sans-serif",
-      color: '#4A5580',
+    // Подсказка
+    const hint = this.add.text(W / 2, y + 32, '← swipe · tap to preview →', {
+      fontSize: '10px', fontFamily: "'Inter', sans-serif", color: '#4A5580',
     }).setOrigin(0.5).setDepth(18);
     this.skinSelectorElements.push(hint);
+
+    // --- Pointer обработчики (НЕ Phaser drag!) ---
+    const self = this;
+
+    this._skinPointerDown = function(pointer) {
+      // Только если тап в зоне карусели
+      if (pointer.y < y - 40 || pointer.y > y + 40) return;
+      dragging = true;
+      dragStartX = pointer.x;
+      totalDragDist = 0;
+    };
+
+    this._skinPointerMove = function(pointer) {
+      if (!dragging) return;
+      const dx = pointer.x - dragStartX;
+      totalDragDist += Math.abs(dx);
+      self._skinScrollX = Phaser.Math.Clamp(
+        self._skinScrollX + dx, W - totalW, 0
+      );
+      dragStartX = pointer.x;
+      self._repositionSkins();
+    };
+
+    this._skinPointerUp = function(pointer) {
+      if (!dragging) return;
+      dragging = false;
+      // Тап: палец двигался < 8px — открыть тултип
+      if (totalDragDist < 8 && pointer.y >= y - 40 && pointer.y <= y + 40) {
+        const tapX = pointer.x;
+        for (const item of self._skinItems) {
+          const skinX = self._skinScrollX + item.index * cellW + cellW / 2;
+          if (Math.abs(tapX - skinX) < cellW / 2) {
+            self._showSkinTooltip(item.index, skinX, y);
+            break;
+          }
+        }
+      }
+    };
+
+    this.input.on('pointerdown', this._skinPointerDown);
+    this.input.on('pointermove', this._skinPointerMove);
+    this.input.on('pointerup', this._skinPointerUp);
   }
 
-  // Перепозиционировать скины при скролле
+  // Перепозиционировать скины при свайпе
   _repositionSkins() {
     if (!this._skinItems) return;
     const cellW = 56;
-    const y = this.H * 0.90;
+    const y = this.H * 0.88;
     for (const item of this._skinItems) {
       const x = this._skinScrollX + item.index * cellW + cellW / 2;
       item.container.setX(x);
-      item.zone.setX(x);
       if (item.frame) {
         item.frame.clear();
-        item.frame.lineStyle(1.5, 0x00F5D4, 0.6);
-        item.frame.strokeRoundedRect(x - 20, y - 26, 40, 52, 6);
+        item.frame.lineStyle(2, 0x00F5D4, 0.7);
+        item.frame.strokeRoundedRect(x - 22, y - 28, 44, 56, 6);
       }
     }
   }
@@ -618,19 +587,16 @@ export class MenuScene extends Phaser.Scene {
   }
 
   shutdown() {
-    // Очистка тултипа скинов
-    this._hideSkinTooltip();
-    // Очистка селектора скинов
-    for (const el of this.skinSelectorElements || []) {
-      if (el && el.destroy) el.destroy();
-    }
-    // Остановить инерционный tween свайпа
-    if (this._inertiaTween) {
-      this._inertiaTween.stop();
-      this._inertiaTween = null;
-    }
     if (this._konamiHandler) {
       this.input.keyboard.off('keydown', this._konamiHandler);
+    }
+    this._hideSkinTooltip();
+    // Cleanup карусели
+    if (this._skinPointerDown) this.input.off('pointerdown', this._skinPointerDown);
+    if (this._skinPointerMove) this.input.off('pointermove', this._skinPointerMove);
+    if (this._skinPointerUp) this.input.off('pointerup', this._skinPointerUp);
+    for (const el of this.skinSelectorElements || []) {
+      if (el && el.destroy) el.destroy();
     }
   }
 

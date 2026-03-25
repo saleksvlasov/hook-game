@@ -213,7 +213,7 @@ async function handleSaveChallenge(request, env) {
   };
 
   // Определить текущую неделю
-  const LAUNCH_DATE = 1742860800000; // 2025-03-25T00:00:00Z
+  const LAUNCH_DATE = 1773792000000; // 2025-03-25T00:00:00Z
   const currentWeek = Math.floor((Date.now() - LAUNCH_DATE) / (7 * 24 * 60 * 60 * 1000));
   const weekKey = `week${currentWeek}`;
 
@@ -316,7 +316,7 @@ async function handleClaimSkin(request, env) {
   const existing = await env.CHALLENGES.get(key, 'json');
   if (!existing) return jsonResponse({ error: 'No data' }, 404);
 
-  const LAUNCH_DATE = 1742860800000;
+  const LAUNCH_DATE = 1773792000000;
   const currentWeek = Math.floor((Date.now() - LAUNCH_DATE) / (7 * 24 * 60 * 60 * 1000));
   const weekKey = `week${currentWeek}`;
   const ch = existing.weeklyProgress[weekKey];
