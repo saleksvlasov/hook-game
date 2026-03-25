@@ -2,11 +2,11 @@
 
 // Физика — расчёт [MATH] агента v2
 export const GRAVITY = 980;              // Гравитация маятника (период T=2.98s при L=220)
-export const HOOK_RANGE = 200;           // Было 380 — статично не достаёшь, нужна раскачка
+export const HOOK_RANGE = 300;           // Было 380→200(сломано). Достаёшь ближайший, но не через один
 export const MAX_ROPE_LENGTH = 220;      // Период ~3s, макс v=657 px/s при 90° амплитуде
 export const MIN_ROPE = 50;
 export const SWING_FRICTION = 0.9992;    // Было 0.9996 — 4.7%/сек потеря, 3 качания = -20% энергии
-export const RELEASE_BOOST = 1.15;       // Было 1.4 — идеальный swing еле достаёт до следующего
+export const RELEASE_BOOST = 1.25;       // Было 1.4→1.15(слишком мало). Хороший swing достаёт
 export const TRAIL_SPEED_THRESHOLD = 150;
 
 // Хук: штраф за падение — чем быстрее падаешь, тем меньше радиус зацепа

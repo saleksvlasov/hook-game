@@ -145,10 +145,11 @@ export class GameScene extends Phaser.Scene {
     let minDist = Infinity;
 
     for (const anchor of this.anchorMgr.anchors) {
-      // Только якоря выше или на уровне — нельзя цепляться за якоря ниже
-      if (anchor.y > py + 30) continue;
+      // Якоря выше — полный радиус, якоря ниже — уменьшенный (но не запрещены)
+      const isBelow = anchor.y > py + 50;
+      const range = isBelow ? effectiveRange * 0.5 : effectiveRange;
       const dist = Phaser.Math.Distance.Between(px, py, anchor.x, anchor.y);
-      if (dist < minDist && dist < effectiveRange) {
+      if (dist < minDist && dist < range) {
         minDist = dist;
         nearest = anchor;
       }
@@ -174,9 +175,10 @@ export class GameScene extends Phaser.Scene {
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    // Мягкий начальный толчок — чтобы маятник хотя бы шевельнулся
-    if (Math.abs(this.swingSpeed) < 0.5) {
-      this.swingSpeed = px < nearest.x ? -0.5 : 0.5;
+    // Начальный толчок — достаточный для раскачки, но не для перелёта
+    if (Math.abs(this.swingSpeed) < 1.5) {
+      const dir = Math.sign(this.swingSpeed) || (px < nearest.x ? -1 : 1);
+      this.swingSpeed = dir * 1.5;
     }
 
     this.anchorMgr.highlightAnchor(nearest, true);
@@ -334,8 +336,23 @@ export class GameScene extends Phaser.Scene {
       this.ghostContainer.setVisible(false);
     }
 
-    // ===== 3. Камера — X фиксирована, Y следит за игроком =====
-    this.cameras.main.scrollX = 0;
+    // ===== 3. Камера — X следит при hooked, Y всегда =====
+    if (this.isHooked) {
+      // На маятнике камера плавно следит по X чтобы игрок не исчезал за краем
+      const targetX = Phaser.Math.Clamp(
+        this.player.x - this.W / 2,
+        -this.W * 0.3,
+        this.W * 0.3
+      );
+      this.cameras.main.scrollX = Phaser.Math.Linear(
+        this.cameras.main.scrollX, targetX, 0.08
+      );
+    } else {
+      // В свободном полёте — плавно возвращаем камеру к центру
+      this.cameras.main.scrollX = Phaser.Math.Linear(
+        this.cameras.main.scrollX, 0, 0.1
+      );
+    }
     const targetY = this.player.y - this.H * 0.55;
     this.cameras.main.scrollY = Phaser.Math.Linear(
       this.cameras.main.scrollY, targetY, 0.15
