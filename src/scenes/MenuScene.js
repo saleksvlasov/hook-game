@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getBest, getMoon, getActiveSkin } from '../storage.js';
+import { getBest, getMoon, getActiveSkin, setActiveSkin, isSkinUnlocked } from '../storage.js';
 import { SKINS, drawSkinPose } from '../managers/SkinRenderer.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
@@ -34,6 +34,10 @@ export class MenuScene extends Phaser.Scene {
 
     // Все UI элементы для stagger-анимации
     this._uiElements = [];
+
+    // Селектор скинов
+    this.skinSelectorOpen = false;
+    this.skinSelectorElements = [];
 
     // --- Фон: глубокий navy-black градиент (neon western) ---
     if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
@@ -239,6 +243,24 @@ export class MenuScene extends Phaser.Scene {
       this._addStaggerEntry(moonText, H * 0.78, 700);
     }
 
+    // --- Кнопка SKINS ---
+    const skinsY = H * 0.82;
+    const skinsGfx = this.add.graphics().setDepth(15);
+    drawGlassButton(skinsGfx, W / 2, skinsY, 120, 32);
+
+    const skinsText = this.add.text(W / 2, skinsY, t('skins_title'), {
+      fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold',
+      color: NEON_CYAN_STR,
+    }).setOrigin(0.5).setDepth(16).setAlpha(0);
+
+    const skinsZone = this.add.zone(W / 2, skinsY, 120, 32)
+      .setInteractive({ useHandCursor: true }).setDepth(17);
+
+    skinsZone.on('pointerdown', () => this._toggleSkinSelector());
+
+    this._addStaggerFade(skinsGfx, 750);
+    this._addStaggerEntry(skinsText, skinsY, 750);
+
     // --- Подсказка внизу — neon cyan, пульсация ---
     const hintText = this.add.text(W / 2, H - 24, t('tap_to_hunt'), {
       fontSize: '15px', fontFamily: NEON_FONT, fontStyle: 'italic', color: NEON_CYAN_STR,
@@ -317,7 +339,86 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
+  // Открыть/закрыть горизонтальный селектор скинов
+  _toggleSkinSelector() {
+    if (this.skinSelectorOpen) {
+      // Закрыть
+      for (const el of this.skinSelectorElements) {
+        if (el && el.destroy) el.destroy();
+      }
+      this.skinSelectorElements = [];
+      this.skinSelectorOpen = false;
+      return;
+    }
+
+    this.skinSelectorOpen = true;
+    const W = this.W;
+    const H = this.H;
+    const y = H * 0.90;
+    const cellW = 60;
+    const startX = W / 2 - (SKINS.length * cellW) / 2 + cellW / 2;
+    const activeSkin = getActiveSkin();
+
+    // Фон полоса
+    const bgStrip = this.add.graphics().setDepth(18);
+    bgStrip.fillStyle(BG_DARK_NEON, 0.85);
+    bgStrip.fillRect(0, y - 35, W, 70);
+    bgStrip.lineStyle(1, NEON_CYAN, 0.15);
+    bgStrip.lineBetween(0, y - 35, W, y - 35);
+    this.skinSelectorElements.push(bgStrip);
+
+    for (let i = 0; i < SKINS.length; i++) {
+      const skin = SKINS[i];
+      const x = startX + i * cellW;
+      const unlocked = isSkinUnlocked(skin.id);
+      const isActive = skin.id === activeSkin;
+
+      // Миниатюра скина
+      const container = this.add.container(x, y).setDepth(19);
+      const gfx = this.add.graphics();
+      drawSkinPose(gfx, i, 0);
+      container.add(gfx);
+      container.setScale(0.7);
+
+      if (!unlocked) {
+        container.setAlpha(0.2);
+      }
+
+      // Рамка активного
+      if (isActive) {
+        const frame = this.add.graphics().setDepth(18);
+        frame.lineStyle(1.5, NEON_CYAN, 0.6);
+        frame.strokeRoundedRect(x - 22, y - 28, 44, 56, 6);
+        this.skinSelectorElements.push(frame);
+      }
+
+      // Зона клика
+      const zone = this.add.zone(x, y, 44, 56).setInteractive().setDepth(20);
+      zone.on('pointerdown', () => {
+        if (!unlocked) return; // заблокирован
+        setActiveSkin(skin.id);
+        // Перерисовать охотника в меню
+        if (this.menuHunter) {
+          const hunterGfx = this.menuHunter.list[0];
+          if (hunterGfx) {
+            hunterGfx.clear();
+            drawSkinPose(hunterGfx, i, 0);
+          }
+        }
+        // Пересоздать селектор для обновления рамки
+        this._toggleSkinSelector(); // close
+        this._toggleSkinSelector(); // reopen
+      });
+
+      this.skinSelectorElements.push(container, zone);
+    }
+  }
+
   shutdown() {
+    // Очистка селектора скинов
+    for (const el of this.skinSelectorElements || []) {
+      if (el && el.destroy) el.destroy();
+    }
     if (this._konamiHandler) {
       this.input.keyboard.off('keydown', this._konamiHandler);
     }

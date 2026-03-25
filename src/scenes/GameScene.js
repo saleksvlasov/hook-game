@@ -20,6 +20,7 @@ import { GameOverUI } from '../managers/GameOverUI.js';
 import { EasterEggs } from '../managers/EasterEggs.js';
 import { BiomeManager } from '../managers/BiomeManager.js';
 import { ObstacleManager } from '../managers/ObstacleManager.js';
+import { ChallengeManager } from '../managers/ChallengeManager.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -37,6 +38,7 @@ export class GameScene extends Phaser.Scene {
     this.swamp.destroy();
     this.hunter.destroy();
     this.anchorMgr.destroy();
+    this.challengeMgr = null;
   }
 
   create() {
@@ -114,6 +116,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.eggs = new EasterEggs(this);
+
+    // Еженедельные испытания
+    this.challengeMgr = new ChallengeManager();
+    this.hitCount = 0; // счётчик столкновений с жуками за игру
 
     // Камера — X фиксирована, Y следит за игроком
     this.cameras.main.scrollX = 0;
@@ -250,6 +256,14 @@ export class GameScene extends Phaser.Scene {
       saveScoreOnline(this.maxHeight);
     }
 
+    // Обновляем прогресс еженедельного испытания ПЕРЕД show() —
+    // чтобы кнопка CLAIM SKIN появилась сразу при завершении челленджа
+    this.challengeMgr.updateProgress({
+      height: this.maxHeight,
+      hitCount: this.hitCount,
+      gamesPlayed: 1,
+    });
+
     this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0, this.continueUsed);
 
     playDeath();
@@ -302,6 +316,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverUI.hide();
     this.maxHeight = 0;
     this.continueUsed = false;
+    this.hitCount = 0;
     this.eggs.reset();
     this.player.setPosition(this.W / 2, SPAWN_Y);
     this.player.body.reset(this.W / 2, SPAWN_Y);
@@ -424,6 +439,7 @@ export class GameScene extends Phaser.Scene {
     // Коллизия с жуками — сброс с крюка + визуальный фидбек
     if (!this.isDead && this.bugHitCooldown <= 0
         && this.obstacles.checkCollision(this.player.x, this.player.y)) {
+      this.hitCount++;
       if (this.isHooked) this.releaseHook();
       // Откидывание вниз и в сторону
       const knockX = (Math.random() - 0.5) * 300;

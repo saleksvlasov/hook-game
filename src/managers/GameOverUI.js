@@ -1,5 +1,8 @@
 import { GOLD, DARK_RED, FONT, Z } from '../constants.js';
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
+import { ChallengeManager } from './ChallengeManager.js';
+import { SKINS } from './SkinRenderer.js';
+import { tf } from '../i18n.js';
 import { isTelegram, fetchLeaderboard, getTelegramUserId } from '../telegram.js';
 import {
   drawBloodSplatter, drawWantedPosterFrame,
@@ -418,6 +421,33 @@ export class GameOverUI {
         createEmberBurst(this.scene, W / 2, H * 0.39, 15);
       });
     }
+
+    // === Кнопка CLAIM SKIN — если челлендж выполнен но не claimed ===
+    const challengeMgr = new ChallengeManager();
+    const ch = challengeMgr.getCurrentChallenge();
+    if (ch && ch.completed && !ch.claimed) {
+      const claimBtn = this._createButton(t('challenge_claim'), 'claim');
+      // Переопределяем стиль — amber цвет и amber border
+      claimBtn.style.color = NEON_AMBER;
+      claimBtn.style.borderColor = 'rgba(255, 184, 0, 0.5)';
+
+      // Удаляем старый click listener и добавляем свой
+      const newClaimBtn = claimBtn.cloneNode(true);
+      newClaimBtn.addEventListener('click', () => {
+        const skinId = challengeMgr.claimReward();
+        if (skinId) {
+          newClaimBtn.textContent = t('challenge_claimed');
+          newClaimBtn.disabled = true;
+          newClaimBtn.style.opacity = '0.5';
+          newClaimBtn.style.pointerEvents = 'none';
+        }
+      });
+
+      // Вставляем перед кнопкой MENU (последняя кнопка)
+      this.buttonsDiv.insertBefore(newClaimBtn, this.menuBtn);
+      // Сохраняем ссылку для очистки
+      this.claimBtn = newClaimBtn;
+    }
   }
 
   hide() {
@@ -455,6 +485,11 @@ export class GameOverUI {
     this.buttonsDiv.style.opacity = '0';
     setTimeout(() => {
       this.buttonsDiv.style.display = 'none';
+      // Удаляем кнопку claim если была
+      if (this.claimBtn) {
+        this.claimBtn.remove();
+        this.claimBtn = null;
+      }
       // Сбрасываем видимость Phaser-элементов после fade
       for (const el of this.elements) {
         if (el && el.active) el.setVisible(false).setAlpha(1);

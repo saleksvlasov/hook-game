@@ -1,5 +1,7 @@
 import { FONT, Z } from '../constants.js';
 import { t } from '../i18n.js';
+import { ChallengeManager } from './ChallengeManager.js';
+import { tf } from '../i18n.js';
 import { createEmberBurst } from '../managers/UIFactory.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
@@ -20,6 +22,7 @@ export class HUDManager {
     this.hintText = null;
     this.bgPanel = null;
     this.lastMilestone = 0;
+    this.challengeText = null;
   }
 
   create() {
@@ -83,6 +86,28 @@ export class HUDManager {
       yoyo: true,
       repeat: -1,
     });
+
+    // Виджет еженедельного испытания — внизу экрана
+    const challengeMgr = new ChallengeManager();
+    const ch = challengeMgr.getCurrentChallenge();
+    if (ch && !ch.completed) {
+      const labelMap = {
+        reach: 'challenge_reach',
+        total: 'challenge_total',
+        no_hit: 'challenge_no_hit',
+        games: 'challenge_games',
+        streak: 'challenge_streak',
+      };
+      const label = tf(labelMap[ch.type] || 'challenge_reach', ch.target, ch.count || 3);
+
+      this.challengeText = this.scene.add.text(W / 2, this.scene.H - 20, `⚔ ${label}: ${ch.progress}/${ch.target}`, {
+        fontSize: '11px',
+        fontFamily: "'Inter', sans-serif",
+        color: '#00F5D4',
+        stroke: '#0A0E1A',
+        strokeThickness: 2,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.HUD).setAlpha(0.6);
+    }
   }
 
   updateHeight(currentHeight, maxHeight, sessionBest) {
@@ -123,6 +148,24 @@ export class HUDManager {
       duration: 100,
       yoyo: true,
     });
+  }
+
+  // Обновить прогресс челленджа в виджете
+  updateChallenge(progress, target) {
+    if (!this.challengeText) return;
+    const challengeMgr = new ChallengeManager();
+    const ch = challengeMgr.getCurrentChallenge();
+    if (!ch) return;
+
+    const labelMap = {
+      reach: 'challenge_reach',
+      total: 'challenge_total',
+      no_hit: 'challenge_no_hit',
+      games: 'challenge_games',
+      streak: 'challenge_streak',
+    };
+    const label = tf(labelMap[ch.type] || 'challenge_reach', ch.target, ch.count || 3);
+    this.challengeText.setText(`⚔ ${label}: ${progress}/${target}`);
   }
 
   destroy() {
