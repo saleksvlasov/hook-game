@@ -69,6 +69,7 @@ export default {
       if (url.pathname === '/save-challenge') return handleSaveChallenge(request, env);
       if (url.pathname === '/claim-skin') return handleClaimSkin(request, env);
       if (url.pathname === '/sync-challenges') return handleSyncChallenges(request, env);
+      if (url.pathname === '/sync-profile') return handleSyncProfile(request, env);
     }
 
     if (request.method === 'GET') {
@@ -360,6 +361,34 @@ async function handleSyncChallenges(request, env) {
   };
 
   return jsonResponse(existing);
+}
+
+// ---- Sync Profile (рекорд + челленджи + скины одним запросом) ----
+
+async function handleSyncProfile(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData } = body;
+  if (!initData) return jsonResponse({ error: 'Missing initData' }, 400);
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+
+  // Параллельно читаем рекорд и челленджи
+  const [scoreData, challengeData] = await Promise.all([
+    env.SCORES ? env.SCORES.get(`user:${userId}`, 'json') : null,
+    env.CHALLENGES ? env.CHALLENGES.get(`challenges:${userId}`, 'json') : null,
+  ]);
+
+  return jsonResponse({
+    bestScore: scoreData?.score || 0,
+    unlockedSkins: challengeData?.unlockedSkins || ['default'],
+    activeSkin: challengeData?.activeSkin || 'default',
+    weeklyProgress: challengeData?.weeklyProgress || {},
+  });
 }
 
 // ---- Helpers ----

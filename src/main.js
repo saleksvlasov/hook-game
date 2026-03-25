@@ -1,12 +1,16 @@
 import Phaser from 'phaser';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
+import { syncProfile } from './telegram.js';
 
-// Telegram Mini App — раскрываем на весь экран
+// Telegram Mini App — раскрываем на весь экран + синхронизация профиля
 if (window.Telegram?.WebApp) {
   const tg = window.Telegram.WebApp;
   tg.ready();
   tg.expand();
+
+  // Подтягиваем рекорд и скины с сервера → localStorage (fire-and-forget)
+  syncProfile();
 }
 
 // Safe area: set CSS variable from env() for JS access

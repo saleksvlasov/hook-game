@@ -1,4 +1,5 @@
 // Telegram Mini App — Stars оплата + leaderboard
+import { saveBest, getChallenges, saveChallenges, setActiveSkin } from './storage.js';
 
 const WORKER_URL = 'https://thehook-invoice.sidodji1337.workers.dev';
 
@@ -117,6 +118,42 @@ export async function syncChallengesOnline() {
     return await resp.json();
   } catch (err) {
     console.error('Sync challenges error:', err);
+    return null;
+  }
+}
+
+// Синхронизация профиля при загрузке — рекорд + скины с сервера → localStorage
+export async function syncProfile() {
+  if (!isTelegram()) return null;
+  try {
+    const resp = await fetch(`${WORKER_URL}/sync-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: window.Telegram.WebApp.initData,
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+
+    // Обновляем localStorage из серверных данных
+    if (data.bestScore > 0) {
+      saveBest(data.bestScore);
+    }
+    if (data.unlockedSkins) {
+      const local = getChallenges();
+      // Мержим скины: сервер + локальные
+      const merged = [...new Set([...local.unlockedSkins, ...data.unlockedSkins])];
+      local.unlockedSkins = merged;
+      saveChallenges(local);
+    }
+    if (data.activeSkin && data.activeSkin !== 'default') {
+      setActiveSkin(data.activeSkin);
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Sync profile error:', err);
     return null;
   }
 }
