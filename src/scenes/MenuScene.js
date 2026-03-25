@@ -38,6 +38,7 @@ export class MenuScene extends Phaser.Scene {
     // Селектор скинов
     this.skinSelectorOpen = false;
     this.skinSelectorElements = [];
+    this._tooltipElements = [];
 
     // --- Фон: глубокий navy-black градиент (neon western) ---
     if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
@@ -392,29 +393,128 @@ export class MenuScene extends Phaser.Scene {
         this.skinSelectorElements.push(frame);
       }
 
-      // Зона клика
+      // Зона клика — всегда показываем тултип
       const zone = this.add.zone(x, y, 44, 56).setInteractive().setDepth(20);
       zone.on('pointerdown', () => {
-        if (!unlocked) return; // заблокирован
-        setActiveSkin(skin.id);
-        // Перерисовать охотника в меню
-        if (this.menuHunter) {
-          const hunterGfx = this.menuHunter.list[0];
-          if (hunterGfx) {
-            hunterGfx.clear();
-            drawSkinPose(hunterGfx, i, 0);
-          }
-        }
-        // Пересоздать селектор для обновления рамки
-        this._toggleSkinSelector(); // close
-        this._toggleSkinSelector(); // reopen
+        this._showSkinTooltip(i, x, y);
       });
 
       this.skinSelectorElements.push(container, zone);
     }
   }
 
+  // Показать тултип-карточку скина по центру экрана
+  _showSkinTooltip(skinIndex, x, y) {
+    // Убрать предыдущий тултип
+    this._hideSkinTooltip();
+
+    const skin = SKINS[skinIndex];
+    if (!skin) return;
+
+    const W = this.W;
+    const H = this.H;
+    const lang = getLang();
+
+    this._tooltipElements = [];
+
+    // Затемнение фона
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x0A0E1A, 0.7)
+      .setDepth(30).setInteractive();
+    overlay.on('pointerdown', () => this._hideSkinTooltip());
+    this._tooltipElements.push(overlay);
+
+    // Карточка тултипа — по центру экрана
+    const cardW = 260;
+    const cardH = 220;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    const card = this.add.graphics().setDepth(31);
+    // Фон карточки — тёмное стекло
+    card.fillStyle(0x0E1225, 0.95);
+    card.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+    // Рамка — цвет скина
+    card.lineStyle(1.5, skin.outline, 0.5);
+    card.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+    this._tooltipElements.push(card);
+
+    // Скин крупно по центру
+    const skinContainer = this.add.container(cx, cy - 40).setDepth(32).setScale(2);
+    const skinGfx = this.add.graphics();
+    drawSkinPose(skinGfx, skinIndex, 0);
+    skinContainer.add(skinGfx);
+    this._tooltipElements.push(skinContainer);
+
+    // Имя скина
+    const name = skin.name[lang] || skin.name.en;
+    const nameText = this.add.text(cx, cy + 30, name, {
+      fontSize: '18px', fontFamily: NEON_FONT, fontStyle: 'bold',
+      color: '#' + skin.outline.toString(16).padStart(6, '0'),
+    }).setOrigin(0.5).setDepth(32);
+    this._tooltipElements.push(nameText);
+
+    // Условие получения
+    const unlocked = isSkinUnlocked(skin.id);
+    let conditionText;
+    if (unlocked) {
+      conditionText = t('skin_equipped');
+    } else if (skin.week === 0) {
+      conditionText = 'FREE';
+    } else {
+      conditionText = `Week ${skin.week} ${t('challenge_title')}`;
+    }
+
+    const condText = this.add.text(cx, cy + 55, conditionText, {
+      fontSize: '12px', fontFamily: NEON_FONT,
+      color: unlocked ? NEON_CYAN_STR : '#4A5580',
+    }).setOrigin(0.5).setDepth(32);
+    this._tooltipElements.push(condText);
+
+    // Кнопка EQUIP или LOCKED
+    if (unlocked && skin.id !== getActiveSkin()) {
+      const equipText = this.add.text(cx, cy + 85, t('skin_equip'), {
+        fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold',
+        color: NEON_AMBER_STR, backgroundColor: 'rgba(255,184,0,0.1)',
+        padding: { x: 20, y: 8 },
+      }).setOrigin(0.5).setDepth(32).setInteractive({ useHandCursor: true });
+
+      equipText.on('pointerdown', () => {
+        setActiveSkin(skin.id);
+        // Обновить охотника в меню
+        if (this.menuHunter) {
+          const gfx = this.menuHunter.list[0];
+          if (gfx) { gfx.clear(); drawSkinPose(gfx, skinIndex, 0); }
+        }
+        this._hideSkinTooltip();
+        // Пересоздать селектор для обновления рамки
+        if (this.skinSelectorOpen) {
+          this._toggleSkinSelector();
+          this._toggleSkinSelector();
+        }
+      });
+      this._tooltipElements.push(equipText);
+    } else if (!unlocked) {
+      const lockText = this.add.text(cx, cy + 85, `🔒 ${t('skin_locked')}`, {
+        fontSize: '14px', fontFamily: NEON_FONT,
+        color: NEON_PINK_STR,
+      }).setOrigin(0.5).setDepth(32);
+      this._tooltipElements.push(lockText);
+    }
+  }
+
+  // Скрыть тултип скина
+  _hideSkinTooltip() {
+    if (this._tooltipElements) {
+      for (const el of this._tooltipElements) {
+        if (el && el.destroy) el.destroy();
+      }
+      this._tooltipElements = [];
+    }
+  }
+
   shutdown() {
+    // Очистка тултипа скинов
+    this._hideSkinTooltip();
     // Очистка селектора скинов
     for (const el of this.skinSelectorElements || []) {
       if (el && el.destroy) el.destroy();

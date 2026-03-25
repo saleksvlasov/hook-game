@@ -2,7 +2,7 @@ import { FONT, Z } from '../constants.js';
 import { t } from '../i18n.js';
 import { ChallengeManager } from './ChallengeManager.js';
 import { tf } from '../i18n.js';
-import { createEmberBurst } from '../managers/UIFactory.js';
+import { createEmberBurst, drawChip } from '../managers/UIFactory.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN = '#00F5D4';
@@ -23,6 +23,7 @@ export class HUDManager {
     this.bgPanel = null;
     this.lastMilestone = 0;
     this.challengeText = null;
+    this.challengeBg = null;
   }
 
   create() {
@@ -87,7 +88,7 @@ export class HUDManager {
       repeat: -1,
     });
 
-    // Виджет еженедельного испытания — внизу экрана
+    // Виджет еженедельного испытания — под hint текстом, MUI Chip стиль
     const challengeMgr = new ChallengeManager();
     const ch = challengeMgr.getCurrentChallenge();
     if (ch && !ch.completed) {
@@ -99,14 +100,25 @@ export class HUDManager {
         streak: 'challenge_streak',
       };
       const label = tf(labelMap[ch.type] || 'challenge_reach', ch.target, ch.count || 3);
+      const weekNum = challengeMgr.week;
+      const chipY = safeTop + 102;
 
-      this.challengeText = this.scene.add.text(W / 2, this.scene.H - 20, `⚔ ${label}: ${ch.progress}/${ch.target}`, {
-        fontSize: '11px',
-        fontFamily: "'Inter', sans-serif",
-        color: '#00F5D4',
-        stroke: '#0A0E1A',
+      // Текст челленджа — amber, увеличенный шрифт
+      const challengeStr = `WEEK ${weekNum}: ${label} — ${ch.progress}/${ch.target}`;
+      this.challengeText = this.scene.add.text(W / 2, chipY, challengeStr, {
+        fontSize: '13px',
+        fontFamily: NEON_FONT,
+        color: NEON_AMBER,
+        stroke: NEON_BG,
         strokeThickness: 2,
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.HUD).setAlpha(0.6);
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.HUD).setAlpha(0.85);
+
+      // Chip-фон — тёмное стекло + тонкая cyan рамка (pill)
+      const tw = this.challengeText.width + 24;
+      const th = this.challengeText.height + 10;
+      this.challengeBg = this.scene.add.graphics();
+      drawChip(this.challengeBg, W / 2, chipY, tw, th);
+      this.challengeBg.setScrollFactor(0).setDepth(Z.HUD - 1).setAlpha(0.85);
     }
   }
 
@@ -165,7 +177,16 @@ export class HUDManager {
       streak: 'challenge_streak',
     };
     const label = tf(labelMap[ch.type] || 'challenge_reach', ch.target, ch.count || 3);
-    this.challengeText.setText(`⚔ ${label}: ${progress}/${target}`);
+    const weekNum = challengeMgr.week;
+    this.challengeText.setText(`WEEK ${weekNum}: ${label} — ${progress}/${target}`);
+
+    // Перерисовать chip-фон под новый размер текста
+    if (this.challengeBg) {
+      this.challengeBg.clear();
+      const tw = this.challengeText.width + 24;
+      const th = this.challengeText.height + 10;
+      drawChip(this.challengeBg, this.challengeText.x, this.challengeText.y, tw, th);
+    }
   }
 
   destroy() {
