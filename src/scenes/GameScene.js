@@ -6,7 +6,8 @@ import { isTelegram, purchaseContinue, saveScoreOnline } from '../telegram.js';
 import { t } from '../i18n.js';
 import {
   GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
-  MIN_ROPE, SWING_FRICTION, RELEASE_BOOST, Z,
+  MIN_ROPE, SWING_FRICTION, RELEASE_BOOST, HOOK_COOLDOWN,
+  FALL_SPEED_PENALTY_START, FALL_SPEED_PENALTY_MAX, HOOK_RANGE_FALLING_MIN, Z,
 } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     this.sessionBest = getBest();
     this.isDead = false;
     this.continueUsed = false;
+    this.lastReleaseTime = 0;    // Кулдаун хука
 
     this.biome = new BiomeManager(this);
     this.biome.create();
@@ -124,36 +126,41 @@ export class GameScene extends Phaser.Scene {
   // ===================== HOOK MECHANICS =====================
 
   shootHook() {
+    // Кулдаун — нельзя мгновенно перецепиться
+    if (this.time.now - this.lastReleaseTime < HOOK_COOLDOWN) return;
+
     const px = this.player.x;
     const py = this.player.y;
+    const vy = this.player.body.velocity.y;
+
+    // Штраф за падение: чем быстрее падаешь, тем меньше радиус зацепа
+    const fallSpeed = Math.max(0, vy);
+    const penalty = Phaser.Math.Clamp(
+      (fallSpeed - FALL_SPEED_PENALTY_START) / (FALL_SPEED_PENALTY_MAX - FALL_SPEED_PENALTY_START),
+      0, 1
+    );
+    const effectiveRange = HOOK_RANGE * (1 - penalty * (1 - HOOK_RANGE_FALLING_MIN));
 
     let nearest = null;
     let minDist = Infinity;
 
-    // Цепляемся за ближайший якорь — и выше, и ниже (при падении)
-    const isFalling = this.player.body.velocity.y > 50;
-
     for (const anchor of this.anchorMgr.anchors) {
-      // При падении — цепляемся за любой якорь в радиусе
-      // При подъёме — только за якоря выше
-      if (!isFalling && anchor.y >= py - 20) continue;
+      // Только якоря выше или на уровне — нельзя цепляться за якоря ниже
+      if (anchor.y > py + 30) continue;
       const dist = Phaser.Math.Distance.Between(px, py, anchor.x, anchor.y);
-      // Якоря выше — полный радиус, якоря ниже — уменьшенный
-      const range = anchor.y < py ? HOOK_RANGE : HOOK_RANGE * 0.6;
-      if (dist < minDist && dist < range) {
+      if (dist < minDist && dist < effectiveRange) {
         minDist = dist;
         nearest = anchor;
       }
     }
 
+    // Промах — нет якорей в радиусе
     if (!nearest) return;
 
     const vx = this.player.body.velocity.x;
-    const vy = this.player.body.velocity.y;
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    // Верёвка = реальное расстояние (без телепорта), clamp только снизу
     this.ropeLength = Phaser.Math.Clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
 
     this.player.body.allowGravity = false;
@@ -167,11 +174,9 @@ export class GameScene extends Phaser.Scene {
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    // Минимальная раскачка — без неё маятник еле шевелится (±20°)
-    const MIN_SWING = 3.0;
-    if (Math.abs(this.swingSpeed) < MIN_SWING) {
-      const dir = Math.sign(this.swingSpeed) || (px < nearest.x ? -1 : 1);
-      this.swingSpeed = dir * MIN_SWING;
+    // Мягкий начальный толчок — чтобы маятник хотя бы шевельнулся
+    if (Math.abs(this.swingSpeed) < 0.5) {
+      this.swingSpeed = px < nearest.x ? -0.5 : 0.5;
     }
 
     this.anchorMgr.highlightAnchor(nearest, true);
@@ -187,6 +192,7 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = false;
     this.player.body.allowGravity = true;
+    this.lastReleaseTime = this.time.now; // Старт кулдауна
 
     // Скорость при отпускании — касательная к дуге + boost для game feel
     const speed = this.swingSpeed * this.ropeLength * RELEASE_BOOST;

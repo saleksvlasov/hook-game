@@ -1,19 +1,27 @@
 // ===================== ИГРОВЫЕ КОНСТАНТЫ =====================
 
-// Физика
-export const GRAVITY = 980;              // Было 1200 — легче раскачиваться
-export const HOOK_RANGE = 380;           // Было 300 — увеличен чтобы доставать до следующего якоря
-export const MAX_ROPE_LENGTH = 220;      // Короче = быстрее качания, меньше выброс за экран
+// Физика — расчёт [MATH] агента v2
+export const GRAVITY = 980;              // Гравитация маятника (период T=2.98s при L=220)
+export const HOOK_RANGE = 200;           // Было 380 — статично не достаёшь, нужна раскачка
+export const MAX_ROPE_LENGTH = 220;      // Период ~3s, макс v=657 px/s при 90° амплитуде
 export const MIN_ROPE = 50;
-export const SWING_FRICTION = 0.9996;    // Потеря 2.4%/сек — маятник держит энергию, третье качание -7% от первого
-export const RELEASE_BOOST = 1.4;        // Snap при отпускании как в Stickman Hook
+export const SWING_FRICTION = 0.9992;    // Было 0.9996 — 4.7%/сек потеря, 3 качания = -20% энергии
+export const RELEASE_BOOST = 1.15;       // Было 1.4 — идеальный swing еле достаёт до следующего
 export const TRAIL_SPEED_THRESHOLD = 150;
+
+// Хук: штраф за падение — чем быстрее падаешь, тем меньше радиус зацепа
+export const FALL_SPEED_PENALTY_START = 200;  // px/s — начало штрафа
+export const FALL_SPEED_PENALTY_MAX = 1000;   // px/s — максимальный штраф
+export const HOOK_RANGE_FALLING_MIN = 0.3;    // множитель — 60px при макс штрафе
+
+// Кулдаун хука — нельзя мгновенно перецепиться
+export const HOOK_COOLDOWN = 180;         // ms после отпускания
 
 // Мир
 export const WORLD_HEIGHT = 100000;
-export const ANCHOR_SPACING_Y = 240;     // Было 280 — крюки ближе, достижимы раскачкой
+export const ANCHOR_SPACING_Y = 240;     // Вертикаль между крюками
 export const GROUND_Y = WORLD_HEIGHT - 10;
-export const SPAWN_Y = WORLD_HEIGHT - 400;  // Было -200 — выше от земли, игрок успевает зацепиться
+export const SPAWN_Y = WORLD_HEIGHT - 400;
 
 // Пасхалки
 export const BOUNTY_HEIGHT = 1000;
