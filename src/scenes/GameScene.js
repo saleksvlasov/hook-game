@@ -174,6 +174,9 @@ export class GameScene extends Phaser.Scene {
 
     this.anchorMgr.highlightAnchor(result.anchor, true);
 
+    // Haptic — короткий тик при зацепе
+    navigator.vibrate?.(15);
+
     playHook();
     this.time.delayedCall(80, () => playAttach());
 
@@ -198,6 +201,10 @@ export class GameScene extends Phaser.Scene {
 
     this.rope.clear();
     this.hud.setHint('click_hook');
+
+    // Haptic — лёгкий тик при отпускании
+    navigator.vibrate?.(10);
+
     playRelease();
   }
 
@@ -208,6 +215,9 @@ export class GameScene extends Phaser.Scene {
     if (this.isHooked) this.releaseHook();
     this.player.body.setVelocity(0, 0);
     this.player.body.allowGravity = false;
+
+    // Haptic — тяжёлый паттерн при смерти
+    navigator.vibrate?.([50, 30, 80]);
 
     this.cameras.main.shake(400, 0.02);
     this.cameras.main.flash(400, 140, 20, 10);
@@ -403,6 +413,9 @@ export class GameScene extends Phaser.Scene {
       const knockX = (Math.random() - 0.5) * 300;
       this.player.body.setVelocity(knockX, 400);
       this.bugHitCooldown = 2000; // 2s неуязвимости (совпадает с визуалом)
+
+      // Haptic — паттерн удара при столкновении с жуком
+      navigator.vibrate?.([30, 20, 30]);
 
       // Звук удара
       playBugHit();

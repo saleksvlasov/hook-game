@@ -1,4 +1,4 @@
-import { Z } from '../constants.js';
+import { Z, FONT_MONO } from '../constants.js';
 import { t } from '../i18n.js';
 import { SKINS } from './SkinRenderer.js';
 import { isTelegram } from '../telegram.js';
@@ -62,23 +62,32 @@ export class GameOverUI {
       this.scene.add.rectangle(W / 2, H / 2, W, H, 0x050810, 0.85)
     );
 
-    // Заголовок "YOU FELL" — neon pink, драматичный
+    // Scanlines поверх overlay — горизонтальные линии через 4px, alpha 0.03
+    this.scanlines = this.scene.add.graphics()
+      .setScrollFactor(0).setDepth(Z.GAME_OVER).setVisible(false);
+    this.scanlines.fillStyle(0x000000, 0.03);
+    for (let y = 0; y < H; y += 4) {
+      this.scanlines.fillRect(0, y, W, 2);
+    }
+    this.elements.push(this.scanlines);
+
+    // Заголовок "YOU FELL" — neon pink, драматичный glow
     this.titleText = makeUI(this.scene.add.text(W / 2, H * 0.26, t('you_died'), {
       fontSize: '48px', color: NEON_PINK, fontFamily: NEON_FONT, fontStyle: 'bold',
       stroke: NEON_BG, strokeThickness: 6,
-    }).setOrigin(0.5));
+    }).setOrigin(0.5).setShadow(0, 0, '#FF2E63', 8, true, true));
 
-    // Высота (score) — neon amber
+    // Высота (score) — neon amber, моноширинный + glow
     this.scoreText = makeUI(this.scene.add.text(W / 2, H * 0.35, '', {
-      fontSize: '20px', color: NEON_AMBER, fontFamily: NEON_FONT, fontStyle: 'bold',
+      fontSize: '20px', color: NEON_AMBER, fontFamily: FONT_MONO, fontStyle: 'bold',
       stroke: NEON_BG, strokeThickness: 2,
-    }).setOrigin(0.5));
+    }).setOrigin(0.5).setShadow(0, 0, '#FFB800', 5, true, true));
 
-    // Рекорд (best) — cyan по умолчанию, amber при новом рекорде
+    // Рекорд (best) — cyan по умолчанию, amber при новом рекорде + glow
     this.bestText = makeUI(this.scene.add.text(W / 2, H * 0.39, '', {
-      fontSize: '30px', color: NEON_CYAN, fontFamily: NEON_FONT, fontStyle: 'bold',
+      fontSize: '30px', color: NEON_CYAN, fontFamily: FONT_MONO, fontStyle: 'bold',
       stroke: NEON_BG, strokeThickness: 5,
-    }).setOrigin(0.5));
+    }).setOrigin(0.5).setShadow(0, 0, '#00F5D4', 5, true, true));
 
     // НОВЫЙ РЕКОРД — neon amber
     this.newBestText = makeUI(this.scene.add.text(W / 2, H * 0.44, t('new_record'), {
@@ -144,6 +153,13 @@ export class GameOverUI {
         ? 'rgba(74, 85, 128, 0.3)'
         : 'rgba(0, 245, 212, 0.3)';
 
+    // Neon text-shadow — amber для continue, cyan для restart/leaderboard, без для menu
+    const textShadow = isContinue
+      ? 'text-shadow: 0 0 4px rgba(255, 184, 0, 0.6);'
+      : isMenu
+        ? ''
+        : 'text-shadow: 0 0 4px rgba(0, 245, 212, 0.6);';
+
     btn.style.cssText = `
       font-family: ${NEON_FONT}; cursor: pointer;
       outline: none; pointer-events: auto;
@@ -159,6 +175,7 @@ export class GameOverUI {
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       transition: all 0.12s ease;
+      ${textShadow}
     `;
 
     // Hover/press — цвета зависят от типа
@@ -174,7 +191,7 @@ export class GameOverUI {
 
     const onEnter = () => {
       btn.style.borderColor = hoverBorder;
-      btn.style.textShadow = `0 0 10px ${hoverShadowColor}`;
+      btn.style.textShadow = `0 0 5px ${hoverShadowColor}`;
       if (isMenu) btn.style.color = hoverTextColor;
     };
     const onLeave = () => {
@@ -376,6 +393,7 @@ export class GameOverUI {
   destroy() {
     if (this.bloodGfx) { this.bloodGfx.destroy(); this.bloodGfx = null; }
     if (this.posterGfx) { this.posterGfx.destroy(); this.posterGfx = null; }
+    if (this.scanlines) { this.scanlines.destroy(); this.scanlines = null; }
     const el = document.getElementById('game-over-buttons');
     if (el) el.remove();
     this.leaderboardUI.destroy();

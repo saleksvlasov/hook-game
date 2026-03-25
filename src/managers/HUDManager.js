@@ -1,4 +1,4 @@
-import { Z } from '../constants.js';
+import { Z, FONT_MONO } from '../constants.js';
 import { t } from '../i18n.js';
 import { tf } from '../i18n.js';
 import { createEmberBurst, drawChip } from '../managers/UIFactory.js';
@@ -39,33 +39,44 @@ export class HUDManager {
     this.bgPanel.fillRoundedRect(W / 2 - 76, safeTop + 10, 152, 52, 26);
     this.bgPanel.lineStyle(1, NEON_CYAN_HEX, 0.15);
     this.bgPanel.strokeRoundedRect(W / 2 - 76, safeTop + 10, 152, 52, 26);
+    // Scanline текстура — горизонтальные линии через 3px, alpha 0.03
+    const panelX = W / 2 - 76;
+    const panelY = safeTop + 10;
+    const panelW = 152;
+    const panelH = 52;
+    for (let sy = panelY; sy < panelY + panelH; sy += 3) {
+      this.bgPanel.fillStyle(0xFFFFFF, 0.03);
+      this.bgPanel.fillRect(panelX, sy, panelW, 1);
+    }
     this.bgPanel.setScrollFactor(0).setDepth(Z.HUD);
 
-    // Высота — neon amber, крупный
+    // Высота — neon amber, крупный, моноширинный + cyan glow
     this.heightText = this.scene.add.text(W / 2, safeTop + 18, `0${t('unit_m')}`, {
       fontSize: '36px',
       color: NEON_AMBER,
-      fontFamily: NEON_FONT,
+      fontFamily: FONT_MONO,
       fontStyle: 'bold',
       stroke: NEON_BG,
       strokeThickness: 5,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
+    this.heightText.setShadow(0, 0, '#00F5D4', 4, true, true);
 
-    // Рекорд — neon cyan
+    // Рекорд — neon cyan, моноширинный + cyan glow
     this.maxHeightText = this.scene.add.text(W / 2, safeTop + 56, `${t('record')}: 0${t('unit_m')}`, {
       fontSize: '14px',
       color: NEON_CYAN,
-      fontFamily: NEON_FONT,
+      fontFamily: FONT_MONO,
       fontStyle: 'bold',
       stroke: NEON_BG,
       strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
+    this.maxHeightText.setShadow(0, 0, '#00F5D4', 4, true, true);
 
-    // Label — метка "ГЛУБИНА" — steel, letterSpacing 4
-    this.scene.add.text(W / 2, safeTop + 4, t('depth'), {
+    // Label — метка "ГЛУБИНА" — steel, letterSpacing 4, моноширинный
+    this.depthLabel = this.scene.add.text(W / 2, safeTop + 4, t('depth'), {
       fontSize: '11px',
       color: NEON_STEEL,
-      fontFamily: NEON_FONT,
+      fontFamily: FONT_MONO,
       letterSpacing: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 

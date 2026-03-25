@@ -72,6 +72,8 @@ export const AMBER_GLOW = 0x00F5D4;     // Cyan свечение (крюки, к
 
 // Шрифт — современный sans-serif
 export const FONT = "'Inter', 'Helvetica Neue', sans-serif";
+// Моноширинный шрифт — для HUD чисел (neon glow)
+export const FONT_MONO = "'Share Tech Mono', monospace";
 
 // ===== БИОМЫ =====
 export const BIOMES = [

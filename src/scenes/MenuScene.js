@@ -6,8 +6,10 @@ import {
   drawGlassButton, drawChip,
   createTypewriterText, createEmberBurst,
 } from '../managers/UIFactory.js';
+import { FONT_MONO } from '../constants.js';
 import { SkinCarousel } from '../managers/SkinCarousel.js';
 import { MenuHunter } from '../managers/MenuHunter.js';
+import { LeaderboardUI } from '../managers/LeaderboardUI.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN = 0x00F5D4;
@@ -101,6 +103,8 @@ export class MenuScene extends Phaser.Scene {
       fontSize: '60px', fontFamily: NEON_FONT, fontStyle: 'bold',
       color: NEON_AMBER_STR, stroke: BG_DARK_NEON_STR, strokeThickness: 7,
     }).setOrigin(0.5).setDepth(11).setAlpha(0);
+    // Neon glow через setShadow — cyan свечение
+    title.setShadow(0, 0, '#00F5D4', 6, true, true);
     this.tweens.add({
       targets: title, y: titleY - 5, duration: 2500, yoyo: true, repeat: -1,
       ease: 'Sine.easeInOut', delay: 500,
@@ -145,8 +149,10 @@ export class MenuScene extends Phaser.Scene {
       const chipGfx = this.add.graphics().setDepth(10).setAlpha(0);
       drawChip(chipGfx, W / 2, recordY, 200, 36);
       const recordText = this.add.text(W / 2, recordY, `${t('record')}: ${best}${t('unit_m')}`, {
-        fontSize: '16px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_AMBER_STR,
+        fontSize: '16px', fontFamily: FONT_MONO, fontStyle: 'bold', color: NEON_AMBER_STR,
       }).setOrigin(0.5).setDepth(11).setAlpha(0);
+      // Cyan glow на числе рекорда
+      recordText.setShadow(0, 0, '#00F5D4', 3, true, true);
       this._addStaggerFade(chipGfx, 700);
       this._addStaggerEntry(recordText, recordY, 700);
     }
@@ -171,12 +177,33 @@ export class MenuScene extends Phaser.Scene {
     this._addStaggerFade(skinsGfx, 750);
     this._addStaggerEntry(skinsText, skinsY, 750);
 
+    // --- Кнопка ТОП (лидерборд) ---
+    const topY = skinsY + 40;
+    const topGfx = this.add.graphics().setDepth(15);
+    drawGlassButton(topGfx, W / 2, topY, 120, 32);
+    const topText = this.add.text(W / 2, topY, t('top_button'), {
+      fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_CYAN_STR,
+    }).setOrigin(0.5).setDepth(16).setAlpha(0);
+    const topZone = this.add.zone(W / 2, topY, 120, 32)
+      .setInteractive({ useHandCursor: true }).setDepth(17);
+    topZone.on('pointerdown', () => {
+      if (!this.leaderboardUI) {
+        this.leaderboardUI = new LeaderboardUI();
+        this.leaderboardUI.create();
+      }
+      this.leaderboardUI.show();
+    });
+    this._addStaggerFade(topGfx, 800);
+    this._addStaggerEntry(topText, topY, 800);
+
     // --- Подсказка ---
     const hintText = this.add.text(W / 2, H - 24, t('tap_to_hunt'), {
       fontSize: '15px', fontFamily: NEON_FONT, fontStyle: 'italic', color: NEON_CYAN_STR,
     }).setOrigin(0.5).setDepth(11).setAlpha(0);
+    // Cyan glow + усиленный пульс 0.5→1.0
+    hintText.setShadow(0, 0, '#00F5D4', 3, true, true);
     this.tweens.add({
-      targets: hintText, alpha: { from: 0.4, to: 0.9 },
+      targets: hintText, alpha: { from: 0.5, to: 1.0 },
       duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 800,
     });
     this._addStaggerEntry(hintText, H - 20, 800);
@@ -190,6 +217,16 @@ export class MenuScene extends Phaser.Scene {
     this.konamiTriggered = false;
     this._konamiHandler = (event) => this._checkKonami(event);
     this.input.keyboard.on('keydown', this._konamiHandler);
+
+    // Scanline overlay — тонкие горизонтальные линии для cyberpunk feel
+    const scanlines = this.add.graphics().setScrollFactor(0).setDepth(18);
+    const scanH = this.scale.height;
+    scanlines.lineStyle(1, 0xffffff, 0.03);
+    for (let y = 0; y < scanH; y += 4) {
+      scanlines.moveTo(0, y);
+      scanlines.lineTo(this.scale.width, y);
+    }
+    scanlines.strokePath();
 
     // Stagger entry анимация
     this._playStaggerEntries();
@@ -214,6 +251,8 @@ export class MenuScene extends Phaser.Scene {
       fontSize: '32px', fontFamily: NEON_FONT, fontStyle: 'bold',
       color: NEON_AMBER_STR, stroke: BG_DARK_NEON_STR, strokeThickness: 4,
     }).setOrigin(0.5).setDepth(14).setAlpha(0);
+    // Neon amber glow на тексте кнопки
+    btnText.setShadow(0, 0, '#FFB800', 4);
     const btnZone = this.add.zone(W / 2, btnY, btnW, btnH).setInteractive({ useHandCursor: true }).setDepth(15);
     btnZone.on('pointerover', () => { drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH, { hover: true }); btnText.setScale(1.05); });
     btnZone.on('pointerout', () => { drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH); btnText.setScale(1); });
@@ -263,10 +302,10 @@ export class MenuScene extends Phaser.Scene {
     for (const { target, finalY, delay, fadeOnly } of this._uiElements) {
       if (target.setAlpha) target.setAlpha(0);
       if (fadeOnly) {
-        this.tweens.add({ targets: target, alpha: 1, duration: 400, delay, ease: 'Cubic.easeOut' });
+        this.tweens.add({ targets: target, alpha: 1, duration: 250, delay, ease: 'Cubic.easeOut' });
       } else {
         if (target.setY) target.setY(finalY + 20);
-        this.tweens.add({ targets: target, alpha: 1, y: finalY, duration: 400, delay, ease: 'Cubic.easeOut' });
+        this.tweens.add({ targets: target, alpha: 1, y: finalY, duration: 250, delay, ease: 'Cubic.easeOut' });
       }
     }
   }
@@ -354,6 +393,7 @@ export class MenuScene extends Phaser.Scene {
   shutdown() {
     if (this._konamiHandler) this.input.keyboard.off('keydown', this._konamiHandler);
     if (this._skinCarousel) this._skinCarousel.destroy();
+    if (this.leaderboardUI) this.leaderboardUI.destroy();
     if (this.menuHunterObj) this.menuHunterObj.destroy();
   }
 }

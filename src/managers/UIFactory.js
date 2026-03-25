@@ -178,5 +178,11 @@ export function drawChip(gfx, x, y, w, h) {
   gfx.strokeRoundedRect(left, top, w, h, radius);
 }
 
+// Neon glow утилита — добавляет тень-свечение на текстовый объект Phaser
+export function applyNeonGlow(textObj, color = '#00F5D4', blur = 8) {
+  textObj.setShadow(0, 0, color, blur, true, true);
+  return textObj;
+}
+
 // Ржавые края — no-op в новом дизайне
 export function drawRustedEdge() {}
