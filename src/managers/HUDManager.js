@@ -1,6 +1,5 @@
 import { Z } from '../constants.js';
 import { t } from '../i18n.js';
-import { ChallengeManager } from './ChallengeManager.js';
 import { tf } from '../i18n.js';
 import { createEmberBurst, drawChip } from '../managers/UIFactory.js';
 
@@ -26,7 +25,8 @@ export class HUDManager {
     this.challengeBg = null;
   }
 
-  create() {
+  create(challengeMgr) {
+    this._challengeMgr = challengeMgr || null;
     const W = this.scene.W;
 
     // Отступ для safe area (Dynamic Island, notch, статусбар)
@@ -89,8 +89,7 @@ export class HUDManager {
     });
 
     // Виджет еженедельного испытания — под hint текстом, MUI Chip стиль
-    const challengeMgr = new ChallengeManager();
-    const ch = challengeMgr.getCurrentChallenge();
+    const ch = this._challengeMgr ? this._challengeMgr.getCurrentChallenge() : null;
     if (ch && !ch.completed) {
       const labelMap = {
         reach: 'challenge_reach',

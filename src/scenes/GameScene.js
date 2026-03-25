@@ -99,8 +99,13 @@ export class GameScene extends Phaser.Scene {
     this.swamp = new SwampManager(this);
     this.swamp.create();
 
+    // Еженедельные испытания — создаём ДО HUD и GameOverUI (единый экземпляр)
+    this.challengeMgr = new ChallengeManager();
+    this.hitCount = 0;
+    this.gameStartTime = Date.now();
+
     this.hud = new HUDManager(this);
-    this.hud.create();
+    this.hud.create(this.challengeMgr);
 
     this.gameOverUI = new GameOverUI(this);
     this.gameOverUI.create({
@@ -113,14 +118,10 @@ export class GameScene extends Phaser.Scene {
         this.scene.stop('GameScene');
         this.scene.start('MenuScene');
       },
+      challengeMgr: this.challengeMgr,
     });
 
     this.eggs = new EasterEggs(this);
-
-    // Еженедельные испытания
-    this.challengeMgr = new ChallengeManager();
-    this.hitCount = 0; // счётчик столкновений с жуками за игру
-    this.gameStartTime = Date.now(); // время старта для анти-чита
 
     // Камера — X фиксирована, Y следит за игроком
     this.cameras.main.scrollX = 0;
@@ -282,23 +283,6 @@ export class GameScene extends Phaser.Scene {
     }
     this.scene.stop('GameScene');
     this.scene.start('GameScene');
-  }
-
-  respawn() {
-    this.isDead = false;
-    this.gameOverUI.hide();
-    this.maxHeight = 0;
-    this.continueUsed = false;
-    this.hitCount = 0;
-    this.gameStartTime = Date.now(); // сброс таймера при респавне
-    this.eggs.reset();
-    this.player.setPosition(this.W / 2, SPAWN_Y);
-    this.player.body.reset(this.W / 2, SPAWN_Y);
-    this.player.body.allowGravity = true;
-    this.playerContainer.setAlpha(1);
-    this.playerContainer.setRotation(0);
-    this.trail.reset();
-    this.hud.setHint('click_hook');
   }
 
   // ===================== UPDATE =====================

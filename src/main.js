@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
-// import { SkinPreviewScene } from './scenes/SkinPreviewScene.js'; // DEBUG: раскомментить для превью скинов
 
 // Telegram Mini App — раскрываем на весь экран
 if (window.Telegram?.WebApp) {

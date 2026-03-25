@@ -1,6 +1,5 @@
 import { Z } from '../constants.js';
 import { t } from '../i18n.js';
-import { ChallengeManager } from './ChallengeManager.js';
 import { SKINS } from './SkinRenderer.js';
 import { isTelegram } from '../telegram.js';
 import {
@@ -44,7 +43,8 @@ export class GameOverUI {
     this.onMenu = null;
   }
 
-  create({ onContinue, onRestart, onMenu }) {
+  create({ onContinue, onRestart, onMenu, challengeMgr }) {
+    this._challengeMgr = challengeMgr || null;
     this.onContinue = onContinue;
     this.onRestart = onRestart;
     this.onMenu = onMenu;
@@ -302,8 +302,8 @@ export class GameOverUI {
     }
 
     // === Кнопка CLAIM SKIN — если челлендж выполнен но не claimed ===
-    const challengeMgr = new ChallengeManager();
-    const ch = challengeMgr.getCurrentChallenge();
+    const challengeMgr = this._challengeMgr;
+    const ch = challengeMgr ? challengeMgr.getCurrentChallenge() : null;
     if (ch && ch.completed && !ch.claimed) {
       const claimBtn = this._createButton(t('challenge_claim'), 'claim');
       // Переопределяем стиль — amber цвет и amber border

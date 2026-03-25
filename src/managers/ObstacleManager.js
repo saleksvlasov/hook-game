@@ -63,8 +63,8 @@ export class ObstacleManager {
       const sway = Math.sin(time * 0.003 + obs.x * 0.1) * 3;
       obs.container.setY(obs.baseY + sway);
 
-      // Firefly — пульсация glow каждые ~10 кадров
-      if (obs.type === 3 && Math.floor(time / 160) % 10 === 0) {
+      // Firefly — плавная пульсация (каждый кадр, не условная)
+      if (obs.type === 3) {
         const pulse = 0.5 + 0.5 * Math.sin(time * 0.005 + obs.x);
         obs.container.setAlpha(0.7 + pulse * 0.3);
       }
