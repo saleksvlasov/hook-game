@@ -356,21 +356,52 @@ export class MenuScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const y = H * 0.90;
-    const cellW = 60;
-    const startX = W / 2 - (SKINS.length * cellW) / 2 + cellW / 2;
+    const cellW = 56;
     const activeSkin = getActiveSkin();
+
+    // Активный скин — центрируем на нём
+    const activeIdx = SKINS.findIndex(s => s.id === activeSkin);
+    const totalW = SKINS.length * cellW;
+
+    // Скролл-контейнер — видимая область = экран, содержимое шире
+    // Начальный offset — центрируем на активном скине
+    const centerOffset = W / 2 - (activeIdx >= 0 ? activeIdx : 0) * cellW - cellW / 2;
+    this._skinScrollX = Phaser.Math.Clamp(centerOffset, W - totalW - 10, 10);
 
     // Фон полоса
     const bgStrip = this.add.graphics().setDepth(18);
-    bgStrip.fillStyle(BG_DARK_NEON, 0.85);
+    bgStrip.fillStyle(BG_DARK_NEON, 0.90);
     bgStrip.fillRect(0, y - 35, W, 70);
     bgStrip.lineStyle(1, NEON_CYAN, 0.15);
     bgStrip.lineBetween(0, y - 35, W, y - 35);
     this.skinSelectorElements.push(bgStrip);
 
+    // Стрелки навигации если контент шире экрана
+    if (totalW > W) {
+      const arrowL = this.add.text(8, y, '◀', {
+        fontSize: '18px', color: '#00F5D4',
+      }).setOrigin(0, 0.5).setDepth(21).setAlpha(0.5).setInteractive();
+      const arrowR = this.add.text(W - 8, y, '▶', {
+        fontSize: '18px', color: '#00F5D4',
+      }).setOrigin(1, 0.5).setDepth(21).setAlpha(0.5).setInteractive();
+
+      arrowL.on('pointerdown', () => {
+        this._skinScrollX = Math.min(this._skinScrollX + cellW * 3, 10);
+        this._repositionSkins();
+      });
+      arrowR.on('pointerdown', () => {
+        this._skinScrollX = Math.max(this._skinScrollX - cellW * 3, W - totalW - 10);
+        this._repositionSkins();
+      });
+      this.skinSelectorElements.push(arrowL, arrowR);
+    }
+
+    // Массив скин-элементов для скролла
+    this._skinItems = [];
+
     for (let i = 0; i < SKINS.length; i++) {
       const skin = SKINS[i];
-      const x = startX + i * cellW;
+      const x = this._skinScrollX + i * cellW + cellW / 2;
       const unlocked = isSkinUnlocked(skin.id);
       const isActive = skin.id === activeSkin;
 
@@ -379,27 +410,53 @@ export class MenuScene extends Phaser.Scene {
       const gfx = this.add.graphics();
       drawSkinPose(gfx, i, 0);
       container.add(gfx);
-      container.setScale(0.7);
+      container.setScale(0.65);
 
       if (!unlocked) {
         container.setAlpha(0.2);
       }
 
       // Рамка активного
+      let frame = null;
       if (isActive) {
-        const frame = this.add.graphics().setDepth(18);
+        frame = this.add.graphics().setDepth(18);
         frame.lineStyle(1.5, NEON_CYAN, 0.6);
-        frame.strokeRoundedRect(x - 22, y - 28, 44, 56, 6);
+        frame.strokeRoundedRect(x - 20, y - 26, 40, 52, 6);
         this.skinSelectorElements.push(frame);
       }
 
       // Зона клика — всегда показываем тултип
-      const zone = this.add.zone(x, y, 44, 56).setInteractive().setDepth(20);
+      const zone = this.add.zone(x, y, 40, 52).setInteractive().setDepth(20);
       zone.on('pointerdown', () => {
         this._showSkinTooltip(i, x, y);
       });
 
+      this._skinItems.push({ container, zone, frame, index: i });
       this.skinSelectorElements.push(container, zone);
+    }
+
+    // Подсказка — что скины кликабельны
+    const hint = this.add.text(W / 2, y + 30, '← tap skin to preview →', {
+      fontSize: '10px', fontFamily: "'Inter', sans-serif",
+      color: '#4A5580',
+    }).setOrigin(0.5).setDepth(18);
+    this.skinSelectorElements.push(hint);
+  }
+
+  // Перепозиционировать скины при скролле
+  _repositionSkins() {
+    if (!this._skinItems) return;
+    const cellW = 56;
+    const y = this.H * 0.90;
+    for (const item of this._skinItems) {
+      const x = this._skinScrollX + item.index * cellW + cellW / 2;
+      item.container.setX(x);
+      item.zone.setX(x);
+      if (item.frame) {
+        item.frame.clear();
+        item.frame.lineStyle(1.5, 0x00F5D4, 0.6);
+        item.frame.strokeRoundedRect(x - 20, y - 26, 40, 52, 6);
+      }
     }
   }
 
