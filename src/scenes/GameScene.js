@@ -244,8 +244,7 @@ export class GameScene extends Phaser.Scene {
       saveScoreOnline(this.maxHeight);
     }
 
-    const lastHeight = Math.max(0, Math.floor((GROUND_Y - this.player.y) / 10));
-    this.gameOverUI.show(lastHeight, this.sessionBest, isNewBest && this.maxHeight > 0, this.continueUsed);
+    this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0, this.continueUsed);
 
     playDeath();
   }
