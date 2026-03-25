@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { TRAIL_SPEED_THRESHOLD, Z } from '../constants.js';
 import { ObjectPool } from './ObjectPool.js';
 
-// Менеджер trail-частиц (ember) с object pool
+// Менеджер trail-частиц — неоновый cyan→pink градиент
 export class TrailManager {
   constructor(scene) {
     this.scene = scene;
@@ -37,18 +37,18 @@ export class TrailManager {
     for (let i = 0; i < this.active.length; i++) {
       const p = this.active[i];
       p.life -= delta;
-      p.y -= delta * 0.01; // embers float up
+      p.y -= delta * 0.01; // частицы всплывают вверх
       if (p.life <= 0) {
         this.pool.release(p);
         continue;
       }
       const frac = p.life / p.maxLife;
-      const alpha = frac * 0.7;
+      const alpha = frac * 0.8; // Ярче чем было (0.7→0.8)
       const size = p.size * frac;
-      // Ember: bright orange → dark red → fade
-      const r = Math.floor(255 * frac);
-      const g = Math.floor(120 * frac * frac);
-      const b = Math.floor(30 * frac * frac * frac);
+      // Neon: cyan → pink градиент при затухании
+      const r = Math.floor(0 + 255 * (1 - frac));    // 0 → 255 (pink)
+      const g = Math.floor(245 * frac);                // 245 → 0 (cyan green)
+      const b = Math.floor(212 * frac + 100 * (1 - frac)); // 212 → 100
       const hex = Phaser.Display.Color.GetColor(r, g, b);
       this.graphics.fillStyle(hex, alpha);
       this.graphics.fillCircle(p.x, p.y, size);

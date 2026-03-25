@@ -172,13 +172,17 @@ export class BiomeManager {
     const moonY = 300;
     const mx = this.W * 0.72;
 
-    moonGfx.fillStyle(0x667788, 0.08);
+    // Внешнее cyan свечение
+    moonGfx.fillStyle(0x00F5D4, 0.05);
     moonGfx.fillCircle(mx, moonY, 90);
-    moonGfx.fillStyle(0x6688AA, 0.25);
+    // Тело луны — стальной тон
+    moonGfx.fillStyle(0x4A5580, 0.25);
     moonGfx.fillCircle(mx, moonY, 70);
-    moonGfx.fillStyle(0x7799BB, 0.18);
+    // Подсветка
+    moonGfx.fillStyle(0x6688AA, 0.15);
     moonGfx.fillCircle(mx - 10, moonY - 5, 62);
-    moonGfx.fillStyle(0x5577AA, 0.10);
+    // Кратеры — тёмная сталь
+    moonGfx.fillStyle(0x2A3050, 0.12);
     moonGfx.fillCircle(mx + 18, moonY - 15, 14);
     moonGfx.fillCircle(mx - 22, moonY + 15, 9);
   }

@@ -1,12 +1,13 @@
-import {
-  GOLD_HEX, DARK_RED_HEX, RUST, BLOOD_RED_HEX, BRASS_HEX,
-  STEEL, STEEL_LIGHT, AMBER_GLOW, EMBER_HEX, BG_DARK_HEX,
-} from '../constants.js';
-
 // ===================== ПРОЦЕДУРНЫЕ UI УТИЛИТЫ =====================
-// Premium glassmorphism + Hunt Showdown — тёплый amber на navy-slate
+// Neon Western — тёмное стекло + неоновые акценты cyan/pink/amber
 
-// Flat minimal кнопка 2025 — единый стиль, никаких теней/выпуклостей
+// Неоновая палитра
+const NEON_CYAN = 0x00F5D4;
+const NEON_PINK = 0xFF2E63;
+const NEON_AMBER = 0xFFB800;
+const BG_DARK_NEON = 0x0A0E1A;
+
+// Flat minimal кнопка — тёмное стекло + неоновая cyan рамка
 export function drawGlassButton(gfx, x, y, w, h, opts = {}) {
   const { pressed = false, hover = false } = opts;
   const left = x - w / 2;
@@ -15,44 +16,59 @@ export function drawGlassButton(gfx, x, y, w, h, opts = {}) {
 
   gfx.clear();
 
-  // Плоский фон — полупрозрачный
-  const bgAlpha = pressed ? 0.5 : hover ? 0.35 : 0.25;
-  gfx.fillStyle(0xFFFFFF, bgAlpha * 0.15);
+  // Тёмный стеклянный фон
+  const bgAlpha = pressed ? 0.7 : 0.6;
+  gfx.fillStyle(BG_DARK_NEON, bgAlpha);
   gfx.fillRoundedRect(left, top, w, h, radius);
 
-  // Одинаковая рамка — тонкая, amber
-  const borderAlpha = pressed ? 0.6 : hover ? 0.5 : 0.35;
-  gfx.lineStyle(1, AMBER_GLOW, borderAlpha);
+  // Неоновая cyan рамка
+  const borderAlpha = pressed ? 0.7 : hover ? 0.6 : 0.4;
+  gfx.lineStyle(1, NEON_CYAN, borderAlpha);
   gfx.strokeRoundedRect(left, top, w, h, radius);
+
+  // Тонкая неоновая линия-блик сверху (1px, cyan)
+  gfx.lineStyle(1, NEON_CYAN, 0.15);
+  gfx.beginPath();
+  gfx.moveTo(left + radius, top);
+  gfx.lineTo(left + w - radius, top);
+  gfx.strokePath();
 }
 
 // Обратная совместимость
 export { drawGlassButton as drawOrnamentalButton };
 
-// Пунктирная линия — маленькие точки каждые 12px
+// Пунктирная линия — неоновые cyan чёрточки
 export function drawChainDecoration(gfx, x1, y1, x2, y2) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy);
   const steps = Math.floor(len / 12);
 
+  // Нормализованное направление для чёрточек
+  const nx = dx / (len || 1);
+  const ny = dy / (len || 1);
+  const dashHalf = 3; // полудлина чёрточки
+
   for (let i = 0; i <= steps; i++) {
     const t = i / Math.max(steps, 1);
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
 
-    // Точки — amber-steel, ярче для видимости
-    gfx.fillStyle(AMBER_GLOW, 0.18);
-    gfx.fillCircle(cx, cy, 1.5);
+    // Чёрточки — neon cyan
+    gfx.lineStyle(1, NEON_CYAN, 0.15);
+    gfx.beginPath();
+    gfx.moveTo(cx - nx * dashHalf, cy - ny * dashHalf);
+    gfx.lineTo(cx + nx * dashHalf, cy + ny * dashHalf);
+    gfx.strokePath();
   }
 }
 
 // Обратная совместимость
 export { drawChainDecoration as drawRopeDecoration };
 
-// Процедурные капли крови — без изменений
+// Процедурные капли крови — неоновый pink вместо тёмного красного
 export function drawBloodSplatter(gfx, x, y, radius, intensity = 0.7) {
-  const color = BLOOD_RED_HEX;
+  const color = NEON_PINK;
 
   // Центральное пятно — несколько перекрывающихся кругов
   for (let i = 0; i < 5; i++) {
@@ -84,18 +100,18 @@ export function drawBloodSplatter(gfx, x, y, radius, intensity = 0.7) {
   }
 }
 
-// Рамка-chip (MUI Chip стиль) — плоский pill/rounded rect
+// Рамка-chip (MUI Chip стиль) — тёмное стекло + тонкая cyan рамка
 export function drawSteelFrame(gfx, x, y, w, h) {
   const left = x - w / 2;
   const top = y - h / 2;
   const radius = Math.min(h / 2, 16); // pill если маленький, 16px если большой
 
-  // Фон — лёгкий полупрозрачный
-  gfx.fillStyle(0xFFFFFF, 0.05);
+  // Фон — тёмное стекло
+  gfx.fillStyle(BG_DARK_NEON, 0.4);
   gfx.fillRoundedRect(left, top, w, h, radius);
 
-  // Рамка — тонкая amber
-  gfx.lineStyle(1, AMBER_GLOW, 0.20);
+  // Рамка — тонкая cyan
+  gfx.lineStyle(1, NEON_CYAN, 0.15);
   gfx.strokeRoundedRect(left, top, w, h, radius);
 }
 
@@ -119,17 +135,20 @@ export function createTypewriterText(scene, x, y, text, style, charDelay = 40) {
   return textObj;
 }
 
-// Вспышка искр — яркий ember стиль, крупные частицы
+// Вспышка искр — cyan + pink неоновые частицы
 export function createEmberBurst(scene, x, y, count = 10, depth = 20) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 30 + Math.random() * 60;
     const dx = Math.cos(angle) * speed;
     const dy = Math.sin(angle) * speed - 20; // вверх
-    const size = 1.5 + Math.random() * 2; // 1.5–3.5px
+    const size = 2 + Math.random() * 2; // 2–4px (крупнее)
+
+    // Случайный выбор: cyan или pink
+    const color = Math.random() < 0.5 ? NEON_CYAN : NEON_PINK;
 
     const ember = scene.add.graphics().setDepth(depth);
-    ember.fillStyle(EMBER_HEX, 0.9);
+    ember.fillStyle(color, 0.9);
     ember.fillCircle(x, y, size);
 
     scene.tweens.add({
@@ -144,18 +163,18 @@ export function createEmberBurst(scene, x, y, count = 10, depth = 20) {
   }
 }
 
-// MUI Chip — pill-shape с текстом, как Material UI
+// MUI Chip — pill-shape с текстом, тёмное стекло + cyan рамка
 export function drawChip(gfx, x, y, w, h) {
   const left = x - w / 2;
   const top = y - h / 2;
   const radius = h / 2; // полный pill
 
-  // Фон — полупрозрачный
-  gfx.fillStyle(0xFFFFFF, 0.05);
+  // Фон — тёмное стекло
+  gfx.fillStyle(BG_DARK_NEON, 0.4);
   gfx.fillRoundedRect(left, top, w, h, radius);
 
-  // Рамка — тонкая amber
-  gfx.lineStyle(1, AMBER_GLOW, 0.20);
+  // Рамка — тонкая cyan
+  gfx.lineStyle(1, NEON_CYAN, 0.15);
   gfx.strokeRoundedRect(left, top, w, h, radius);
 }
 

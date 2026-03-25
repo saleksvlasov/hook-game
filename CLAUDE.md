@@ -34,21 +34,21 @@
 Ты синьор арт-директор с опытом в AAA и мобильном геймдеве. Когда задача начинается с [DESIGN]:
 
 ПРИНЦИПЫ:
-- Стиль: Hunt Showdown — тёмный готический вестерн
+- Стиль: Neon Western — Hunt Showdown × Cyberpunk
 - Mobile-first: всё должно читаться на экране 4"
 - Контраст: персонаж всегда виден на фоне
 - Итерируй визуально: сначала опиши что меняешь, потом меняй
 
-ПАЛИТРА Premium Amber & Slate (не менять без причины):
+ПАЛИТРА Neon Western (не менять без причины):
 ```
-Фон:        #141822 → #222838 → #2e3545 (navy-slate)
-Золото:     #F5B842 (тёплый янтарь)
-Ember:      #FF7A45 (тлеющий)
-Красный:    #D42A4A (алый)
-Сталь:      #4A5068 / #6E7588
-Охотник:    #4A3525 + outline #F5B842
-Шрифт:      Georgia, serif
-Кнопки:     Flat minimal + MUI Chip (без теней/выпуклостей)
+Фон:        #0A0E1A (deep navy-black)
+Neon Cyan:  #00F5D4 (крюки, верёвка, подсказки)
+Neon Pink:  #FF2E63 (опасность, жуки, смерть)
+Neon Amber: #FFB800 (охотник UI, счёт, кнопки)
+Сталь:      #2A3050 / #4A5580
+Охотник:    #1A1030 (силуэт) + outline #00F5D4
+Шрифт:      Inter, Helvetica Neue, sans-serif
+Кнопки:     Neon glass + cyan border
 ```
 
 ЗАПРЕЩЕНО:
@@ -279,7 +279,7 @@ thehook_best, thehook_moon, thehook_games, thehook_lang
 - Кулдаун хука: 180ms после release — нельзя спам-тапать
 - Жуки-препятствия: от 50м, при касании — knockback + 2s invulnerability + звук
 - shutdown() чистит ВСЕ менеджеры + input listener
-- Premium Amber & Slate палитра, процедурная графика, процедурный звук
+- Neon Western палитра, процедурная графика, процедурный звук
 
 ## TODO
 - [x] Telegram Mini App + Stars оплата (⭐6 за воскрешение)

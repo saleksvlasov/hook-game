@@ -6,7 +6,16 @@ import {
   drawRopeDecoration, createEmberBurst,
 } from '../managers/UIFactory.js';
 
-// Менеджер Game Over экрана — premium glassmorphism
+// ===== NEON WESTERN ПАЛИТРА =====
+const NEON_CYAN = '#00F5D4';
+const NEON_PINK = '#FF2E63';
+const NEON_AMBER = '#FFB800';
+const NEON_BG = '#0A0E1A';
+const NEON_STEEL = '#4A5580';
+const NEON_STEEL_MUTED = '#2A3050';
+const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
+
+// Менеджер Game Over экрана — neon western glassmorphism
 export class GameOverUI {
   constructor(scene) {
     this.scene = scene;
@@ -45,36 +54,36 @@ export class GameOverUI {
       return obj;
     };
 
-    // Затемнение — глубокий navy
+    // Затемнение — почти чёрный neon-фон
     this.overlayRect = makeUI(
-      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x0C1018, 0.80)
+      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x050810, 0.85)
     );
 
-    // Заголовок "YOU FELL" — крупный, драматичный
+    // Заголовок "YOU FELL" — neon pink, драматичный
     this.titleText = makeUI(this.scene.add.text(W / 2, H * 0.26, t('you_died'), {
-      fontSize: '48px', color: DARK_RED, fontFamily: FONT, fontStyle: 'bold',
-      stroke: '#080C12', strokeThickness: 7,
+      fontSize: '48px', color: NEON_PINK, fontFamily: NEON_FONT, fontStyle: 'bold',
+      stroke: NEON_BG, strokeThickness: 6,
     }).setOrigin(0.5));
 
-    // Высота (score) — крупнее, ярче
+    // Высота (score) — neon amber
     this.scoreText = makeUI(this.scene.add.text(W / 2, H * 0.35, '', {
-      fontSize: '20px', color: GOLD, fontFamily: FONT, fontStyle: 'bold',
-      stroke: '#101520', strokeThickness: 2,
+      fontSize: '20px', color: NEON_AMBER, fontFamily: NEON_FONT, fontStyle: 'bold',
+      stroke: NEON_BG, strokeThickness: 2,
     }).setOrigin(0.5));
 
-    // Рекорд (best) — крупный, при рекорде станет GOLD
+    // Рекорд (best) — cyan по умолчанию, amber при новом рекорде
     this.bestText = makeUI(this.scene.add.text(W / 2, H * 0.39, '', {
-      fontSize: '30px', color: '#A09060', fontFamily: FONT, fontStyle: 'bold',
-      stroke: '#101520', strokeThickness: 5,
+      fontSize: '30px', color: NEON_CYAN, fontFamily: NEON_FONT, fontStyle: 'bold',
+      stroke: NEON_BG, strokeThickness: 5,
     }).setOrigin(0.5));
 
-    // НОВЫЙ РЕКОРД — крупный, яркий
+    // НОВЫЙ РЕКОРД — neon amber
     this.newBestText = makeUI(this.scene.add.text(W / 2, H * 0.44, t('new_record'), {
-      fontSize: '22px', color: GOLD, fontFamily: FONT, fontStyle: 'bold italic',
-      stroke: '#101520', strokeThickness: 4,
+      fontSize: '22px', color: NEON_AMBER, fontFamily: NEON_FONT, fontStyle: 'bold italic',
+      stroke: NEON_BG, strokeThickness: 4,
     }).setOrigin(0.5));
 
-    // --- HTML кнопки поверх canvas — premium glassmorphism ---
+    // --- HTML кнопки поверх canvas — neon glass ---
     this.buttonsDiv = document.createElement('div');
     this.buttonsDiv.id = 'game-over-buttons';
     this.buttonsDiv.style.cssText = `
@@ -111,46 +120,72 @@ export class GameOverUI {
     this._createLeaderboardPanel();
   }
 
-  // Единый плоский стиль кнопок — flat minimal 2025
+  // Neon glass стиль кнопок — все кнопки одинаковая база, цвет зависит от типа
   _createButton(label, type) {
     const btn = document.createElement('button');
     btn.textContent = label;
 
-    // Единый базовый стиль для ВСЕХ кнопок
     const isSmall = type === 'menu' || type === 'leaderboard';
     const fontSize = isSmall ? '14px' : type === 'continue' ? '16px' : '20px';
     const padding = isSmall ? '10px 32px' : type === 'continue' ? '12px 40px' : '14px 52px';
 
+    // Цвета зависят от типа кнопки
+    const isContinue = type === 'continue';
+    const isMenu = type === 'menu';
+
+    // Базовый цвет текста и бордера
+    const textColor = isContinue ? NEON_AMBER : isMenu ? NEON_STEEL : NEON_CYAN;
+    const borderBase = isContinue
+      ? 'rgba(255, 184, 0, 0.3)'
+      : isMenu
+        ? 'rgba(74, 85, 128, 0.3)'
+        : 'rgba(0, 245, 212, 0.3)';
+
     btn.style.cssText = `
-      font-family: Georgia, serif; cursor: pointer;
+      font-family: ${NEON_FONT}; cursor: pointer;
       outline: none; pointer-events: auto;
       -webkit-tap-highlight-color: transparent;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      background: rgba(255, 255, 255, 0.06);
-      color: #F5B842;
-      border: 1px solid rgba(245, 184, 66, 0.25);
+      letter-spacing: 3px;
+      background: rgba(10, 14, 26, 0.8);
+      color: ${textColor};
+      border: 1px solid ${borderBase};
       font-size: ${fontSize}; font-weight: bold;
       padding: ${padding};
       border-radius: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       transition: all 0.12s ease;
     `;
 
-    // Единые hover/press для всех
+    // Hover/press — цвета зависят от типа
+    const hoverBorder = isContinue
+      ? 'rgba(255, 184, 0, 0.5)'
+      : isMenu
+        ? 'rgba(0, 245, 212, 0.3)'
+        : 'rgba(0, 245, 212, 0.5)';
+    const hoverShadowColor = isContinue
+      ? 'rgba(255, 184, 0, 0.3)'
+      : 'rgba(0, 245, 212, 0.3)';
+    const hoverTextColor = isMenu ? NEON_CYAN : textColor;
+
     const onEnter = () => {
-      btn.style.background = 'rgba(255, 255, 255, 0.10)';
-      btn.style.borderColor = 'rgba(245, 184, 66, 0.45)';
+      btn.style.borderColor = hoverBorder;
+      btn.style.textShadow = `0 0 10px ${hoverShadowColor}`;
+      if (isMenu) btn.style.color = hoverTextColor;
     };
     const onLeave = () => {
-      btn.style.background = 'rgba(255, 255, 255, 0.06)';
-      btn.style.borderColor = 'rgba(245, 184, 66, 0.25)';
+      btn.style.borderColor = borderBase;
+      btn.style.textShadow = 'none';
+      if (isMenu) btn.style.color = textColor;
     };
     const onDown = () => {
       btn.style.transform = 'scale(0.97)';
-      btn.style.background = 'rgba(245, 184, 66, 0.12)';
+      btn.style.background = 'rgba(10, 14, 26, 0.9)';
     };
     const onUp = () => {
       btn.style.transform = '';
+      btn.style.background = 'rgba(10, 14, 26, 0.8)';
       onLeave();
     };
 
@@ -179,7 +214,7 @@ export class GameOverUI {
     this.leaderboardDiv.style.cssText = `
       display: none; position: fixed; top: 0; left: 0;
       width: 100%; height: 100%; z-index: ${Z.HTML_BUTTONS + 10};
-      background: rgba(12, 16, 24, 0.96);
+      background: rgba(5, 8, 16, 0.96);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       flex-direction: column; align-items: center;
@@ -188,24 +223,27 @@ export class GameOverUI {
       opacity: 0; transition: opacity 0.3s ease;
     `;
 
-    // Кнопка закрытия
+    // Кнопка закрытия — neon cyan
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = '✕';
+    closeBtn.textContent = '\u2715';
     closeBtn.style.cssText = `
       position: absolute; top: 12px; right: 16px;
-      background: none; border: none; color: #7A8098;
+      background: none; border: none; color: ${NEON_STEEL};
       font-size: 26px; cursor: pointer; pointer-events: auto;
       -webkit-tap-highlight-color: transparent;
+      transition: color 0.15s ease;
     `;
+    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.color = NEON_CYAN; });
+    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.color = NEON_STEEL; });
     closeBtn.addEventListener('click', () => this._hideLeaderboard());
     this.leaderboardDiv.appendChild(closeBtn);
 
-    // Заголовок
+    // Заголовок — neon amber
     const title = document.createElement('div');
-    title.textContent = `🏆 ${t('leaderboard')}`;
+    title.textContent = `\uD83C\uDFC6 ${t('leaderboard')}`;
     title.style.cssText = `
-      font-family: Georgia, serif; font-size: 26px; font-weight: bold;
-      color: #F5B842; margin-bottom: 24px; letter-spacing: 3px;
+      font-family: ${NEON_FONT}; font-size: 26px; font-weight: bold;
+      color: ${NEON_AMBER}; margin-bottom: 24px; letter-spacing: 3px;
       text-transform: uppercase;
     `;
     this.leaderboardDiv.appendChild(title);
@@ -227,7 +265,7 @@ export class GameOverUI {
     this.lbList.innerHTML = '';
 
     if (lb.length === 0) {
-      this.lbList.innerHTML = `<div style="color:#7A8098;font-family:Georgia,serif;text-align:center;padding:40px 0;font-size:16px">${t('lb_empty')}</div>`;
+      this.lbList.innerHTML = `<div style="color:${NEON_STEEL};font-family:${NEON_FONT};text-align:center;padding:40px 0;font-size:16px">${t('lb_empty')}</div>`;
     } else {
       lb.forEach((entry, i) => {
         const isMe = myId && entry.userId === myId;
@@ -235,20 +273,20 @@ export class GameOverUI {
         row.style.cssText = `
           display: flex; align-items: center; padding: 12px 14px;
           margin-bottom: 6px; border-radius: 10px;
-          background: ${isMe ? 'rgba(245, 184, 66, 0.12)' : 'rgba(26, 32, 48, 0.70)'};
-          border: 1px solid ${isMe ? 'rgba(245, 184, 66, 0.30)' : 'rgba(110, 117, 136, 0.15)'};
-          font-family: Georgia, serif;
+          background: ${isMe ? 'rgba(0, 245, 212, 0.08)' : 'rgba(10, 14, 26, 0.70)'};
+          border: 1px solid ${isMe ? 'rgba(0, 245, 212, 0.30)' : 'rgba(42, 48, 80, 0.40)'};
+          font-family: ${NEON_FONT};
         `;
 
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
         const rank = medal || `${i + 1}`;
 
         row.innerHTML = `
-          <span style="width:36px;text-align:center;font-size:${medal ? '20px' : '15px'};color:#7A8098">${rank}</span>
-          <span style="flex:1;color:${isMe ? '#F5B842' : '#c4c8d4'};font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${entry.name}${isMe ? ` <span style="font-size:12px;color:#F5B842">${t('lb_you')}</span>` : ''}
+          <span style="width:36px;text-align:center;font-size:${medal ? '20px' : '15px'};color:${NEON_STEEL}">${rank}</span>
+          <span style="flex:1;color:${isMe ? NEON_CYAN : '#E0F0FF'};font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${entry.name}${isMe ? ` <span style="font-size:12px;color:${NEON_CYAN}">${t('lb_you')}</span>` : ''}
           </span>
-          <span style="color:#F5B842;font-size:16px;font-weight:bold">${entry.score}${t('unit_m')}</span>
+          <span style="color:${NEON_AMBER};font-size:16px;font-weight:bold">${entry.score}${t('unit_m')}</span>
         `;
         this.lbList.appendChild(row);
       });
@@ -275,10 +313,10 @@ export class GameOverUI {
     this.bestText.setText(`${t('record_label')}: ${best}${t('unit_m')}`);
 
     if (isNewBest) {
-      this.bestText.setColor(GOLD);
+      this.bestText.setColor(NEON_AMBER);
     } else {
       this.newBestText.setVisible(false);
-      this.bestText.setColor('#9A8A60');
+      this.bestText.setColor(NEON_CYAN);
     }
 
     // === Кровавые брызги на фоне (depth Z.BLOOD) ===
@@ -304,11 +342,11 @@ export class GameOverUI {
       ease: 'Linear',
     });
 
-    // 0ms: overlay alpha 0 → 0.75 (400ms)
+    // 0ms: overlay alpha 0 → 0.85 (400ms)
     this.overlayRect.setVisible(true).setAlpha(0);
     this.scene.tweens.add({
       targets: this.overlayRect,
-      alpha: 0.75,
+      alpha: 0.85,
       duration: 400,
       ease: 'Linear',
     });

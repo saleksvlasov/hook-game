@@ -4,7 +4,7 @@ import { saveMoon } from '../storage.js';
 import { t } from '../i18n.js';
 import { drawWantedPosterFrame, createEmberBurst } from '../managers/UIFactory.js';
 
-// Пасхалки: Bounty Claimed (100m) и Moonwalker (300m)
+// Пасхалки: Bounty Claimed (100m) и Moonwalker (300m) — Neon Western цвета
 export class EasterEggs {
   constructor(scene) {
     this.scene = scene;
@@ -39,12 +39,13 @@ export class EasterEggs {
       .setDepth(Z.EASTER_TEXT - 1);
     drawWantedPosterFrame(posterFrame, W / 2, -40, 240, 60);
 
+    // Текст — neon amber с тёмной обводкой
     const banner = this.scene.add.text(W / 2, -40, t('bounty'), {
       fontSize: '26px',
       fontFamily: FONT,
       fontStyle: 'bold',
-      color: GOLD,
-      stroke: '#1a1c20',
+      color: '#FFB800',
+      stroke: '#0A0E1A',
       strokeThickness: 5,
       padding: { x: 20, y: 10 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT);
@@ -89,9 +90,9 @@ export class EasterEggs {
     saveMoon();
     const W = this.scene.W;
 
-    // Свечение луны — blue-steel
+    // Свечение луны — neon cyan
     const moonGlow = this.scene.add.graphics().setScrollFactor(0).setDepth(Z.EASTER);
-    moonGlow.fillStyle(0xAABBCC, 0.0);
+    moonGlow.fillStyle(0x00F5D4, 0.0);
     moonGlow.fillCircle(W * 0.72, 80, 50);
 
     this.scene.tweens.addCounter({
@@ -102,9 +103,10 @@ export class EasterEggs {
       onUpdate: (tw) => {
         const glowAlpha = tw.getValue() / 100;
         moonGlow.clear();
-        moonGlow.fillStyle(0xCCDDEE, glowAlpha);
+        // Cyan лунное свечение
+        moonGlow.fillStyle(0x00F5D4, glowAlpha);
         moonGlow.fillCircle(W * 0.72, 80, 70);
-        moonGlow.fillStyle(0xCCDDEE, glowAlpha * 0.5);
+        moonGlow.fillStyle(0x00F5D4, glowAlpha * 0.5);
         moonGlow.fillCircle(W * 0.72, 80, 35);
       },
       onComplete: () => {
@@ -119,13 +121,13 @@ export class EasterEggs {
       },
     });
 
-    // Надпись "MOONWALKER"
+    // Надпись "MOONWALKER" — neon cyan
     const txt = this.scene.add.text(W / 2, 180, t('moonwalker'), {
       fontSize: '22px',
       fontFamily: FONT,
       fontStyle: 'italic',
-      color: '#D0C080',
-      stroke: '#0d0f12',
+      color: '#00F5D4',
+      stroke: '#0A0E1A',
       strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT).setAlpha(0);
 

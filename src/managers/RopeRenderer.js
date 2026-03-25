@@ -1,6 +1,6 @@
 import { GOLD_HEX, Z } from '../constants.js';
 
-// Рендер верёвки — Bézier кривая с тенью и highlight
+// Рендер верёвки — Bezier кривая с неоновым cyan свечением
 export class RopeRenderer {
   constructor(scene) {
     this.scene = scene;
@@ -21,16 +21,16 @@ export class RopeRenderer {
     const cpX = midX + sagX;
     const cpY = midY + sagY;
 
-    // Shadow
-    this.graphics.lineStyle(4, 0x000000, 0.2);
+    // Тень
+    this.graphics.lineStyle(4, 0x000000, 0.3);
     this._bezier(this.graphics, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
 
-    // Main rope (golden)
-    this.graphics.lineStyle(2.5, GOLD_HEX, 0.6);
+    // Основная верёвка — neon cyan
+    this.graphics.lineStyle(2.5, 0x00F5D4, 0.7);
     this._bezier(this.graphics, ax, ay, cpX, cpY, px, py);
 
-    // Highlight (warm)
-    this.graphics.lineStyle(1, 0xFFCC66, 0.2);
+    // Highlight — холодный белый блик
+    this.graphics.lineStyle(1, 0xE0F0FF, 0.25);
     this._bezier(this.graphics, ax, ay - 1, cpX, cpY - 1, px, py - 1);
   }
 

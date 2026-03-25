@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { ANCHOR_SPACING_Y, SPAWN_Y, GOLD_HEX, RUST, EMBER_HEX, AMBER_GLOW, Z } from '../constants.js';
 
 // Менеджер якорей — процедурная генерация, отрисовка, cleanup
+// Neon Western: cyan неактивные крюки, amber активные, pink ржавчина
 export class AnchorManager {
   constructor(scene) {
     this.scene = scene;
@@ -58,12 +59,12 @@ export class AnchorManager {
   drawButcherHook(g, active) {
     g.clear();
 
-    // Стержень крепления
-    g.fillStyle(active ? GOLD_HEX : RUST);
+    // Стержень — тёмная сталь
+    g.fillStyle(0x2A3050);
     g.fillRect(-2, -22, 4, 12);
 
-    // S-образный крюк — золотой для видимости
-    const hookColor = active ? 0xFFB84D : GOLD_HEX;
+    // S-образный крюк — cyan (неактив) / amber (актив)
+    const hookColor = active ? 0xFFB800 : 0x00F5D4;
     g.lineStyle(3.5, hookColor, active ? 1 : 0.7);
     g.beginPath();
     g.arc(6, -10, 7, Math.PI, 0, true);
@@ -74,23 +75,23 @@ export class AnchorManager {
     g.lineStyle(3, hookColor, active ? 1 : 0.7);
     g.lineBetween(6, -3, -4, 3);
 
-    // Остриё
-    g.fillStyle(active ? 0xFFB84D : GOLD_HEX, 0.8);
+    // Остриё — совпадает с цветом крюка
+    g.fillStyle(hookColor, 0.9);
     g.fillTriangle(-12, 3, -11, 10, -7, 4);
 
-    // Ржавые пятна
-    g.fillStyle(RUST, 0.2);
+    // Неоновая ржавчина — pink пятна
+    g.fillStyle(0xFF2E63, 0.1);
     g.fillCircle(4, -6, 2);
     g.fillCircle(-6, 5, 1.5);
 
     if (active) {
-      // Тёплое янтарное свечение
-      g.fillStyle(AMBER_GLOW, 0.12);
+      // Cyan свечение — три кольца
+      g.fillStyle(0x00F5D4, 0.15);
       g.fillCircle(0, 0, 15);
-      g.fillStyle(AMBER_GLOW, 0.05);
+      g.fillStyle(0x00F5D4, 0.06);
       g.fillCircle(0, 0, 25);
-      // Второе кольцо — ember feel
-      g.fillStyle(EMBER_HEX, 0.04);
+      // Третье кольцо — amber оттенок
+      g.fillStyle(0xFFB800, 0.04);
       g.fillCircle(0, 0, 35);
     }
   }

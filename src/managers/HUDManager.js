@@ -1,8 +1,17 @@
-import { GOLD, FONT, Z, HINT_COLOR, RECORD_COLOR } from '../constants.js';
+import { FONT, Z } from '../constants.js';
 import { t } from '../i18n.js';
 import { createEmberBurst } from '../managers/UIFactory.js';
 
-// Менеджер HUD — счёт, рекорд, подсказка (premium glassmorphism)
+// ===== NEON WESTERN ПАЛИТРА =====
+const NEON_CYAN = '#00F5D4';
+const NEON_CYAN_HEX = 0x00F5D4;
+const NEON_AMBER = '#FFB800';
+const NEON_BG = '#0A0E1A';
+const NEON_BG_HEX = 0x0A0E1A;
+const NEON_STEEL = '#4A5580';
+const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
+
+// Менеджер HUD — счёт, рекорд, подсказка (neon western glassmorphism)
 export class HUDManager {
   constructor(scene) {
     this.scene = scene;
@@ -20,53 +29,56 @@ export class HUDManager {
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     const safeTop = Math.max(envTop, 10);
 
-    // MUI Chip панель — плоская, pill-shape
+    // Neon glass панель — тёмная с тонким cyan-бордером, pill-shape
     this.bgPanel = this.scene.add.graphics();
-    this.bgPanel.fillStyle(0xFFFFFF, 0.05);
+    this.bgPanel.fillStyle(NEON_BG_HEX, 0.7);
     this.bgPanel.fillRoundedRect(W / 2 - 76, safeTop + 10, 152, 52, 26);
-    this.bgPanel.lineStyle(1, 0xF5B842, 0.18);
+    this.bgPanel.lineStyle(1, NEON_CYAN_HEX, 0.15);
     this.bgPanel.strokeRoundedRect(W / 2 - 76, safeTop + 10, 152, 52, 26);
     this.bgPanel.setScrollFactor(0).setDepth(Z.HUD);
 
+    // Высота — neon amber, крупный
     this.heightText = this.scene.add.text(W / 2, safeTop + 18, `0${t('unit_m')}`, {
       fontSize: '36px',
-      color: GOLD,
-      fontFamily: FONT,
+      color: NEON_AMBER,
+      fontFamily: NEON_FONT,
       fontStyle: 'bold',
-      stroke: '#101520',
+      stroke: NEON_BG,
       strokeThickness: 5,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
+    // Рекорд — neon cyan
     this.maxHeightText = this.scene.add.text(W / 2, safeTop + 56, `${t('record')}: 0${t('unit_m')}`, {
       fontSize: '14px',
-      color: '#A09060',
-      fontFamily: FONT,
+      color: NEON_CYAN,
+      fontFamily: NEON_FONT,
       fontStyle: 'bold',
-      stroke: '#101520',
+      stroke: NEON_BG,
       strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    // Label — метка "ГЛУБИНА" (ярче, читаемее)
+    // Label — метка "ГЛУБИНА" — steel, letterSpacing 4
     this.scene.add.text(W / 2, safeTop + 4, t('depth'), {
       fontSize: '11px',
-      color: '#8A90A0',
-      fontFamily: FONT,
+      color: NEON_STEEL,
+      fontFamily: NEON_FONT,
       letterSpacing: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
+    // Подсказка — neon cyan, пульсация 0.5-1.0
     this.hintText = this.scene.add.text(W / 2, safeTop + 78, t('click_hook'), {
       fontSize: '16px',
-      color: HINT_COLOR,
-      fontFamily: FONT,
+      color: NEON_CYAN,
+      fontFamily: NEON_FONT,
       fontStyle: 'bold italic',
-      stroke: '#101520',
+      stroke: NEON_BG,
       strokeThickness: 3,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    // Пульсация подсказки
+    // Пульсация подсказки — 0.5 → 1.0
     this.scene.tweens.add({
       targets: this.hintText,
-      alpha: { from: 0.6, to: 1.0 },
+      alpha: { from: 0.5, to: 1.0 },
       duration: 1500,
       yoyo: true,
       repeat: -1,
