@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { getBest, getMoon } from '../storage.js';
+import { getBest, getMoon, getActiveSkin } from '../storage.js';
+import { SKINS, drawSkinPose } from '../managers/SkinRenderer.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
 import {
@@ -397,50 +398,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   drawHunterGraphics(g) {
-    // Контур — neon cyan (силуэт с неоновым краем)
-    g.lineStyle(1.5, NEON_CYAN, 0.5);
-    g.strokeRoundedRect(-9, -21, 18, 46, 3);
-    // Ноги — тёмный purple силуэт
-    g.fillStyle(0x1A1030);
-    g.fillTriangle(-10, 10, -14, 24, -4, 24);
-    g.fillTriangle(10, 10, 14, 24, 4, 24);
-    // Тело — тёмный purple силуэт
-    g.fillStyle(0x1A1030);
-    g.fillRoundedRect(-8, -2, 16, 18, 2);
-    // Пояс
-    g.fillStyle(0x2A2040);
-    g.fillRect(-8, 8, 16, 2);
-    // Пряжка — neon amber
-    g.fillStyle(NEON_AMBER, 0.7);
-    g.fillRect(-2, 7, 4, 4);
-    // Шляпа — поля — neon amber
-    g.fillStyle(NEON_AMBER, 0.8);
-    g.fillEllipse(0, -12, 28, 7);
-    // Голова — тёмный purple
-    g.fillStyle(0x1A1030);
-    g.fillRoundedRect(-7, -21, 14, 11, 2);
-    // Полоса шляпы — neon amber
-    g.fillStyle(NEON_AMBER);
-    g.fillRect(-7, -13, 14, 2);
-    // Лицо
-    g.fillStyle(0xF0DDB0);
-    g.fillRect(-4, -10, 8, 5);
-    // Глаза — тёмные
-    g.fillStyle(0x0d0f12);
-    g.fillCircle(-2, -8, 1);
-    g.fillCircle(2, -8, 1);
-    // Руки — тёмный purple
-    g.fillStyle(0x1A1030);
-    g.fillRect(-12, 0, 4, 11);
-    g.fillRect(8, 0, 4, 11);
-    // Штаны
-    g.fillStyle(0x100820);
-    g.fillRect(-6, 16, 5, 8);
-    g.fillRect(1, 16, 5, 8);
-    // Ботинки
-    g.fillStyle(0x150A20);
-    g.fillRect(-7, 22, 6, 4);
-    g.fillRect(1, 22, 6, 4);
+    // Рисуем активный скин из SkinRenderer
+    const skinIdx = SKINS.findIndex(s => s.id === getActiveSkin());
+    drawSkinPose(g, skinIdx >= 0 ? skinIdx : 0, 0);
   }
 
   drawMenuHook(x, y) {
