@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit } from '../audio.js';
 import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
-import { isTelegram, purchaseContinue, saveScoreOnline } from '../telegram.js';
+import { isTelegram, purchaseContinue, saveScoreOnline, saveChallengeOnline } from '../telegram.js';
 import { t } from '../i18n.js';
 import {
   GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
@@ -120,6 +120,7 @@ export class GameScene extends Phaser.Scene {
     // Еженедельные испытания
     this.challengeMgr = new ChallengeManager();
     this.hitCount = 0; // счётчик столкновений с жуками за игру
+    this.gameStartTime = Date.now(); // время старта для анти-чита
 
     // Камера — X фиксирована, Y следит за игроком
     this.cameras.main.scrollX = 0;
@@ -264,6 +265,10 @@ export class GameScene extends Phaser.Scene {
       gamesPlayed: 1,
     });
 
+    // Серверная верификация (fire-and-forget, не блокирует UI)
+    const gameTime = (Date.now() - this.gameStartTime) / 1000;
+    saveChallengeOnline(this.maxHeight, this.hitCount, gameTime);
+
     this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0, this.continueUsed);
 
     playDeath();
@@ -317,6 +322,7 @@ export class GameScene extends Phaser.Scene {
     this.maxHeight = 0;
     this.continueUsed = false;
     this.hitCount = 0;
+    this.gameStartTime = Date.now(); // сброс таймера при респавне
     this.eggs.reset();
     this.player.setPosition(this.W / 2, SPAWN_Y);
     this.player.body.reset(this.W / 2, SPAWN_Y);

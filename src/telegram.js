@@ -63,6 +63,64 @@ export async function saveScoreOnline(score) {
   }
 }
 
+// Сохранить результат игры + прогресс челленджа на сервере
+export async function saveChallengeOnline(height, hitCount, gameTime) {
+  if (!isTelegram()) return null;
+  try {
+    const resp = await fetch(`${WORKER_URL}/save-challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: window.Telegram.WebApp.initData,
+        height, hitCount, gameTime,
+      }),
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (err) {
+    console.error('Save challenge error:', err);
+    return null;
+  }
+}
+
+// Забрать скин на сервере
+export async function claimSkinOnline() {
+  if (!isTelegram()) return null;
+  try {
+    const resp = await fetch(`${WORKER_URL}/claim-skin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: window.Telegram.WebApp.initData,
+      }),
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (err) {
+    console.error('Claim skin error:', err);
+    return null;
+  }
+}
+
+// Синхронизировать челленджи с сервером
+export async function syncChallengesOnline() {
+  if (!isTelegram()) return null;
+  try {
+    const resp = await fetch(`${WORKER_URL}/sync-challenges`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: window.Telegram.WebApp.initData,
+      }),
+    });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (err) {
+    console.error('Sync challenges error:', err);
+    return null;
+  }
+}
+
 // Загрузить лидерборд
 export async function fetchLeaderboard() {
   try {

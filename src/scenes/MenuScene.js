@@ -376,24 +376,62 @@ export class MenuScene extends Phaser.Scene {
     bgStrip.lineBetween(0, y - 35, W, y - 35);
     this.skinSelectorElements.push(bgStrip);
 
-    // Стрелки навигации если контент шире экрана
+    // Свайп-зона для drag-скролла
     if (totalW > W) {
-      const arrowL = this.add.text(8, y, '◀', {
-        fontSize: '18px', color: '#00F5D4',
-      }).setOrigin(0, 0.5).setDepth(21).setAlpha(0.5).setInteractive();
-      const arrowR = this.add.text(W - 8, y, '▶', {
-        fontSize: '18px', color: '#00F5D4',
-      }).setOrigin(1, 0.5).setDepth(21).setAlpha(0.5).setInteractive();
+      const dragZone = this.add.zone(W / 2, y, W, 70)
+        .setInteractive({ draggable: true }).setDepth(17);
+      this._isDragging = false;
+      this._dragStartX = 0;
 
-      arrowL.on('pointerdown', () => {
-        this._skinScrollX = Math.min(this._skinScrollX + cellW * 3, 10);
+      // Phaser требует scene-level drag listener
+      this.input.on('dragstart', () => {});
+
+      dragZone.on('dragstart', (pointer) => {
+        this._isDragging = false;
+        this._dragStartX = pointer.x;
+        // Остановить инерционный tween если есть
+        if (this._inertiaTween) {
+          this._inertiaTween.stop();
+          this._inertiaTween = null;
+        }
+      });
+
+      dragZone.on('drag', (pointer) => {
+        const dx = pointer.x - this._dragStartX;
+        if (Math.abs(dx) > 10) this._isDragging = true;
+
+        this._skinScrollX = Phaser.Math.Clamp(
+          this._skinScrollX + (pointer.x - this._dragStartX) * 0.5,
+          W - totalW - 10,
+          10
+        );
+        this._dragStartX = pointer.x;
         this._repositionSkins();
       });
-      arrowR.on('pointerdown', () => {
-        this._skinScrollX = Math.max(this._skinScrollX - cellW * 3, W - totalW - 10);
-        this._repositionSkins();
+
+      dragZone.on('dragend', (pointer) => {
+        // Инерция свайпа
+        const vx = pointer.velocity ? pointer.velocity.x : 0;
+        if (Math.abs(vx) > 50 && this._isDragging) {
+          const target = Phaser.Math.Clamp(
+            this._skinScrollX + vx * 0.3,
+            W - totalW - 10,
+            10
+          );
+          this._inertiaTween = this.tweens.add({
+            targets: { val: this._skinScrollX },
+            val: target,
+            duration: 300,
+            ease: 'Cubic.easeOut',
+            onUpdate: (_tween, obj) => {
+              this._skinScrollX = obj.val;
+              this._repositionSkins();
+            },
+          });
+        }
       });
-      this.skinSelectorElements.push(arrowL, arrowR);
+
+      this.skinSelectorElements.push(dragZone);
     }
 
     // Массив скин-элементов для скролла
@@ -425,18 +463,20 @@ export class MenuScene extends Phaser.Scene {
         this.skinSelectorElements.push(frame);
       }
 
-      // Зона клика — всегда показываем тултип
+      // Зона клика — тултип только если не было свайпа
       const zone = this.add.zone(x, y, 40, 52).setInteractive().setDepth(20);
-      zone.on('pointerdown', () => {
-        this._showSkinTooltip(i, x, y);
+      zone.on('pointerup', () => {
+        if (!this._isDragging) {
+          this._showSkinTooltip(i, x, y);
+        }
       });
 
       this._skinItems.push({ container, zone, frame, index: i });
       this.skinSelectorElements.push(container, zone);
     }
 
-    // Подсказка — что скины кликабельны
-    const hint = this.add.text(W / 2, y + 30, '← tap skin to preview →', {
+    // Подсказка — свайп для навигации
+    const hint = this.add.text(W / 2, y + 30, '← swipe to browse →', {
       fontSize: '10px', fontFamily: "'Inter', sans-serif",
       color: '#4A5580',
     }).setOrigin(0.5).setDepth(18);
@@ -575,6 +615,11 @@ export class MenuScene extends Phaser.Scene {
     // Очистка селектора скинов
     for (const el of this.skinSelectorElements || []) {
       if (el && el.destroy) el.destroy();
+    }
+    // Остановить инерционный tween свайпа
+    if (this._inertiaTween) {
+      this._inertiaTween.stop();
+      this._inertiaTween = null;
     }
     if (this._konamiHandler) {
       this.input.keyboard.off('keydown', this._konamiHandler);
