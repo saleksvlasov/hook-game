@@ -21,7 +21,19 @@ export class ChallengeManager {
   // Генерация испытания для текущей недели (детерминированная по номеру недели)
   _ensureWeekChallenge() {
     const weekKey = `week${this.week}`;
-    if (this.data.weeklyProgress[weekKey]) return;
+    const existing = this.data.weeklyProgress[weekKey];
+
+    // Миграция: если таргет устарел (меньше нового) — обновляем, сохраняя прогресс
+    if (existing) {
+      const typeIdx = this.week % CHALLENGE_TYPES.length;
+      const ct = CHALLENGE_TYPES[typeIdx];
+      const newTarget = ct.genTarget(this.week);
+      if (existing.target < newTarget && !existing.completed) {
+        existing.target = newTarget;
+        saveChallenges(this.data);
+      }
+      return;
+    }
 
     // Детерминированный выбор типа по номеру недели
     const typeIdx = this.week % CHALLENGE_TYPES.length;
