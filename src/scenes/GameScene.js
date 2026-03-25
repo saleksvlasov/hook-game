@@ -59,7 +59,6 @@ export class GameScene extends Phaser.Scene {
     this.continueUsed = false;
     this.lastReleaseTime = 0;    // Кулдаун хука
     this.bugHitCooldown = 0;     // Защита от повторных ударов жуков
-    this.freeFallTime = 0;       // Время непрерывного свободного падения (сек)
 
     // Физика маятника — чистые расчёты
     this.physics_ = new SwingPhysics();
@@ -368,21 +367,10 @@ export class GameScene extends Phaser.Scene {
       this.rope.clear();
     }
 
-    // Счётчик свободного падения — убиваем через 3 секунды без зацепа
-    if (!this.isHooked && this.player.body.velocity.y > 100) {
-      this.freeFallTime += delta / 1000;
-      if (this.freeFallTime >= 3) {
-        this.die();
-        return;
-      }
-    } else {
-      this.freeFallTime = 0;
-    }
-
-    // Проверка смерти — дно мира (fallback)
-    const deathY = GROUND_Y - 6;
-    const playerBottom = this.player.y + 14;
-    if (playerBottom >= deathY) {
+    // Смерть: упал ниже самого нижнего якоря + 1.5 экрана = проиграл
+    const lowestAnchorY = this.anchorMgr.getLowestY();
+    const deathY = Math.min(GROUND_Y - 6, lowestAnchorY + this.H * 1.5);
+    if (this.player.y > deathY) {
       this.die();
       return;
     }

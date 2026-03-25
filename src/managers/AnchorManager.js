@@ -118,6 +118,15 @@ export class AnchorManager {
     this.drawButcherHook(c.list[0], active);
   }
 
+  // Самый нижний (ближайший к земле) якорь — максимальный Y в мировых координатах
+  getLowestY() {
+    let maxY = 0;
+    for (const a of this.anchors) {
+      if (a.y > maxY) maxY = a.y;
+    }
+    return maxY;
+  }
+
   destroy() {
     for (const anchor of this.anchors) {
       if (anchor._container) anchor._container.destroy();
