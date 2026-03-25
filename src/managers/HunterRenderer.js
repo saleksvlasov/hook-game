@@ -9,6 +9,8 @@ export class HunterRenderer {
     this.graphics = null;
     this.coatTime = 0;
     this.skinIndex = 0;
+    // Порог перерисовки — пропускаем если пальто почти не изменилось
+    this._lastCoatAngle = -999;
   }
 
   // Установить скин по id
@@ -50,6 +52,9 @@ export class HunterRenderer {
   }
 
   drawPose(g, coatAngle) {
+    // Пропускаем перерисовку если угол пальто изменился незначительно
+    if (Math.abs(coatAngle - this._lastCoatAngle) < 0.03) return;
+    this._lastCoatAngle = coatAngle;
     drawSkinPose(g, this.skinIndex, coatAngle);
   }
 

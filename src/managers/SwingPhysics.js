@@ -18,7 +18,7 @@ export class SwingPhysics {
    * Пытается зацепиться за ближайший якорь.
    * @returns {{ anchor, ropeLength, swingAngle, swingSpeed } | null}
    */
-  tryHook(px, py, vx, vy, anchors, now, lastReleaseTime) {
+  tryHook(px, py, vx, vy, anchors, now, lastReleaseTime, screenW) {
     // Кулдаун — нельзя мгновенно перецепиться
     if (now - lastReleaseTime < HOOK_COOLDOWN) return null;
 
@@ -30,8 +30,14 @@ export class SwingPhysics {
     for (const anchor of anchors) {
       // Якоря выше — полный радиус, якоря ниже — уменьшенный (но не запрещены)
       const isBelow = anchor.y > py + 50;
-      const range = isBelow ? effectiveRange * 0.5 : effectiveRange;
-      const dist = Phaser.Math.Distance.Between(px, py, anchor.x, anchor.y);
+      const range = isBelow ? effectiveRange * 0.75 : effectiveRange;
+      // Wrap-aware расстояние по X — учитываем телепортацию
+      const dx1 = Math.abs(px - anchor.x);
+      const dx2 = Math.abs(px - anchor.x + screenW);
+      const dx3 = Math.abs(px - anchor.x - screenW);
+      const dx = Math.min(dx1, dx2, dx3);
+      const dy = py - anchor.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < minDist && dist < range) {
         minDist = dist;
         nearest = anchor;

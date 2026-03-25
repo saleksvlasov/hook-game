@@ -12,7 +12,7 @@ export const TRAIL_SPEED_THRESHOLD = 150;
 // Хук: штраф за падение — чем быстрее падаешь, тем меньше радиус зацепа
 export const FALL_SPEED_PENALTY_START = 200;  // px/s — начало штрафа
 export const FALL_SPEED_PENALTY_MAX = 1000;   // px/s — максимальный штраф
-export const HOOK_RANGE_FALLING_MIN = 0.3;    // множитель — 60px при макс штрафе
+export const HOOK_RANGE_FALLING_MIN = 0.5;    // множитель — 150px при макс штрафе
 
 // Кулдаун хука — нельзя мгновенно перецепиться
 export const HOOK_COOLDOWN = 180;         // ms после отпускания

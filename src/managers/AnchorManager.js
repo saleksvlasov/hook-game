@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ANCHOR_SPACING_Y, SPAWN_Y, Z } from '../constants.js';
+import { ANCHOR_SPACING_Y, HOOK_RANGE, SPAWN_Y, Z } from '../constants.js';
 
 // Менеджер якорей — процедурная генерация, отрисовка, cleanup
 // Neon Western: cyan неактивные крюки, amber активные, pink ржавчина
@@ -22,28 +22,43 @@ export class AnchorManager {
 
   // Процедурная генерация — добавляет якоря вверх до targetY
   generateAnchorsUpTo(targetY) {
+    // Макс горизонтальный разброс — чтобы диагональ не превышала HOOK_RANGE * 0.85
+    const maxDeltaX = Math.sqrt(HOOK_RANGE * HOOK_RANGE * 0.72 - ANCHOR_SPACING_Y * ANCHOR_SPACING_Y);
+
     while (this.highestAnchorY - ANCHOR_SPACING_Y > targetY) {
       this.highestAnchorY -= ANCHOR_SPACING_Y;
       let x;
       do {
         x = Phaser.Math.Between(60, this.scene.W - 60);
       } while (Math.abs(x - this.prevAnchorX) < this.scene.W * 0.15);
+
+      // Ограничение разброса — якорь должен быть достижим с предыдущего
+      const deltaX = x - this.prevAnchorX;
+      if (Math.abs(deltaX) > maxDeltaX) {
+        x = this.prevAnchorX + Math.sign(deltaX) * maxDeltaX + Phaser.Math.Between(-20, 20);
+        x = Phaser.Math.Clamp(x, 60, this.scene.W - 60);
+      }
+
       this.prevAnchorX = x;
       this.addAnchor(x, this.highestAnchorY);
     }
   }
 
   // Удаление якорей далеко ниже игрока (>3000px)
+  // writeIdx pattern вместо splice — O(n) вместо O(n^2)
   cleanup(playerY) {
     const cutoff = playerY + 3000;
-    for (let i = this.anchors.length - 1; i >= 0; i--) {
-      if (this.anchors[i].y > cutoff) {
+    let w = 0;
+    for (let i = 0; i < this.anchors.length; i++) {
+      if (this.anchors[i].y <= cutoff) {
+        this.anchors[w++] = this.anchors[i];
+      } else {
         const anchor = this.anchors[i];
         if (anchor._container) anchor._container.destroy();
         anchor.destroy();
-        this.anchors.splice(i, 1);
       }
     }
+    this.anchors.length = w;
   }
 
   addAnchor(x, y) {

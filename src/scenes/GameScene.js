@@ -157,7 +157,7 @@ export class GameScene extends Phaser.Scene {
 
     const result = this.physics_.tryHook(
       px, py, vx, vy,
-      this.anchorMgr.anchors, this.time.now, this.lastReleaseTime
+      this.anchorMgr.anchors, this.time.now, this.lastReleaseTime, this.W
     );
 
     // Промах — нет якорей в радиусе или кулдаун

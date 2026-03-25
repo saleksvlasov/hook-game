@@ -4,6 +4,9 @@ import { BIOMES, GROUND_Y, WORLD_HEIGHT, Z } from '../constants.js';
 /**
  * BiomeManager — градиент + 3 слоя мерцающих искр (ближние, средние, дальние)
  * для эффекта объёма и перспективы. Плавный кроссфейд между биомами.
+ *
+ * Оптимизация: 3 Graphics на биом (по одному на слой глубины) вместо 575 отдельных.
+ * 575 draw calls → 15 draw calls.
  */
 export class BiomeManager {
   constructor(scene) {
@@ -21,66 +24,59 @@ export class BiomeManager {
       // Фоновый градиент
       layer.bgImage = this._createBgTexture(biome, i);
 
-      // 3 слоя искр: дальние (мелкие, медленные), средние, ближние (крупные, быстрые)
-      layer.sparks = [
-        ...this._createSparkLayer(biome, 0.25, 50, 0.5, 1.5, 0.15, 0.35), // дальние
-        ...this._createSparkLayer(biome, 0.50, 40, 1.0, 2.5, 0.25, 0.55), // средние
-        ...this._createSparkLayer(biome, 0.80, 25, 1.5, 4.0, 0.35, 0.75), // ближние
-      ];
+      // 3 Graphics объекта — по одному на слой глубины (scrollFactor)
+      const scrollFactors = [0.25, 0.5, 0.8];
+      layer.sparkLayers = [];
+      for (const sf of scrollFactors) {
+        layer.sparkLayers.push({
+          gfx: this.scene.add.graphics().setDepth(Z.ASH).setScrollFactor(sf),
+          sf,
+          sparks: [],
+        });
+      }
 
-      this._setLayerAlpha(layer, 0);
+      // Заполняем данные искр по слоям
+      this._fillSparkLayer(layer.sparkLayers[0], biome, 50, 0.5, 1.5, 0.15, 0.35);  // дальние
+      this._fillSparkLayer(layer.sparkLayers[1], biome, 40, 1.0, 2.5, 0.25, 0.55);  // средние
+      this._fillSparkLayer(layer.sparkLayers[2], biome, 25, 1.5, 4.0, 0.35, 0.75);  // ближние
+
+      // Цвет частиц биома — кешируем
+      layer.particleColor = biome.particleColor;
+      layer.alpha = 0;
+      layer.bgImage.setAlpha(0);
+      for (const sl of layer.sparkLayers) sl.gfx.setVisible(false);
+
       this.layers.push(layer);
     }
 
     this._createMoon();
   }
 
-  // Создать слой искр с заданной глубиной
-  _createSparkLayer(biome, scrollFactor, count, minSize, maxSize, minAlpha, maxAlpha) {
-    const sparks = [];
-    const yStart = (GROUND_Y - biome.endHeight * 10) * scrollFactor;
-    const yEnd = (GROUND_Y - biome.startHeight * 10) * scrollFactor;
-    const spanX = this.W / scrollFactor;
-    const spanY = yEnd - yStart;
+  // Заполнить данные искр для слоя (без создания Phaser объектов)
+  _fillSparkLayer(sparkLayer, biome, count, minSize, maxSize, minAlpha, maxAlpha) {
+    const sf = sparkLayer.sf;
+    const yStart = (GROUND_Y - biome.endHeight * 10) * sf;
+    const yEnd = (GROUND_Y - biome.startHeight * 10) * sf;
+    const spanX = this.W / sf;
+    const speedScale = sf * 2;
 
     for (let i = 0; i < count; i++) {
-      const gfx = this.scene.add.graphics().setDepth(Z.ASH).setScrollFactor(scrollFactor);
-
       const size = minSize + Math.random() * (maxSize - minSize);
       const baseAlpha = minAlpha + Math.random() * (maxAlpha - minAlpha);
 
-      // Рисуем искру — ядро + ореол
-      gfx.fillStyle(biome.particleColor, baseAlpha);
-      gfx.fillCircle(0, 0, size);
-      // Мягкий ореол
-      gfx.fillStyle(biome.particleColor, baseAlpha * 0.3);
-      gfx.fillCircle(0, 0, size * 2.5);
-
-      const x = Math.random() * spanX;
-      const y = yStart + Math.random() * spanY;
-      gfx.setPosition(x, y);
-
-      // Скорость зависит от близости: ближние быстрее
-      const speedScale = scrollFactor * 2;
-
-      sparks.push({
-        gfx,
-        baseX: x, baseY: y,
-        yStart, yEnd, sf: scrollFactor,
+      sparkLayer.sparks.push({
+        baseX: Math.random() * spanX,
+        baseY: yStart + Math.random() * (yEnd - yStart),
+        yStart, yEnd,
         size, baseAlpha,
-        // Движение: вверх + дрейф по X
         speedX: (Math.random() - 0.5) * 0.4 * speedScale,
-        speedY: -(0.2 + Math.random() * 0.8) * speedScale, // вверх как от костра
-        // Мерцание
+        speedY: -(0.2 + Math.random() * 0.8) * speedScale,
         flickerPhase: Math.random() * Math.PI * 2,
         flickerSpeed: 0.003 + Math.random() * 0.005,
-        // Покачивание
         driftPhase: Math.random() * Math.PI * 2,
         driftAmp: 5 + Math.random() * 20,
       });
     }
-
-    return sparks;
   }
 
   update(playerY) {
@@ -111,29 +107,35 @@ export class BiomeManager {
       this._setLayerAlpha(this.layers[i], alpha);
     }
 
-    // Анимация искр
+    // Анимация искр — перерисовка на общих Graphics
     const time = this.scene.time.now;
     for (let i = 0; i < this.layers.length; i++) {
-      this._updateSparks(this.layers[i].sparks, time);
+      const layer = this.layers[i];
+      if (layer.alpha === 0) continue;
+      for (let j = 0; j < layer.sparkLayers.length; j++) {
+        this._updateAndDrawSparks(layer.sparkLayers[j], layer.particleColor, layer.alpha, time);
+      }
     }
   }
 
-  _updateSparks(sparks, time) {
-    for (const s of sparks) {
-      if (s.gfx.alpha === 0) continue;
+  // Обновить позиции и перерисовать все искры слоя на одном Graphics
+  _updateAndDrawSparks(sparkLayer, color, layerAlpha, time) {
+    const gfx = sparkLayer.gfx;
+    const sparks = sparkLayer.sparks;
+    const sf = sparkLayer.sf;
+    const spanX = this.W / sf;
+
+    gfx.clear();
+
+    for (let i = 0; i < sparks.length; i++) {
+      const s = sparks[i];
 
       // Движение
       const drift = Math.sin(time * 0.001 + s.driftPhase) * s.driftAmp * 0.008;
       s.baseX += s.speedX + drift;
       s.baseY += s.speedY;
 
-      // Мерцание — пульсация яркости
-      const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * s.flickerSpeed + s.flickerPhase));
-      // Применяем мерцание через масштаб (видимость)
-      s.gfx.setScale(0.6 + flicker * 0.4);
-
       // Wrap
-      const spanX = this.W / s.sf;
       if (s.baseX < 0) s.baseX += spanX;
       if (s.baseX > spanX) s.baseX -= spanX;
       const spanY = s.yEnd - s.yStart;
@@ -142,7 +144,19 @@ export class BiomeManager {
         if (s.baseY > s.yEnd) s.baseY -= spanY;
       }
 
-      s.gfx.setPosition(s.baseX, s.baseY);
+      // Мерцание — пульсация яркости
+      const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * s.flickerSpeed + s.flickerPhase));
+      const scale = 0.6 + flicker * 0.4;
+      const sz = s.size * scale;
+
+      const alpha = layerAlpha * s.baseAlpha * flicker;
+
+      // Ядро искры
+      gfx.fillStyle(color, alpha);
+      gfx.fillCircle(s.baseX, s.baseY, sz);
+      // Мягкий ореол
+      gfx.fillStyle(color, alpha * 0.3);
+      gfx.fillCircle(s.baseX, s.baseY, sz * 2.5);
     }
   }
 
@@ -191,8 +205,9 @@ export class BiomeManager {
     for (let i = 0; i < this.layers.length; i++) {
       const layer = this.layers[i];
       if (layer.bgImage) layer.bgImage.destroy();
-      for (const s of layer.sparks) {
-        if (s.gfx) s.gfx.destroy();
+      // Уничтожаем 3 Graphics на биом (вместо ~115 на биом)
+      for (const sl of layer.sparkLayers) {
+        if (sl.gfx) sl.gfx.destroy();
       }
       const key = `bg-biome-${i}`;
       if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
@@ -201,9 +216,11 @@ export class BiomeManager {
   }
 
   _setLayerAlpha(layer, alpha) {
+    layer.alpha = alpha;
     layer.bgImage.setAlpha(alpha);
-    for (const s of layer.sparks) {
-      s.gfx.setAlpha(alpha > 0 ? alpha * s.baseAlpha : 0);
+    // Видимость Graphics управляется здесь, альфа — через fillStyle в _updateAndDrawSparks
+    for (const sl of layer.sparkLayers) {
+      sl.gfx.setVisible(alpha > 0);
     }
   }
 }
