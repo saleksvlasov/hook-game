@@ -4,35 +4,26 @@ import {
 } from '../constants.js';
 
 // ===================== ПРОЦЕДУРНЫЕ UI УТИЛИТЫ =====================
-// Стиль MUI + Hunt Showdown — чистый, яркий, с amber акцентами
+// Premium glassmorphism + Hunt Showdown — тёплый amber на navy-slate
 
-// MUI-стиль кнопка — elevated card с amber бордером
+// Flat minimal кнопка 2025 — единый стиль, никаких теней/выпуклостей
 export function drawGlassButton(gfx, x, y, w, h, opts = {}) {
   const { pressed = false, hover = false } = opts;
-  const offsetY = pressed ? 2 : 0;
   const left = x - w / 2;
-  const top = y - h / 2 + offsetY;
+  const top = y - h / 2;
+  const radius = 12;
 
   gfx.clear();
 
-  // Тень снизу (только если не нажата)
-  if (!pressed) {
-    gfx.fillStyle(0x000000, 0.3);
-    gfx.fillRoundedRect(left + 1, top + 3, w, h, 10);
-  }
+  // Плоский фон — полупрозрачный
+  const bgAlpha = pressed ? 0.5 : hover ? 0.35 : 0.25;
+  gfx.fillStyle(0xFFFFFF, bgAlpha * 0.15);
+  gfx.fillRoundedRect(left, top, w, h, radius);
 
-  // Основной фон — тёмный blue-grey, хорошо видно
-  gfx.fillStyle(0x2A3040, 0.85);
-  gfx.fillRoundedRect(left, top, w, h, 10);
-
-  // Top highlight — белая полоска сверху
-  gfx.fillStyle(0xFFFFFF, 0.10);
-  gfx.fillRoundedRect(left + 2, top, w - 4, 2, { tl: 10, tr: 10, bl: 0, br: 0 });
-
-  // Border — amber, яркость зависит от состояния
-  const borderAlpha = pressed ? 0.3 : hover ? 0.6 : 0.4;
-  gfx.lineStyle(1.5, AMBER_GLOW, borderAlpha);
-  gfx.strokeRoundedRect(left, top, w, h, 10);
+  // Одинаковая рамка — тонкая, amber
+  const borderAlpha = pressed ? 0.6 : hover ? 0.5 : 0.35;
+  gfx.lineStyle(1, AMBER_GLOW, borderAlpha);
+  gfx.strokeRoundedRect(left, top, w, h, radius);
 }
 
 // Обратная совместимость
@@ -50,8 +41,8 @@ export function drawChainDecoration(gfx, x1, y1, x2, y2) {
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
 
-    // Простые точки — steel с лёгкой альфой
-    gfx.fillStyle(STEEL_LIGHT, 0.2);
+    // Точки — amber-steel, ярче для видимости
+    gfx.fillStyle(AMBER_GLOW, 0.18);
     gfx.fillCircle(cx, cy, 1.5);
   }
 }
@@ -93,22 +84,19 @@ export function drawBloodSplatter(gfx, x, y, radius, intensity = 0.7) {
   }
 }
 
-// MUI-стиль рамка — elevated card
+// Рамка-chip (MUI Chip стиль) — плоский pill/rounded rect
 export function drawSteelFrame(gfx, x, y, w, h) {
   const left = x - w / 2;
   const top = y - h / 2;
+  const radius = Math.min(h / 2, 16); // pill если маленький, 16px если большой
 
-  // Фон — blue-grey полупрозрачный
-  gfx.fillStyle(0x252D3D, 0.7);
-  gfx.fillRoundedRect(left, top, w, h, 8);
+  // Фон — лёгкий полупрозрачный
+  gfx.fillStyle(0xFFFFFF, 0.05);
+  gfx.fillRoundedRect(left, top, w, h, radius);
 
-  // Border — стальной
-  gfx.lineStyle(1, 0x4A5568, 0.4);
-  gfx.strokeRoundedRect(left, top, w, h, 8);
-
-  // Top highlight — белая линия сверху
-  gfx.fillStyle(0xFFFFFF, 0.06);
-  gfx.fillRoundedRect(left + 2, top, w - 4, 1, { tl: 8, tr: 8, bl: 0, br: 0 });
+  // Рамка — тонкая amber
+  gfx.lineStyle(1, AMBER_GLOW, 0.20);
+  gfx.strokeRoundedRect(left, top, w, h, radius);
 }
 
 // Обратная совместимость
@@ -154,6 +142,21 @@ export function createEmberBurst(scene, x, y, count = 10, depth = 20) {
       onComplete: () => ember.destroy(),
     });
   }
+}
+
+// MUI Chip — pill-shape с текстом, как Material UI
+export function drawChip(gfx, x, y, w, h) {
+  const left = x - w / 2;
+  const top = y - h / 2;
+  const radius = h / 2; // полный pill
+
+  // Фон — полупрозрачный
+  gfx.fillStyle(0xFFFFFF, 0.05);
+  gfx.fillRoundedRect(left, top, w, h, radius);
+
+  // Рамка — тонкая amber
+  gfx.lineStyle(1, AMBER_GLOW, 0.20);
+  gfx.strokeRoundedRect(left, top, w, h, radius);
 }
 
 // Ржавые края — no-op в новом дизайне

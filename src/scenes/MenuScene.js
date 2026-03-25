@@ -3,7 +3,7 @@ import { getBest, getMoon } from '../storage.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
 import {
-  drawGlassButton, drawChainDecoration, drawSteelFrame,
+  drawGlassButton, drawChip,
   createTypewriterText, createEmberBurst,
 } from '../managers/UIFactory.js';
 import {
@@ -25,27 +25,34 @@ export class MenuScene extends Phaser.Scene {
     // Все UI элементы для stagger-анимации
     this._uiElements = [];
 
-    // --- Фон: ЯРКИЙ blue-grey градиент ---
+    // --- Фон: PREMIUM navy-slate градиент (тёплый, глубокий) ---
     if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
     const gradTex = this.textures.createCanvas('menu-bg', 1, H);
     const ctx = gradTex.getContext();
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#1a2030');    // deep blue-grey (НЕ чёрный)
-    grad.addColorStop(0.4, '#222838');
-    grad.addColorStop(0.8, '#2e3545');
-    grad.addColorStop(1, '#222838');
+    grad.addColorStop(0, '#141822');    // глубокий navy (верх)
+    grad.addColorStop(0.3, '#1A2030');  // navy-slate
+    grad.addColorStop(0.6, '#222A3A');  // slate mid
+    grad.addColorStop(0.85, '#2A3245'); // светлее к низу
+    grad.addColorStop(1, '#1E2638');    // обратно к navy
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1, H);
     gradTex.refresh();
     this.add.image(W / 2, H / 2, 'menu-bg').setDisplaySize(W, H).setDepth(-10);
 
-    // Луна — ярче, заметнее
+    // Луна — premium glow, заметная на navy фоне
     const moon = this.add.graphics().setDepth(-8);
-    moon.fillStyle(0x667788, 0.25);
+    // Внешнее свечение
+    moon.fillStyle(0x8899AA, 0.10);
+    moon.fillCircle(W * 0.75, H * 0.12, 80);
+    // Основной диск
+    moon.fillStyle(0x7A8DA0, 0.30);
     moon.fillCircle(W * 0.75, H * 0.12, 60);
-    moon.fillStyle(0x778899, 0.15);
+    // Светлая часть
+    moon.fillStyle(0x8EA0B5, 0.20);
     moon.fillCircle(W * 0.75 - 8, H * 0.12 - 5, 55);
-    moon.fillStyle(0x556677, 0.10);
+    // Кратеры
+    moon.fillStyle(0x5A6A7A, 0.12);
     moon.fillCircle(W * 0.75 + 15, H * 0.12 - 15, 12);
     moon.fillCircle(W * 0.75 - 20, H * 0.12 + 10, 8);
 
@@ -69,37 +76,37 @@ export class MenuScene extends Phaser.Scene {
     const trees = this.add.graphics().setDepth(-6);
     this.drawTreeSilhouettes(trees, H - 100, 0.35, W);
 
-    // Туман — светлее, blue-grey
+    // Туман — тёплый navy с лёгким amber оттенком
     const fog = this.add.graphics().setDepth(-3);
-    fog.fillStyle(0x252D3D, 0.25);
+    fog.fillStyle(0x1E2638, 0.30);
     fog.fillRect(0, H - 150, W, 150);
-    fog.fillStyle(0x252D3D, 0.15);
+    fog.fillStyle(0x222A3A, 0.18);
     fog.fillRect(0, H - 250, W, 100);
 
     // Охотник на крюке
     this.createSwingingHunter();
 
-    // --- Заголовок ---
+    // --- Заголовок — КРУПНЫЙ, BOLD, premium amber ---
     const titleY = H * 0.19;
-    // Glow stack — ЯРКИЙ amber
-    const glowColors = [0xF0A030, 0xD08820, 0xA06010];
+    // Glow stack — тёплый amber, 3 слоя свечения
+    const glowColors = [0xF5B842, 0xD49828, 0xA07018];
     for (let i = glowColors.length - 1; i >= 0; i--) {
       const glow = this.add.text(W / 2, titleY, 'THE HOOK', {
-        fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
+        fontSize: '60px', fontFamily: FONT, fontStyle: 'bold',
         color: '#' + glowColors[i].toString(16).padStart(6, '0'),
         stroke: '#' + glowColors[i].toString(16).padStart(6, '0'),
-        strokeThickness: 14 + i * 6,
+        strokeThickness: 16 + i * 8,
       }).setOrigin(0.5).setAlpha(0).setDepth(10);
       this.tweens.add({
-        targets: glow, alpha: 0.15 + i * 0.05, // 0.15–0.25
+        targets: glow, alpha: 0.18 + i * 0.06,
         duration: 1800 + i * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         delay: 400,
       });
     }
 
     const title = this.add.text(W / 2, titleY + 20, 'THE HOOK', {
-      fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
-      color: GOLD, stroke: '#151A25', strokeThickness: 6,
+      fontSize: '60px', fontFamily: FONT, fontStyle: 'bold',
+      color: GOLD, stroke: '#101520', strokeThickness: 7,
     }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
     this.tweens.add({
@@ -110,9 +117,9 @@ export class MenuScene extends Phaser.Scene {
     // Stagger: заголовок 0ms
     this._addStaggerEntry(title, titleY, 0);
 
-    // --- Трещина под заголовком — ярче ---
+    // --- Трещина под заголовком — тёплый amber ---
     const crackGfx = this.add.graphics().setDepth(11).setAlpha(0);
-    crackGfx.lineStyle(1.5, AMBER_GLOW, 0.35);
+    crackGfx.lineStyle(1.5, AMBER_GLOW, 0.45);
     crackGfx.beginPath();
     const crackLeft = W * 0.25;
     const crackRight = W * 0.75;
@@ -127,16 +134,12 @@ export class MenuScene extends Phaser.Scene {
     crackGfx.strokePath();
     this._addStaggerFade(crackGfx, 0);
 
-    // --- Пунктирные декорации у подзаголовка ---
-    const subtitleY = titleY + 48;
-    const chainGfx = this.add.graphics().setDepth(11).setAlpha(0);
-    drawChainDecoration(chainGfx, W * 0.2, subtitleY, W * 0.38, subtitleY);
-    drawChainDecoration(chainGfx, W * 0.62, subtitleY, W * 0.8, subtitleY);
-    this._addStaggerFade(chainGfx, 200);
+    // --- Подзаголовок ---
+    const subtitleY = titleY + 54;
 
-    // --- Подзаголовок — typewriter ---
+    // --- Подзаголовок — typewriter, крупнее ---
     const subtitleText = createTypewriterText(this, W / 2, subtitleY, t('title_sub'), {
-      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#A09070',
+      fontSize: '16px', fontFamily: FONT, fontStyle: 'italic', color: '#B8A070',
     }, 50);
     subtitleText.setDepth(11).setAlpha(0);
     this._addStaggerEntry(subtitleText, subtitleY, 200);
@@ -147,15 +150,15 @@ export class MenuScene extends Phaser.Scene {
       this._addStaggerEntry(this.menuHunter, this.menuHunter.y, 300);
     }
 
-    // --- Кнопка CLIMB (MUI glass) ---
+    // --- Кнопка CLIMB — крупная premium glassmorphism ---
     const btnY = H * 0.66;
-    const btnW = 220;
-    const btnH = 56;
+    const btnW = 250;
+    const btnH = 64;
 
-    // Glow пульсация вокруг кнопки — amber
-    const btnGlow = this.add.rectangle(W / 2, btnY, btnW + 16, btnH + 16, AMBER_GLOW, 0.10).setDepth(12);
+    // Glow пульсация вокруг кнопки — тёплый amber
+    const btnGlow = this.add.rectangle(W / 2, btnY, btnW + 20, btnH + 20, AMBER_GLOW, 0.12).setDepth(12);
     this.tweens.add({
-      targets: btnGlow, alpha: 0.20, scaleX: 1.04, scaleY: 1.04,
+      targets: btnGlow, alpha: 0.24, scaleX: 1.05, scaleY: 1.05,
       duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
@@ -163,10 +166,10 @@ export class MenuScene extends Phaser.Scene {
     const btnGfx = this.add.graphics().setDepth(13);
     drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH);
 
-    // Текст кнопки
+    // Текст кнопки — крупный, яркий
     const btnText = this.add.text(W / 2, btnY, t('play'), {
-      fontSize: '28px', fontFamily: FONT, fontStyle: 'bold',
-      color: GOLD, stroke: '#151A25', strokeThickness: 3,
+      fontSize: '32px', fontFamily: FONT, fontStyle: 'bold',
+      color: GOLD, stroke: '#101520', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(14).setAlpha(0);
 
     // Невидимая зона для интерактива
@@ -191,9 +194,9 @@ export class MenuScene extends Phaser.Scene {
     btnZone.on('pointerup', () => {
       drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH);
       btnText.setY(btnY);
-      // Запуск игры — fadeOut в blue-grey
+      // Запуск игры — fadeOut в navy
       createEmberBurst(this, W / 2, btnY, 20);
-      this.cameras.main.fadeOut(400, 26, 32, 48);
+      this.cameras.main.fadeOut(400, 20, 24, 34);
       this.time.delayedCall(400, () => this.scene.start('GameScene'));
     });
 
@@ -209,22 +212,16 @@ export class MenuScene extends Phaser.Scene {
     const recordY = H * 0.75;
     if (best > 0) {
       // MUI steel frame рамка
-      const posterGfx = this.add.graphics().setDepth(10).setAlpha(0);
-      drawSteelFrame(posterGfx, W / 2, recordY, 200, 50);
-
-      // Пунктирные точки сверху и снизу рамки
-      const chainRecordGfx = this.add.graphics().setDepth(10).setAlpha(0);
-      drawChainDecoration(chainRecordGfx, W / 2 - 100, recordY - 28, W / 2 + 100, recordY - 28);
-      drawChainDecoration(chainRecordGfx, W / 2 - 100, recordY + 28, W / 2 + 100, recordY + 28);
+      // MUI Chip для рекорда
+      const chipGfx = this.add.graphics().setDepth(10).setAlpha(0);
+      drawChip(chipGfx, W / 2, recordY, 200, 36);
 
       const recordText = this.add.text(W / 2, recordY, `${t('record')}: ${best}${t('unit_m')}`, {
-        fontSize: '18px', fontFamily: FONT, color: GOLD,
-        stroke: '#151A25', strokeThickness: 2,
+        fontSize: '16px', fontFamily: FONT, fontStyle: 'bold', color: GOLD,
       }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
       // Stagger: рекорд 700ms
-      this._addStaggerFade(posterGfx, 700);
-      this._addStaggerFade(chainRecordGfx, 700);
+      this._addStaggerFade(chipGfx, 700);
       this._addStaggerEntry(recordText, recordY, 700);
     }
 
@@ -235,14 +232,14 @@ export class MenuScene extends Phaser.Scene {
       this._addStaggerEntry(moonText, H * 0.78, 700);
     }
 
-    // --- Подсказка внизу ---
-    const hintText = this.add.text(W / 2, H - 20, t('tap_to_hunt'), {
-      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#A09070',
+    // --- Подсказка внизу — ярче, крупнее ---
+    const hintText = this.add.text(W / 2, H - 24, t('tap_to_hunt'), {
+      fontSize: '15px', fontFamily: FONT, fontStyle: 'italic', color: '#B8A070',
     }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
-    // Пульсация подсказки 0.4 → 0.8
+    // Пульсация подсказки 0.45 → 0.85
     this.tweens.add({
-      targets: hintText, alpha: { from: 0.4, to: 0.8 },
+      targets: hintText, alpha: { from: 0.45, to: 0.85 },
       duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       delay: 800,
     });
@@ -339,7 +336,7 @@ export class MenuScene extends Phaser.Scene {
     playOminous();
     const txt = this.add.text(this.W / 2, this.H / 2, t('butcher'), {
       fontSize: '28px', fontFamily: FONT, fontStyle: 'bold',
-      color: GOLD, stroke: '#151A25', strokeThickness: 5, align: 'center',
+      color: GOLD, stroke: '#101520', strokeThickness: 5, align: 'center',
     }).setOrigin(0.5).setDepth(50).setAlpha(0);
 
     this.tweens.add({
@@ -363,8 +360,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   drawTreeSilhouettes(gfx, baseY, alpha, width) {
-    // Сине-серые деревья — заметнее
-    gfx.fillStyle(0x1E2535, alpha);
+    // Navy-slate деревья — силуэты на тёмном фоне
+    gfx.fillStyle(0x1A2030, alpha);
     for (let tx = 20; tx < width; tx += 50 + Math.random() * 30) {
       const h = 80 + Math.random() * 160;
       const w = 6 + Math.random() * 8;

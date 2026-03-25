@@ -157,6 +157,27 @@ export function playRecord() {
   } catch(e) { /* audio context closed or unavailable */ }
 }
 
+// Удар о жука — резкий хруст + низкий удар
+export function playBugHit() {
+  try {
+    const c = getCtx();
+    // Хруст — шумоподобный через расстроенный square
+    const o1 = c.createOscillator();
+    const g1 = c.createGain();
+    o1.type = 'square';
+    o1.frequency.setValueAtTime(300, c.currentTime);
+    o1.frequency.exponentialRampToValueAtTime(80, c.currentTime + 0.12);
+    o1.detune.setValueAtTime(100, c.currentTime);
+    g1.gain.setValueAtTime(0.25, c.currentTime);
+    g1.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.12);
+    o1.connect(g1).connect(c.destination);
+    o1.start();
+    o1.stop(c.currentTime + 0.12);
+    // Низкий удар
+    osc('sine', 100, 0.15, 0.2, 40);
+  } catch(e) { /* audio context closed or unavailable */ }
+}
+
 export function destroyAudio() {
   if (ctx && ctx.state !== 'closed') {
     ctx.close().catch(() => {});

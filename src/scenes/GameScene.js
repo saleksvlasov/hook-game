@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { playHook, playAttach, playRelease, playDeath, playRecord } from '../audio.js';
+import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit } from '../audio.js';
 import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, saveScoreOnline } from '../telegram.js';
@@ -19,6 +19,7 @@ import { HunterRenderer } from '../managers/HunterRenderer.js';
 import { GameOverUI } from '../managers/GameOverUI.js';
 import { EasterEggs } from '../managers/EasterEggs.js';
 import { BiomeManager } from '../managers/BiomeManager.js';
+import { ObstacleManager } from '../managers/ObstacleManager.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -29,6 +30,7 @@ export class GameScene extends Phaser.Scene {
   shutdown() {
     this.gameOverUI.destroy();
     this.biome.destroy();
+    this.obstacles.destroy();
   }
 
   create() {
@@ -51,6 +53,7 @@ export class GameScene extends Phaser.Scene {
     this.isDead = false;
     this.continueUsed = false;
     this.lastReleaseTime = 0;    // Кулдаун хука
+    this.bugHitCooldown = 0;     // Защита от повторных ударов жуков
 
     this.biome = new BiomeManager(this);
     this.biome.create();
@@ -81,6 +84,9 @@ export class GameScene extends Phaser.Scene {
 
     this.anchorMgr = new AnchorManager(this);
     this.anchorMgr.create();
+
+    this.obstacles = new ObstacleManager(this);
+    this.obstacles.create();
 
     this.swamp = new SwampManager(this);
     this.swamp.create();
@@ -262,6 +268,7 @@ export class GameScene extends Phaser.Scene {
 
       // Генерируем якоря до этой высоты чтобы было за что цепляться
       this.anchorMgr.generateAnchorsUpTo(targetY - 1500);
+      this.obstacles.generateUpTo(targetY - 1500, this.anchorMgr.anchors);
 
       this.player.setPosition(this.W / 2, targetY);
       this.player.body.reset(this.W / 2, targetY);
@@ -409,6 +416,51 @@ export class GameScene extends Phaser.Scene {
     // Процедурная генерация и cleanup якорей
     this.anchorMgr.generateAnchorsUpTo(this.player.y - 2000);
     this.anchorMgr.cleanup(this.player.y);
+
+    // Генерация и cleanup жуков
+    this.obstacles.generateUpTo(this.player.y - 2000, this.anchorMgr.anchors);
+    this.obstacles.update(delta, this.player.y);
+
+    // Коллизия с жуками — сброс с крюка + визуальный фидбек
+    if (!this.isDead && this.bugHitCooldown <= 0
+        && this.obstacles.checkCollision(this.player.x, this.player.y)) {
+      if (this.isHooked) this.releaseHook();
+      // Откидывание вниз и в сторону
+      const knockX = (Math.random() - 0.5) * 300;
+      this.player.body.setVelocity(knockX, 400);
+      this.bugHitCooldown = 2000; // 2s неуязвимости (совпадает с визуалом)
+
+      // Звук удара
+      playBugHit();
+
+      // Визуал: shake + flash
+      this.cameras.main.shake(250, 0.012);
+      this.cameras.main.flash(150, 255, 80, 30, true);
+
+      // Мигание игрока (alpha pulse) → возврат к нормальному через 2 сек
+      this.playerContainer.setAlpha(0.4);
+      this.tweens.add({
+        targets: this.playerContainer,
+        alpha: { from: 0.3, to: 0.6 },
+        duration: 100,
+        repeat: 5,
+        yoyo: true,
+        onComplete: () => {
+          // Через 2 сек плавно возвращаем полную яркость
+          this.time.delayedCall(1500, () => {
+            if (this.playerContainer && !this.isDead) {
+              this.tweens.add({
+                targets: this.playerContainer,
+                alpha: 1,
+                duration: 400,
+              });
+            }
+          });
+        },
+      });
+    }
+    // Обновление кулдауна
+    if (this.bugHitCooldown > 0) this.bugHitCooldown -= delta;
 
     // Пасхалки
     this.eggs.check(currentHeight);

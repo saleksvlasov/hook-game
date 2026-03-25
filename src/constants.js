@@ -28,37 +28,42 @@ export const SPAWN_Y = WORLD_HEIGHT - 400;
 export const BOUNTY_HEIGHT = 1000;
 export const MOON_HEIGHT = 3000;
 
-// ===== ПАЛИТРА EMBER & STEEL =====
-// Основные цвета
-export const GOLD = '#F0A030';           // Яркий янтарь (было #C8A96E)
-export const GOLD_HEX = 0xF0A030;
-export const EMBER = '#FF6B35';          // Тлеющий уголь
-export const EMBER_HEX = 0xFF6B35;
-export const DARK_RED = '#C41E3A';       // Алый (было #6B0F0F)
-export const DARK_RED_HEX = 0xC41E3A;
-export const RUST = 0x8B5E3C;            // Тёплая ржавчина (было 0x7A4A1E)
-export const BG_DARK = '#0d0f12';        // Тёмная сталь (было #1a0e06)
-export const BG_DARK_HEX = 0x0d0f12;
+// Препятствия — жуки
+export const OBSTACLE_START_HEIGHT = 50;    // метры — начало спавна (ближе для видимости)
+export const OBSTACLE_CHANCE = 0.4;         // 40% шанс жука на уровне каждого крюка
+export const OBSTACLE_HIT_RADIUS = 22;      // пиксели — радиус коллизии
+
+// ===== ПАЛИТРА PREMIUM AMBER & SLATE =====
+// Основные цвета — тёплый янтарь на глубоком navy-slate
+export const GOLD = '#F5B842';           // Насыщенный тёплый янтарь (ярче, теплее)
+export const GOLD_HEX = 0xF5B842;
+export const EMBER = '#FF7A45';          // Тлеющий уголь (теплее)
+export const EMBER_HEX = 0xFF7A45;
+export const DARK_RED = '#D42A4A';       // Алый — ярче для контраста на тёмном фоне
+export const DARK_RED_HEX = 0xD42A4A;
+export const RUST = 0x9B6E4C;            // Тёплая ржавчина (светлее для видимости)
+export const BG_DARK = '#141822';        // Глубокий navy (НЕ чёрный, НЕ серый)
+export const BG_DARK_HEX = 0x141822;
 
 // Охотник
 export const HUNTER_BODY = 0x4A3525;     // Тёмная кожа
 export const HUNTER_FACE = 0xF0DDB0;
-export const TRAIL_COLOR = 0xFF6B35;     // Ember trail
+export const TRAIL_COLOR = 0xFF7A45;     // Ember trail (теплее)
 
-// Стальная палитра
-export const STEEL = 0x3A3D45;
-export const STEEL_LIGHT = 0x5A5D65;
-export const STEEL_HEX = '#3A3D45';
-export const STEEL_LIGHT_HEX = '#5A5D65';
+// Стальная палитра — светлее для лучшей читаемости
+export const STEEL = 0x4A5068;
+export const STEEL_LIGHT = 0x6E7588;
+export const STEEL_HEX = '#4A5068';
+export const STEEL_LIGHT_HEX = '#6E7588';
 
 // UI акценты
 export const BLOOD_RED_HEX = 0x8B0000;
-export const BRASS_HEX = 0xB8964E;
-export const HINT_COLOR = '#A08040';     // Теплее (было #9B8050)
-export const RECORD_COLOR = '#8B7A50';   // Теплее
-export const AMBER_GLOW = 0xF0A030;     // Для свечений
+export const BRASS_HEX = 0xC8A85E;      // Ярче для читаемости
+export const HINT_COLOR = '#C8A050';     // Значительно ярче — читаемая подсказка
+export const RECORD_COLOR = '#A09060';   // Теплее, читаемее
+export const AMBER_GLOW = 0xF5B842;     // Для свечений (совпадает с GOLD)
 
-// Шрифт
+// Шрифт — Georgia bold, premium gothic feel
 export const FONT = 'Georgia, serif';
 
 // ===== БИОМЫ =====
@@ -147,6 +152,7 @@ export const Z = {
   SWAMP:       1,
   SWAMP_BUBBLES: 2,
   ANCHORS:     2,
+  OBSTACLES:   3,   // между trail и rope
   TRAIL:       3,
   ROPE:        4,
   PLAYER:      5,

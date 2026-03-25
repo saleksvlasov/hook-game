@@ -2,7 +2,7 @@ import { GOLD, FONT, Z, HINT_COLOR, RECORD_COLOR } from '../constants.js';
 import { t } from '../i18n.js';
 import { createEmberBurst } from '../managers/UIFactory.js';
 
-// Менеджер HUD — счёт, рекорд, подсказка (MUI-inspired brighter style)
+// Менеджер HUD — счёт, рекорд, подсказка (premium glassmorphism)
 export class HUDManager {
   constructor(scene) {
     this.scene = scene;
@@ -10,7 +10,6 @@ export class HUDManager {
     this.maxHeightText = null;
     this.hintText = null;
     this.bgPanel = null;
-    this.bgShadow = null;
     this.lastMilestone = 0;
   }
 
@@ -21,52 +20,46 @@ export class HUDManager {
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     const safeTop = Math.max(envTop, 10);
 
-    // Тень под панелью — мягкая elevation
-    this.bgShadow = this.scene.add.graphics();
-    this.bgShadow.fillStyle(0x000000, 0.2);
-    this.bgShadow.fillRoundedRect(W / 2 - 70, safeTop + 12, 140, 50, 6);
-    this.bgShadow.setScrollFactor(0).setDepth(Z.HUD);
-
-    // Blue-grey подложка за высотой — ярче чем было
+    // MUI Chip панель — плоская, pill-shape
     this.bgPanel = this.scene.add.graphics();
-    this.bgPanel.fillStyle(0x1E2535, 0.75);
-    this.bgPanel.fillRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 6);
-    // Тонкая стальная рамка
-    this.bgPanel.lineStyle(1, 0x4A5568, 0.25);
-    this.bgPanel.strokeRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 6);
+    this.bgPanel.fillStyle(0xFFFFFF, 0.05);
+    this.bgPanel.fillRoundedRect(W / 2 - 76, safeTop + 10, 152, 52, 26);
+    this.bgPanel.lineStyle(1, 0xF5B842, 0.18);
+    this.bgPanel.strokeRoundedRect(W / 2 - 76, safeTop + 10, 152, 52, 26);
     this.bgPanel.setScrollFactor(0).setDepth(Z.HUD);
 
     this.heightText = this.scene.add.text(W / 2, safeTop + 18, `0${t('unit_m')}`, {
-      fontSize: '32px',
+      fontSize: '36px',
       color: GOLD,
       fontFamily: FONT,
       fontStyle: 'bold',
-      stroke: '#151A25',
-      strokeThickness: 4,
+      stroke: '#101520',
+      strokeThickness: 5,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    this.maxHeightText = this.scene.add.text(W / 2, safeTop + 54, `${t('record')}: 0${t('unit_m')}`, {
-      fontSize: '15px',
-      color: '#9A8A60',
+    this.maxHeightText = this.scene.add.text(W / 2, safeTop + 56, `${t('record')}: 0${t('unit_m')}`, {
+      fontSize: '14px',
+      color: '#A09060',
       fontFamily: FONT,
-      stroke: '#151A25',
+      fontStyle: 'bold',
+      stroke: '#101520',
       strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    // Label — метка "ГЛУБИНА" (blue-grey, читаемый)
+    // Label — метка "ГЛУБИНА" (ярче, читаемее)
     this.scene.add.text(W / 2, safeTop + 4, t('depth'), {
-      fontSize: '12px',
-      color: '#7A8090',
+      fontSize: '11px',
+      color: '#8A90A0',
       fontFamily: FONT,
-      letterSpacing: 3,
+      letterSpacing: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    this.hintText = this.scene.add.text(W / 2, safeTop + 76, t('click_hook'), {
-      fontSize: '15px',
+    this.hintText = this.scene.add.text(W / 2, safeTop + 78, t('click_hook'), {
+      fontSize: '16px',
       color: HINT_COLOR,
       fontFamily: FONT,
-      fontStyle: 'italic',
-      stroke: '#151A25',
+      fontStyle: 'bold italic',
+      stroke: '#101520',
       strokeThickness: 3,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
