@@ -23,13 +23,14 @@ export class ChallengeManager {
     const weekKey = `week${this.week}`;
     const existing = this.data.weeklyProgress[weekKey];
 
-    // Миграция: если таргет устарел (меньше нового) — обновляем, сохраняя прогресс
+    // Миграция: всегда пересчитываем таргет по формуле, сохраняя прогресс
     if (existing) {
       const typeIdx = this.week % CHALLENGE_TYPES.length;
       const ct = CHALLENGE_TYPES[typeIdx];
-      const newTarget = ct.genTarget(this.week);
-      if (existing.target < newTarget && !existing.completed) {
-        existing.target = newTarget;
+      const correctTarget = ct.genTarget(this.week);
+      if (existing.target !== correctTarget && !existing.completed) {
+        existing.target = correctTarget;
+        existing.type = ct.type; // тип тоже мог устареть
         saveChallenges(this.data);
       }
       return;
