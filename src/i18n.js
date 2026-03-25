@@ -22,6 +22,9 @@ export const LANGS = {
     tap_to_hunt: 'Tap to start climbing',
     moon_reached: 'Moon: reached',
     unit_m: 'm',
+    leaderboard: 'TOP',
+    lb_empty: 'No records yet',
+    lb_you: 'YOU',
   },
   ru: {
     title_sub: 'Как высоко заберёшься?',
@@ -44,6 +47,9 @@ export const LANGS = {
     tap_to_hunt: 'Нажми чтобы начать подъём',
     moon_reached: 'Луна: достигнута',
     unit_m: 'м',
+    leaderboard: 'ТОП',
+    lb_empty: 'Пока нет рекордов',
+    lb_you: 'ТЫ',
   },
 };
 

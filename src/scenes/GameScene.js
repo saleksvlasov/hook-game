@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { playHook, playAttach, playRelease, playDeath, playRecord } from '../audio.js';
 import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
-import { isTelegram, purchaseContinue } from '../telegram.js';
+import { isTelegram, purchaseContinue, saveScoreOnline } from '../telegram.js';
 import { t } from '../i18n.js';
 import {
   GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
@@ -215,6 +215,11 @@ export class GameScene extends Phaser.Scene {
 
     const isNewBest = saveBest(this.maxHeight);
     this.sessionBest = getBest();
+
+    // Сохраняем рекорд онлайн (fire-and-forget)
+    if (isNewBest && this.maxHeight > 0) {
+      saveScoreOnline(this.maxHeight);
+    }
 
     const lastHeight = Math.max(0, Math.floor((GROUND_Y - this.player.y) / 10));
     this.gameOverUI.show(lastHeight, this.sessionBest, isNewBest && this.maxHeight > 0, this.continueUsed);

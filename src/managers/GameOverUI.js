@@ -1,6 +1,6 @@
 import { GOLD, DARK_RED, FONT, Z } from '../constants.js';
 import { t } from '../i18n.js';
-import { isTelegram } from '../telegram.js';
+import { isTelegram, fetchLeaderboard, getTelegramUserId } from '../telegram.js';
 import {
   drawBloodSplatter, drawWantedPosterFrame,
   drawRopeDecoration, createEmberBurst,
@@ -23,6 +23,8 @@ export class GameOverUI {
     this.bloodGfx = null;
     this.posterGfx = null;
     this.overlayRect = null;
+
+    this.leaderboardDiv = null;
 
     // Callbacks
     this.onContinue = null;
@@ -92,11 +94,20 @@ export class GameOverUI {
     this.restartBtn = this._createButton(t('restart'), 'restart');
     this.buttonsDiv.appendChild(this.restartBtn);
 
+    // LEADERBOARD (только в Telegram)
+    if (isTelegram()) {
+      this.leaderboardBtn = this._createButton(t('leaderboard'), 'leaderboard');
+      this.buttonsDiv.appendChild(this.leaderboardBtn);
+    }
+
     // MENU
     this.menuBtn = this._createButton(t('menu'), 'menu');
     this.buttonsDiv.appendChild(this.menuBtn);
 
     document.body.appendChild(this.buttonsDiv);
+
+    // Панель лидерборда (HTML overlay)
+    this._createLeaderboardPanel();
   }
 
   // Создание кнопки с MUI elevation стилями
@@ -214,9 +225,129 @@ export class GameOverUI {
       btn.addEventListener('touchend', onUp, { passive: true });
       btn.addEventListener('mouseup', onUp);
       btn.addEventListener('click', () => this.onMenu?.());
+
+    } else if (type === 'leaderboard') {
+      // Стиль как menu но с иконкой
+      btn.style.cssText = `${base}
+        background: transparent;
+        color: #F0A030;
+        border: none;
+        border-bottom: 1px solid transparent;
+        font-size: 14px;
+        padding: 8px 36px;
+        transition: all 0.15s ease;
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.color = '#FFB848';
+        btn.style.borderBottomColor = 'rgba(240, 160, 48, 0.3)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.color = '#F0A030';
+        btn.style.borderBottomColor = 'transparent';
+      });
+      const onDown = () => { btn.style.transform = 'scale(0.97)'; };
+      const onUp = () => { btn.style.transform = ''; };
+      btn.addEventListener('touchstart', onDown, { passive: true });
+      btn.addEventListener('mousedown', onDown);
+      btn.addEventListener('touchend', onUp, { passive: true });
+      btn.addEventListener('mouseup', onUp);
+      btn.addEventListener('click', () => this._showLeaderboard());
     }
 
     return btn;
+  }
+
+  _createLeaderboardPanel() {
+    this.leaderboardDiv = document.createElement('div');
+    this.leaderboardDiv.id = 'leaderboard-panel';
+    this.leaderboardDiv.style.cssText = `
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: ${Z.HTML_BUTTONS + 10};
+      background: rgba(14, 20, 32, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      flex-direction: column; align-items: center;
+      padding: 40px 16px 20px;
+      overflow-y: auto;
+      opacity: 0; transition: opacity 0.3s ease;
+    `;
+
+    // Кнопка закрытия
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = `
+      position: absolute; top: 12px; right: 16px;
+      background: none; border: none; color: #6A7080;
+      font-size: 24px; cursor: pointer; pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+    `;
+    closeBtn.addEventListener('click', () => this._hideLeaderboard());
+    this.leaderboardDiv.appendChild(closeBtn);
+
+    // Заголовок
+    const title = document.createElement('div');
+    title.textContent = `🏆 ${t('leaderboard')}`;
+    title.style.cssText = `
+      font-family: Georgia, serif; font-size: 24px; font-weight: bold;
+      color: #F0A030; margin-bottom: 20px; letter-spacing: 2px;
+    `;
+    this.leaderboardDiv.appendChild(title);
+
+    // Контейнер для списка
+    this.lbList = document.createElement('div');
+    this.lbList.style.cssText = `
+      width: 100%; max-width: 360px;
+    `;
+    this.leaderboardDiv.appendChild(this.lbList);
+
+    document.body.appendChild(this.leaderboardDiv);
+  }
+
+  async _showLeaderboard() {
+    const lb = await fetchLeaderboard();
+    const myId = getTelegramUserId();
+
+    this.lbList.innerHTML = '';
+
+    if (lb.length === 0) {
+      this.lbList.innerHTML = `<div style="color:#6A7080;font-family:Georgia,serif;text-align:center;padding:40px 0">${t('lb_empty')}</div>`;
+    } else {
+      lb.forEach((entry, i) => {
+        const isMe = myId && entry.userId === myId;
+        const row = document.createElement('div');
+        row.style.cssText = `
+          display: flex; align-items: center; padding: 10px 12px;
+          margin-bottom: 4px; border-radius: 8px;
+          background: ${isMe ? 'rgba(240, 160, 48, 0.12)' : 'rgba(30, 35, 48, 0.6)'};
+          border: 1px solid ${isMe ? 'rgba(240, 160, 48, 0.3)' : 'rgba(90, 93, 101, 0.15)'};
+          font-family: Georgia, serif;
+        `;
+
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+        const rank = medal || `${i + 1}`;
+
+        row.innerHTML = `
+          <span style="width:36px;text-align:center;font-size:${medal ? '18px' : '14px'};color:#6A7080">${rank}</span>
+          <span style="flex:1;color:${isMe ? '#F0A030' : '#c0c4cc'};font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${entry.name}${isMe ? ` <span style="font-size:11px;color:#F0A030">${t('lb_you')}</span>` : ''}
+          </span>
+          <span style="color:#F0A030;font-size:15px;font-weight:bold">${entry.score}${t('unit_m')}</span>
+        `;
+        this.lbList.appendChild(row);
+      });
+    }
+
+    this.leaderboardDiv.style.display = 'flex';
+    requestAnimationFrame(() => {
+      this.leaderboardDiv.style.opacity = '1';
+    });
+  }
+
+  _hideLeaderboard() {
+    this.leaderboardDiv.style.opacity = '0';
+    setTimeout(() => {
+      this.leaderboardDiv.style.display = 'none';
+    }, 300);
   }
 
   show(score, best, isNewBest, continueUsed) {
@@ -385,5 +516,7 @@ export class GameOverUI {
     if (this.posterGfx) { this.posterGfx.destroy(); this.posterGfx = null; }
     const el = document.getElementById('game-over-buttons');
     if (el) el.remove();
+    const lb = document.getElementById('leaderboard-panel');
+    if (lb) lb.remove();
   }
 }
