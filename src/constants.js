@@ -1,9 +1,11 @@
 // ===================== ИГРОВЫЕ КОНСТАНТЫ =====================
 
 // Физика
-export const GRAVITY = 800;
-export const HOOK_RANGE = 500;
+export const GRAVITY = 1200;           // Было 800 — тяжелее падение, как в Flappy Bird
+export const HOOK_RANGE = 280;         // Было 500 — нельзя зацепиться издалека
+export const MAX_ROPE_LENGTH = 160;    // Макс длина верёвки — короткие качели
 export const MIN_ROPE = 40;
+export const SWING_FRICTION = 0.997;   // Было 0.9995 — маятник быстрее теряет энергию
 export const TRAIL_SPEED_THRESHOLD = 150;
 
 // Мир

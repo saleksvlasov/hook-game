@@ -4,7 +4,8 @@ import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { t } from '../i18n.js';
 import {
-  GRAVITY, HOOK_RANGE, WORLD_HEIGHT, GROUND_Y, SPAWN_Y, MIN_ROPE, Z,
+  GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, WORLD_HEIGHT, GROUND_Y, SPAWN_Y,
+  MIN_ROPE, SWING_FRICTION, Z,
 } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -220,8 +221,8 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    // Минимум 40px чтобы избежать числовой нестабильности
-    this.ropeLength = Math.max(minDist, MIN_ROPE);
+    // Верёвка: min 40px (стабильность), max 160px (короткие качели, нет халявы)
+    this.ropeLength = Phaser.Math.Clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
 
     this.player.body.allowGravity = false;
     this.player.body.setVelocity(0, 0);
@@ -234,9 +235,9 @@ export class GameScene extends Phaser.Scene {
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    // Начальный импульс если мало инерции
+    // Начальный импульс слабее — нужна инерция от предыдущего качения
     if (Math.abs(this.swingSpeed) < 0.5) {
-      this.swingSpeed = px < nearest.x ? -2.0 : 2.0;
+      this.swingSpeed = px < nearest.x ? -1.2 : 1.2;
     }
 
     this.anchorMgr.highlightAnchor(nearest, true);
@@ -302,9 +303,24 @@ export class GameScene extends Phaser.Scene {
     if (rewarded) {
       this.isDead = false;
       this.continueUsed = true;
+
+      // Респавн на высоте прошлого рекорда (до этой сессии)
+      // sessionBest сохранён при create() — это рекорд ДО текущей игры
+      const targetHeight = this.sessionBest > 0 ? this.sessionBest : 20;
+      const targetY = GROUND_Y - targetHeight * 10;
+
+      // Генерируем якоря до этой высоты чтобы было за что цепляться
+      this.anchorMgr.generateAnchorsUpTo(targetY - 1500);
+
+      this.player.setPosition(this.W / 2, targetY);
+      this.player.body.reset(this.W / 2, targetY);
       this.player.body.allowGravity = true;
-      this.player.body.setVelocity(0, -400);
+      this.player.body.setVelocity(0, -300);
       this.playerContainer.setAlpha(1);
+
+      // Камера сразу на новую позицию
+      this.cameras.main.scrollY = targetY - this.H * 0.55;
+
       this.hud.setHint('click_hook');
     } else {
       for (const el of this.gameOverUI.elements) el.setVisible(true);
@@ -365,7 +381,7 @@ export class GameScene extends Phaser.Scene {
       const dt = delta / 1000;
       const angularAccel = (GRAVITY / this.ropeLength) * Math.cos(this.swingAngle);
       this.swingSpeed += angularAccel * dt;
-      this.swingSpeed *= 0.9995;
+      this.swingSpeed *= SWING_FRICTION; // 0.997 — маятник быстрее теряет энергию
 
       // Полные 360° — без ограничений угла
       this.swingAngle += this.swingSpeed * dt;
