@@ -1,4 +1,4 @@
-import { RUST, Z } from '../constants.js';
+import { GOLD_HEX, Z } from '../constants.js';
 
 // Рендер верёвки — Bézier кривая с тенью и highlight
 export class RopeRenderer {
@@ -22,15 +22,15 @@ export class RopeRenderer {
     const cpY = midY + sagY;
 
     // Shadow
-    this.graphics.lineStyle(4, 0x000000, 0.15);
+    this.graphics.lineStyle(4, 0x000000, 0.2);
     this._bezier(this.graphics, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
 
-    // Main rope (rusty)
-    this.graphics.lineStyle(2.5, RUST, 0.8);
+    // Main rope (golden)
+    this.graphics.lineStyle(2.5, GOLD_HEX, 0.6);
     this._bezier(this.graphics, ax, ay, cpX, cpY, px, py);
 
-    // Highlight
-    this.graphics.lineStyle(1, 0xAA8855, 0.3);
+    // Highlight (warm)
+    this.graphics.lineStyle(1, 0xFFCC66, 0.2);
     this._bezier(this.graphics, ax, ay - 1, cpX, cpY - 1, px, py - 1);
   }
 

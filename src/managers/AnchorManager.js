@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ANCHOR_SPACING_Y, SPAWN_Y, GOLD_HEX, Z } from '../constants.js';
+import { ANCHOR_SPACING_Y, SPAWN_Y, GOLD_HEX, RUST, EMBER_HEX, AMBER_GLOW, Z } from '../constants.js';
 
 // Менеджер якорей — процедурная генерация, отрисовка, cleanup
 export class AnchorManager {
@@ -65,7 +65,7 @@ export class AnchorManager {
     g.clear();
 
     // Стержень крепления
-    g.fillStyle(active ? GOLD_HEX : 0x7A4A1E);
+    g.fillStyle(active ? GOLD_HEX : RUST);
     g.fillRect(-2, -22, 4, 12);
 
     // S-образный крюк — золотой для видимости
@@ -85,16 +85,19 @@ export class AnchorManager {
     g.fillTriangle(-12, 3, -11, 10, -7, 4);
 
     // Ржавые пятна
-    g.fillStyle(0x7A4A1E, 0.25);
+    g.fillStyle(RUST, 0.2);
     g.fillCircle(4, -6, 2);
     g.fillCircle(-6, 5, 1.5);
 
     if (active) {
-      // Тёплое свечение
-      g.fillStyle(0xFFB84D, 0.15);
+      // Тёплое янтарное свечение
+      g.fillStyle(AMBER_GLOW, 0.12);
       g.fillCircle(0, 0, 15);
-      g.fillStyle(0xFFB84D, 0.06);
+      g.fillStyle(AMBER_GLOW, 0.05);
       g.fillCircle(0, 0, 25);
+      // Второе кольцо — ember feel
+      g.fillStyle(EMBER_HEX, 0.04);
+      g.fillCircle(0, 0, 35);
     }
   }
 

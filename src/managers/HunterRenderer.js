@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GOLD_HEX, HUNTER_BODY, HUNTER_FACE } from '../constants.js';
+import { GOLD_HEX, HUNTER_BODY, HUNTER_FACE, BG_DARK_HEX, RUST } from '../constants.js';
 
 // Рендер охотника + анимация пальто от ветра
 export class HunterRenderer {
@@ -39,7 +39,7 @@ export class HunterRenderer {
     g.clear();
 
     // Яркий золотой outline для видимости на тёмном фоне
-    g.lineStyle(2, GOLD_HEX, 0.6);
+    g.lineStyle(2, GOLD_HEX, 0.7);
     g.strokeRoundedRect(-10, -24, 20, 50, 3);
 
     // Пальто полы (анимация ветра)
@@ -53,13 +53,13 @@ export class HunterRenderer {
     g.fillRoundedRect(-8, -2, 16, 18, 2);
 
     // Пояс + пряжка
-    g.fillStyle(0x7A4A1E);
+    g.fillStyle(RUST);
     g.fillRect(-8, 8, 16, 2);
-    g.fillStyle(GOLD_HEX, 0.7);
+    g.fillStyle(GOLD_HEX, 0.8);
     g.fillRect(-2, 7, 4, 4);
 
     // Шляпа — золотая, сразу видна
-    g.fillStyle(GOLD_HEX, 0.8);
+    g.fillStyle(GOLD_HEX, 0.85);
     g.fillEllipse(0, -12, 28, 7);
     // Тулья
     g.fillStyle(HUNTER_BODY);
@@ -72,7 +72,7 @@ export class HunterRenderer {
     g.fillStyle(HUNTER_FACE);
     g.fillRect(-4, -10, 8, 5);
     // Глаза
-    g.fillStyle(0x1a0e06);
+    g.fillStyle(BG_DARK_HEX);
     g.fillCircle(-2, -8, 1);
     g.fillCircle(2, -8, 1);
 
@@ -86,12 +86,12 @@ export class HunterRenderer {
     g.fillRect(8, 10, 4, 3);
 
     // Ноги
-    g.fillStyle(0x2a1a0a);
+    g.fillStyle(0x1E1A15);
     g.fillRect(-6, 16, 5, 8);
     g.fillRect(1, 16, 5, 8);
 
     // Сапоги
-    g.fillStyle(0x3d2510);
+    g.fillStyle(0x2A2520);
     g.fillRect(-7, 22, 6, 4);
     g.fillRect(1, 22, 6, 4);
   }

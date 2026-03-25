@@ -1,8 +1,8 @@
-import { GOLD, BG_DARK, FONT, Z, HINT_COLOR, RECORD_COLOR } from '../constants.js';
+import { GOLD, BG_DARK, FONT, Z, HINT_COLOR, RECORD_COLOR, STEEL_LIGHT } from '../constants.js';
 import { t } from '../i18n.js';
 import { createEmberBurst } from '../managers/UIFactory.js';
 
-// Менеджер HUD — счёт, рекорд, подсказка
+// Менеджер HUD — счёт, рекорд, подсказка (Ember & Steel стиль)
 export class HUDManager {
   constructor(scene) {
     this.scene = scene;
@@ -21,10 +21,13 @@ export class HUDManager {
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     const safeTop = Math.max(envTop, 10);
 
-    // Тёмная подложка за высотой
+    // Тёмная стальная подложка за высотой
     this.bgPanel = this.scene.add.graphics();
-    this.bgPanel.fillStyle(0x0d0800, 0.5);
-    this.bgPanel.fillRoundedRect(W / 2 - 60, safeTop + 10, 120, 50, 4);
+    this.bgPanel.fillStyle(0x0d0f12, 0.6);
+    this.bgPanel.fillRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 4);
+    // Тонкая стальная рамка
+    this.bgPanel.lineStyle(1, STEEL_LIGHT, 0.15);
+    this.bgPanel.strokeRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 4);
     this.bgPanel.setScrollFactor(0).setDepth(Z.HUD);
 
     this.heightText = this.scene.add.text(W / 2, safeTop + 18, `0${t('unit_m')}`, {
@@ -33,7 +36,7 @@ export class HUDManager {
       fontFamily: FONT,
       fontStyle: 'bold',
       stroke: BG_DARK,
-      strokeThickness: 5,
+      strokeThickness: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
     this.maxHeightText = this.scene.add.text(W / 2, safeTop + 54, `${t('record')}: 0${t('unit_m')}`, {
@@ -44,10 +47,10 @@ export class HUDManager {
       strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    // Label — метка "ГЛУБИНА"
+    // Label — метка "ГЛУБИНА" (стальной серый)
     this.scene.add.text(W / 2, safeTop + 4, t('depth'), {
       fontSize: '12px',
-      color: '#7B6040',
+      color: '#6A6D75',
       fontFamily: FONT,
       letterSpacing: 3,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
@@ -57,7 +60,7 @@ export class HUDManager {
       color: HINT_COLOR,
       fontFamily: FONT,
       fontStyle: 'italic',
-      stroke: '#0d0800',
+      stroke: '#0d0f12',
       strokeThickness: 3,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 

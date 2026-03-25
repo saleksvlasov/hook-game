@@ -16,6 +16,7 @@ import { RopeRenderer } from '../managers/RopeRenderer.js';
 import { HunterRenderer } from '../managers/HunterRenderer.js';
 import { GameOverUI } from '../managers/GameOverUI.js';
 import { EasterEggs } from '../managers/EasterEggs.js';
+import { BiomeManager } from '../managers/BiomeManager.js';
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -47,7 +48,8 @@ export class GameScene extends Phaser.Scene {
     this.isDead = false;
     this.continueUsed = false;
 
-    this.createBackground();
+    this.biome = new BiomeManager(this);
+    this.biome.create();
 
     // --- PLAYER (hunter) ---
     this.playerContainer = this.add.container(this.W / 2, SPAWN_Y).setDepth(Z.PLAYER);
@@ -96,86 +98,7 @@ export class GameScene extends Phaser.Scene {
     // Input
     this.input.on('pointerdown', () => this.handlePointerDown());
 
-    this.cameras.main.fadeIn(400, 13, 8, 0);
-  }
-
-  // ===================== BACKGROUND =====================
-
-  createBackground() {
-    if (this.textures.exists('bg-grad')) this.textures.remove('bg-grad');
-    // Текстура 4000px — тайлится по вертикали через setDisplaySize
-    const bgH = 4000;
-    const gradTex = this.textures.createCanvas('bg-grad', 1, bgH);
-    const gCtx = gradTex.getContext();
-    const grad = gCtx.createLinearGradient(0, 0, 0, bgH);
-    grad.addColorStop(0, '#15100a');
-    grad.addColorStop(0.3, '#1e150c');
-    grad.addColorStop(0.7, '#2a1c0e');
-    grad.addColorStop(1, '#3d2812');
-    gCtx.fillStyle = grad;
-    gCtx.fillRect(0, 0, 1, bgH);
-    gradTex.refresh();
-    // Фон шире экрана x5 — камера может двигаться по X без видимых краёв
-    this.add.image(this.W / 2, WORLD_HEIGHT / 2, 'bg-grad')
-      .setDisplaySize(this.W * 5, WORLD_HEIGHT).setDepth(Z.BG);
-
-    // Moon (high up in the world)
-    const moonGfx = this.add.graphics().setDepth(Z.MOON);
-    const moonY = 300;
-    moonGfx.fillStyle(0x444433, 0.12);
-    moonGfx.fillCircle(this.W * 0.72, moonY, 70);
-    moonGfx.fillStyle(0x555544, 0.08);
-    moonGfx.fillCircle(this.W * 0.72 - 10, moonY - 5, 62);
-    moonGfx.fillStyle(0x333322, 0.06);
-    moonGfx.fillCircle(this.W * 0.72 + 18, moonY - 15, 14);
-    moonGfx.fillCircle(this.W * 0.72 - 22, moonY + 15, 9);
-
-    // Parallax ash/ember layers
-    const layerConfigs = [
-      { count: 60, scrollFactor: 0.2, maxR: 1.0, alpha: 0.12, color: 0x886644 },
-      { count: 40, scrollFactor: 0.4, maxR: 1.5, alpha: 0.18, color: 0xC8A96E },
-      { count: 25, scrollFactor: 0.65, maxR: 2.0, alpha: 0.22, color: 0xAA8855 },
-    ];
-    for (const cfg of layerConfigs) {
-      const g = this.add.graphics().setDepth(Z.ASH);
-      g.setScrollFactor(cfg.scrollFactor);
-      for (let i = 0; i < cfg.count; i++) {
-        const x = Phaser.Math.Between(0, this.W / cfg.scrollFactor);
-        const y = Phaser.Math.Between(0, WORLD_HEIGHT / cfg.scrollFactor);
-        const r = 0.3 + Math.random() * cfg.maxR;
-        const a = cfg.alpha * (0.3 + Math.random() * 0.7);
-        g.fillStyle(cfg.color, a);
-        g.fillCircle(x, y, r);
-      }
-    }
-
-    // Tree silhouettes (parallax)
-    const treeFar = this.add.graphics().setDepth(Z.TREE_FAR).setScrollFactor(0.3);
-    this._drawTrees(treeFar, 0, WORLD_HEIGHT * 0.8, this.W * 3, 0.08);
-    const treeNear = this.add.graphics().setDepth(Z.TREE_NEAR).setScrollFactor(0.5);
-    this._drawTrees(treeNear, 0, WORLD_HEIGHT * 0.6, this.W * 2, 0.12);
-
-    // Fog layers
-    const fog = this.add.graphics().setDepth(Z.FOG).setScrollFactor(0.7);
-    for (let y = WORLD_HEIGHT * 0.4; y < WORLD_HEIGHT; y += 300) {
-      fog.fillStyle(0x281405, 0.05);
-      fog.fillRect(-this.W * 2, y, this.W * 5, 80);
-    }
-  }
-
-  _drawTrees(gfx, startX, baseY, width, alpha) {
-    gfx.fillStyle(0x0a0500, alpha);
-    for (let x = startX; x < width; x += 30 + Math.random() * 50) {
-      const h = 60 + Math.random() * 200;
-      const w = 4 + Math.random() * 6;
-      gfx.fillRect(x - w / 2, baseY - h, w, h + 20);
-      for (let b = 0; b < 2 + Math.floor(Math.random() * 3); b++) {
-        const by = baseY - h * (0.25 + Math.random() * 0.55);
-        const bLen = 10 + Math.random() * 25;
-        const dir = Math.random() > 0.5 ? 1 : -1;
-        gfx.fillRect(x, by, bLen * dir, 2);
-      }
-    }
+    this.cameras.main.fadeIn(400, 13, 15, 18);
   }
 
   // ===================== INPUT =====================
@@ -370,6 +293,8 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.scrollY = Phaser.Math.Linear(
       this.cameras.main.scrollY, targetY, 0.15
     );
+
+    this.biome.update(this.player.y);
 
     if (this.isDead) {
       this.swamp.update(delta);

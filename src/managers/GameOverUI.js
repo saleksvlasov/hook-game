@@ -5,7 +5,7 @@ import {
   drawRopeDecoration, createEmberBurst,
 } from '../managers/UIFactory.js';
 
-// Менеджер Game Over экрана — premium Hunt: Showdown стиль
+// Менеджер Game Over экрана — Ember & Steel glassmorphism стиль
 export class GameOverUI {
   constructor(scene) {
     this.scene = scene;
@@ -42,32 +42,32 @@ export class GameOverUI {
       return obj;
     };
 
-    // Затемнение — отдельная ссылка для индивидуального tween
+    // Затемнение — тёмно-стальной синий
     this.overlayRect = makeUI(
-      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x2d0000, 0.65)
+      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x0a0c14, 0.7)
     );
 
     // Заголовок "YOU FELL"
     this.titleText = makeUI(this.scene.add.text(W / 2, H * 0.28, t('you_died'), {
       fontSize: '42px', color: DARK_RED, fontFamily: FONT, fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 8,
+      stroke: '#000000', strokeThickness: 6,
     }).setOrigin(0.5));
 
-    // Высота
+    // Высота (score)
     this.scoreText = makeUI(this.scene.add.text(W / 2, H * 0.36, '', {
       fontSize: '18px', color: GOLD, fontFamily: FONT,
     }).setOrigin(0.5));
 
-    // Рекорд
+    // Рекорд (best)
     this.bestText = makeUI(this.scene.add.text(W / 2, H * 0.40, '', {
-      fontSize: '26px', color: '#6B5030', fontFamily: FONT, fontStyle: 'bold',
+      fontSize: '26px', color: '#8B7A50', fontFamily: FONT, fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
     // НОВЫЙ РЕКОРД
     this.newBestText = makeUI(this.scene.add.text(W / 2, H * 0.45, t('new_record'), {
       fontSize: '20px', color: GOLD, fontFamily: FONT, fontStyle: 'bold italic',
-      stroke: '#3B1A00', strokeThickness: 4,
+      stroke: '#1a1c20', strokeThickness: 4,
     }).setOrigin(0.5));
 
     // --- Чистые HTML кнопки поверх canvas ---
@@ -78,7 +78,7 @@ export class GameOverUI {
       width: 100%; height: 100%; z-index: ${Z.HTML_BUTTONS};
       pointer-events: none;
       flex-direction: column; align-items: center; justify-content: center;
-      gap: 12px; padding-top: 15%;
+      gap: 14px; padding-top: 52%;
       opacity: 0; transition: opacity 0.3s ease;
     `;
 
@@ -97,7 +97,7 @@ export class GameOverUI {
     document.body.appendChild(this.buttonsDiv);
   }
 
-  // Создание кнопки с premium стилями
+  // Создание кнопки с glassmorphism стилями
   _createButton(label, type) {
     const btn = document.createElement('button');
     btn.textContent = label;
@@ -108,25 +108,39 @@ export class GameOverUI {
 
     if (type === 'restart') {
       btn.style.cssText = `${base}
-        background: linear-gradient(180deg, #5B1A1A 0%, #3B0808 100%);
-        color: #C8A96E;
-        border: 2px solid #C8A96E;
+        background: rgba(15, 17, 22, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #F0A030;
+        border: 1px solid rgba(240, 160, 48, 0.3);
         font-size: 20px; font-weight: bold;
         padding: 14px 48px;
-        border-radius: 2px;
-        box-shadow: 0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15);
-        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-        transition: transform 0.1s, box-shadow 0.1s;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(255, 107, 53, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+        text-shadow: 0 0 10px rgba(240, 160, 48, 0.3);
+        transition: all 0.2s ease;
       `;
-      // Active press effect
+      const onEnter = () => {
+        btn.style.borderColor = 'rgba(240, 160, 48, 0.5)';
+        btn.style.boxShadow = '0 0 25px rgba(255, 107, 53, 0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
+      };
+      const onLeave = () => {
+        btn.style.borderColor = 'rgba(240, 160, 48, 0.3)';
+        btn.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)';
+      };
       const onDown = () => {
-        btn.style.transform = 'translateY(3px)';
-        btn.style.boxShadow = '0 1px 0 #1a0500';
+        btn.style.transform = 'scale(0.97)';
+        btn.style.background = 'rgba(15, 17, 22, 0.8)';
+        btn.style.borderColor = 'rgba(240, 160, 48, 0.6)';
+        btn.style.boxShadow = '0 0 30px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)';
       };
       const onUp = () => {
         btn.style.transform = '';
-        btn.style.boxShadow = '0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15)';
+        btn.style.background = 'rgba(15, 17, 22, 0.7)';
+        onLeave();
       };
+      btn.addEventListener('mouseenter', onEnter);
+      btn.addEventListener('mouseleave', onLeave);
       btn.addEventListener('touchstart', onDown, { passive: true });
       btn.addEventListener('mousedown', onDown);
       btn.addEventListener('touchend', onUp, { passive: true });
@@ -135,24 +149,39 @@ export class GameOverUI {
 
     } else if (type === 'continue') {
       btn.style.cssText = `${base}
-        background: linear-gradient(180deg, #5B1A1A 0%, #3B0808 100%);
-        color: #C8A96E;
-        border: 2px solid #7A4A1E;
+        background: rgba(15, 17, 22, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #F0A030;
+        border: 1px solid rgba(90, 93, 101, 0.4);
         font-size: 15px; font-weight: bold;
         padding: 10px 36px;
-        border-radius: 2px;
-        box-shadow: 0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15);
-        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-        transition: transform 0.1s, box-shadow 0.1s;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.05), inset 0 1px 0 rgba(255,255,255,0.05);
+        text-shadow: 0 0 10px rgba(240, 160, 48, 0.3);
+        transition: all 0.2s ease;
       `;
+      const onEnter = () => {
+        btn.style.borderColor = 'rgba(90, 93, 101, 0.6)';
+        btn.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)';
+      };
+      const onLeave = () => {
+        btn.style.borderColor = 'rgba(90, 93, 101, 0.4)';
+        btn.style.boxShadow = '0 0 15px rgba(255, 107, 53, 0.05), inset 0 1px 0 rgba(255,255,255,0.05)';
+      };
       const onDown = () => {
-        btn.style.transform = 'translateY(3px)';
-        btn.style.boxShadow = '0 1px 0 #1a0500';
+        btn.style.transform = 'scale(0.97)';
+        btn.style.background = 'rgba(15, 17, 22, 0.8)';
+        btn.style.borderColor = 'rgba(90, 93, 101, 0.7)';
+        btn.style.boxShadow = '0 0 25px rgba(255, 107, 53, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)';
       };
       const onUp = () => {
         btn.style.transform = '';
-        btn.style.boxShadow = '0 4px 0 #1a0500, 0 0 15px rgba(200,169,110,0.15)';
+        btn.style.background = 'rgba(15, 17, 22, 0.7)';
+        onLeave();
       };
+      btn.addEventListener('mouseenter', onEnter);
+      btn.addEventListener('mouseleave', onLeave);
       btn.addEventListener('touchstart', onDown, { passive: true });
       btn.addEventListener('mousedown', onDown);
       btn.addEventListener('touchend', onUp, { passive: true });
@@ -162,20 +191,20 @@ export class GameOverUI {
     } else if (type === 'menu') {
       btn.style.cssText = `${base}
         background: transparent;
-        color: #7B6040;
+        color: #5A5D65;
         border: none;
         border-bottom: 1px solid transparent;
         font-size: 14px;
         padding: 8px 36px;
-        transition: border-bottom-color 0.2s, color 0.2s, transform 0.1s;
+        transition: all 0.2s ease;
       `;
       btn.addEventListener('mouseenter', () => {
-        btn.style.borderBottomColor = '#7A4A1E';
-        btn.style.color = '#C8A96E';
+        btn.style.color = '#F0A030';
+        btn.style.borderBottomColor = 'rgba(240, 160, 48, 0.3)';
       });
       btn.addEventListener('mouseleave', () => {
+        btn.style.color = '#5A5D65';
         btn.style.borderBottomColor = 'transparent';
-        btn.style.color = '#7B6040';
       });
       const onDown = () => { btn.style.transform = 'scale(0.97)'; };
       const onUp = () => { btn.style.transform = ''; };
@@ -200,7 +229,7 @@ export class GameOverUI {
       this.bestText.setColor(GOLD);
     } else {
       this.newBestText.setVisible(false);
-      this.bestText.setColor('#6B5030');
+      this.bestText.setColor('#8B7A50');
     }
 
     // === Кровавые брызги на фоне (depth Z.BLOOD) ===
@@ -208,11 +237,11 @@ export class GameOverUI {
       .setScrollFactor(0).setDepth(Z.BLOOD).setAlpha(0);
     drawBloodSplatter(this.bloodGfx, W / 2, H * 0.5, 120, 0.8);
 
-    // === Рамка розыскного плаката за счётом ===
+    // === Стальная рамка за счётом ===
     this.posterGfx = this.scene.add.graphics()
       .setScrollFactor(0).setDepth(Z.GAME_OVER).setAlpha(0);
     drawWantedPosterFrame(this.posterGfx, W / 2, H * 0.38, 200, 80);
-    // Верёвки сверху и снизу постера
+    // Цепи сверху и снизу рамки
     drawRopeDecoration(this.posterGfx, W / 2 - 100, H * 0.38 - 44, W / 2 + 100, H * 0.38 - 44);
     drawRopeDecoration(this.posterGfx, W / 2 - 100, H * 0.38 + 44, W / 2 + 100, H * 0.38 + 44);
 
@@ -226,11 +255,11 @@ export class GameOverUI {
       ease: 'Linear',
     });
 
-    // 0ms: overlay alpha 0 → 0.65 (400ms)
+    // 0ms: overlay alpha 0 → 0.7 (400ms)
     this.overlayRect.setVisible(true).setAlpha(0);
     this.scene.tweens.add({
       targets: this.overlayRect,
-      alpha: 0.65,
+      alpha: 0.7,
       duration: 400,
       ease: 'Linear',
     });

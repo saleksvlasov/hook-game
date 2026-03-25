@@ -3,12 +3,12 @@ import { getBest, getMoon } from '../storage.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
 import {
-  drawOrnamentalButton, drawRopeDecoration, drawWantedPosterFrame,
+  drawGlassButton, drawChainDecoration, drawSteelFrame,
   createTypewriterText, createEmberBurst,
 } from '../managers/UIFactory.js';
 import {
-  LEATHER_DARK, LEATHER_LIGHT, BRASS_HEX,
-  GOLD, GOLD_HEX, FONT,
+  GOLD, GOLD_HEX, FONT, AMBER_GLOW, EMBER_HEX,
+  BG_DARK, BG_DARK_HEX, STEEL_LIGHT,
 } from '../constants.js';
 
 export class MenuScene extends Phaser.Scene {
@@ -25,53 +25,55 @@ export class MenuScene extends Phaser.Scene {
     // Все UI элементы для stagger-анимации
     this._uiElements = [];
 
-    // --- Фон ---
+    // --- Фон: тёмная сталь ---
     if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
     const gradTex = this.textures.createCanvas('menu-bg', 1, H);
     const ctx = gradTex.getContext();
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0f0a04');
-    grad.addColorStop(0.4, '#1a0e06');
-    grad.addColorStop(0.8, '#2d1a0a');
-    grad.addColorStop(1, '#1a0e06');
+    grad.addColorStop(0, '#080a10');
+    grad.addColorStop(0.4, '#0d0f12');
+    grad.addColorStop(0.8, '#1a1c20');
+    grad.addColorStop(1, '#0d0f12');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1, H);
     gradTex.refresh();
     this.add.image(W / 2, H / 2, 'menu-bg').setDisplaySize(W, H).setDepth(-10);
 
-    // Луна
+    // Луна — голубоватый оттенок
     const moon = this.add.graphics().setDepth(-8);
-    moon.fillStyle(0x555544, 0.18);
+    moon.fillStyle(0x667788, 0.15);
     moon.fillCircle(W * 0.75, H * 0.12, 60);
-    moon.fillStyle(0x666655, 0.12);
+    moon.fillStyle(0x778899, 0.10);
     moon.fillCircle(W * 0.75 - 8, H * 0.12 - 5, 55);
-    moon.fillStyle(0x444433, 0.08);
+    moon.fillStyle(0x556677, 0.08);
     moon.fillCircle(W * 0.75 + 15, H * 0.12 - 15, 12);
     moon.fillCircle(W * 0.75 - 20, H * 0.12 + 10, 8);
 
-    // Пепел
+    // Пепел + тлеющие угольки
     this.ashParticles = [];
     for (let i = 0; i < 50; i++) {
+      const isEmber = Math.random() < 0.4; // 40% летят вверх
       this.ashParticles.push({
         x: Phaser.Math.Between(0, W),
         y: Phaser.Math.Between(0, H),
         size: 0.5 + Math.random() * 1.5,
-        speed: 8 + Math.random() * 15,
+        speed: isEmber ? -(8 + Math.random() * 15) : (8 + Math.random() * 15),
         drift: (Math.random() - 0.5) * 10,
-        alpha: 0.15 + Math.random() * 0.35,
+        alpha: 0.2 + Math.random() * 0.3,
+        color: isEmber ? EMBER_HEX : AMBER_GLOW,
       });
     }
     this.ashGfx = this.add.graphics().setDepth(-4);
 
-    // Деревья
+    // Деревья — сине-серые
     const trees = this.add.graphics().setDepth(-6);
-    this.drawTreeSilhouettes(trees, H - 100, 0.2, W);
+    this.drawTreeSilhouettes(trees, H - 100, 0.25, W);
 
-    // Туман
+    // Туман — стальной
     const fog = this.add.graphics().setDepth(-3);
-    fog.fillStyle(0x281405, 0.25);
+    fog.fillStyle(0x1a1c20, 0.2);
     fog.fillRect(0, H - 150, W, 150);
-    fog.fillStyle(0x281405, 0.12);
+    fog.fillStyle(0x1a1c20, 0.1);
     fog.fillRect(0, H - 250, W, 100);
 
     // Охотник на крюке
@@ -79,7 +81,7 @@ export class MenuScene extends Phaser.Scene {
 
     // --- Заголовок ---
     const titleY = H * 0.19;
-    const glowColors = [0x8B4513, 0x6B3410, 0x4B2408];
+    const glowColors = [0xF0A030, 0xC08020, 0x905010];
     for (let i = glowColors.length - 1; i >= 0; i--) {
       const glow = this.add.text(W / 2, titleY, 'THE HOOK', {
         fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
@@ -96,7 +98,7 @@ export class MenuScene extends Phaser.Scene {
 
     const title = this.add.text(W / 2, titleY + 20, 'THE HOOK', {
       fontSize: '52px', fontFamily: FONT, fontStyle: 'bold',
-      color: GOLD, stroke: '#1a0e06', strokeThickness: 6,
+      color: GOLD, stroke: BG_DARK, strokeThickness: 6,
     }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
     this.tweens.add({
@@ -109,7 +111,7 @@ export class MenuScene extends Phaser.Scene {
 
     // --- Трещина под заголовком ---
     const crackGfx = this.add.graphics().setDepth(11).setAlpha(0);
-    crackGfx.lineStyle(1.5, GOLD_HEX, 0.3);
+    crackGfx.lineStyle(1.5, AMBER_GLOW, 0.25);
     crackGfx.beginPath();
     const crackLeft = W * 0.25;
     const crackRight = W * 0.75;
@@ -124,16 +126,16 @@ export class MenuScene extends Phaser.Scene {
     crackGfx.strokePath();
     this._addStaggerFade(crackGfx, 0);
 
-    // --- Верёвочные украшения у подзаголовка ---
+    // --- Цепные украшения у подзаголовка ---
     const subtitleY = titleY + 48;
-    const ropeGfx = this.add.graphics().setDepth(11).setAlpha(0);
-    drawRopeDecoration(ropeGfx, W * 0.2, subtitleY, W * 0.38, subtitleY);
-    drawRopeDecoration(ropeGfx, W * 0.62, subtitleY, W * 0.8, subtitleY);
-    this._addStaggerFade(ropeGfx, 200);
+    const chainGfx = this.add.graphics().setDepth(11).setAlpha(0);
+    drawChainDecoration(chainGfx, W * 0.2, subtitleY, W * 0.38, subtitleY);
+    drawChainDecoration(chainGfx, W * 0.62, subtitleY, W * 0.8, subtitleY);
+    this._addStaggerFade(chainGfx, 200);
 
     // --- Подзаголовок — typewriter ---
     const subtitleText = createTypewriterText(this, W / 2, subtitleY, t('title_sub'), {
-      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#7B6040',
+      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#8A7A50',
     }, 50);
     subtitleText.setDepth(11).setAlpha(0);
     this._addStaggerEntry(subtitleText, subtitleY, 200);
@@ -144,61 +146,57 @@ export class MenuScene extends Phaser.Scene {
       this._addStaggerEntry(this.menuHunter, this.menuHunter.y, 300);
     }
 
-    // --- Кнопка CLIMB (ornamental) ---
+    // --- Кнопка CLIMB (glassmorphism) ---
     const btnY = H * 0.66;
     const btnW = 220;
-    const btnH = 60;
+    const btnH = 56;
 
-    // Glow пульсация вокруг кнопки
-    const btnGlow = this.add.rectangle(W / 2, btnY, btnW + 16, btnH + 16, 0x8B4513, 0.1).setDepth(12);
+    // Glow пульсация вокруг кнопки — amber
+    const btnGlow = this.add.rectangle(W / 2, btnY, btnW + 16, btnH + 16, AMBER_GLOW, 0.08).setDepth(12);
     this.tweens.add({
-      targets: btnGlow, alpha: 0.2, scaleX: 1.04, scaleY: 1.04,
+      targets: btnGlow, alpha: 0.15, scaleX: 1.04, scaleY: 1.04,
       duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    // Graphics для ornamental кнопки
+    // Graphics для glass кнопки
     const btnGfx = this.add.graphics().setDepth(13);
-    drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH);
+    drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH);
 
     // Текст кнопки
     const btnText = this.add.text(W / 2, btnY, t('play'), {
       fontSize: '28px', fontFamily: FONT, fontStyle: 'bold',
-      color: GOLD, stroke: '#1a0e06', strokeThickness: 3,
+      color: GOLD, stroke: BG_DARK, strokeThickness: 3,
     }).setOrigin(0.5).setDepth(14).setAlpha(0);
 
     // Невидимая зона для интерактива
     const btnZone = this.add.zone(W / 2, btnY, btnW, btnH).setInteractive({ useHandCursor: true }).setDepth(15);
 
     btnZone.on('pointerover', () => {
-      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH, {
-        fillTop: 0x3D2010, fillBot: 0x5B2A00,
-      });
+      drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH, { hover: true });
       btnText.setScale(1.05);
     });
 
     btnZone.on('pointerout', () => {
-      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH);
+      drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH);
       btnText.setScale(1);
     });
 
     btnZone.on('pointerdown', () => {
-      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH, {
-        pressed: true, fillTop: 0x1a0a00, fillBot: 0x2A1508,
-      });
-      btnText.setY(btnY + 2);
+      drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH, { pressed: true });
+      btnText.setY(btnY + 1);
       createEmberBurst(this, W / 2, btnY, 6);
     });
 
     btnZone.on('pointerup', () => {
-      drawOrnamentalButton(btnGfx, W / 2, btnY, btnW, btnH);
+      drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH);
       btnText.setY(btnY);
       // Запуск игры
       createEmberBurst(this, W / 2, btnY, 20);
-      this.cameras.main.fadeOut(400, 26, 14, 6);
+      this.cameras.main.fadeOut(400, 13, 15, 18);
       this.time.delayedCall(400, () => this.scene.start('GameScene'));
     });
 
-    // Stagger: кнопка 500ms (Graphics не двигаем по Y — рисунок в абсолютных координатах)
+    // Stagger: кнопка 500ms
     btnGlow.setAlpha(0);
     btnGfx.setAlpha(0);
     this._addStaggerFade(btnGlow, 500);
@@ -209,67 +207,65 @@ export class MenuScene extends Phaser.Scene {
     const best = getBest();
     const recordY = H * 0.75;
     if (best > 0) {
-      // Wanted poster рамка
+      // Steel frame рамка
       const posterGfx = this.add.graphics().setDepth(10).setAlpha(0);
-      drawWantedPosterFrame(posterGfx, W / 2, recordY, 200, 50);
+      drawSteelFrame(posterGfx, W / 2, recordY, 200, 50);
 
-      // Верёвки сверху и снизу постера
-      const ropeRecordGfx = this.add.graphics().setDepth(10).setAlpha(0);
-      drawRopeDecoration(ropeRecordGfx, W / 2 - 100, recordY - 28, W / 2 + 100, recordY - 28);
-      drawRopeDecoration(ropeRecordGfx, W / 2 - 100, recordY + 28, W / 2 + 100, recordY + 28);
+      // Цепи сверху и снизу рамки
+      const chainRecordGfx = this.add.graphics().setDepth(10).setAlpha(0);
+      drawChainDecoration(chainRecordGfx, W / 2 - 100, recordY - 28, W / 2 + 100, recordY - 28);
+      drawChainDecoration(chainRecordGfx, W / 2 - 100, recordY + 28, W / 2 + 100, recordY + 28);
 
       const recordText = this.add.text(W / 2, recordY, `${t('record')}: ${best}${t('unit_m')}`, {
         fontSize: '18px', fontFamily: FONT, color: GOLD,
-        stroke: '#1a0e06', strokeThickness: 2,
+        stroke: BG_DARK, strokeThickness: 2,
       }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
       // Stagger: рекорд 700ms
       this._addStaggerFade(posterGfx, 700);
-      this._addStaggerFade(ropeRecordGfx, 700);
+      this._addStaggerFade(chainRecordGfx, 700);
       this._addStaggerEntry(recordText, recordY, 700);
     }
 
     if (getMoon()) {
       const moonText = this.add.text(W / 2, H * 0.78, t('moon_reached'), {
-        fontSize: '12px', fontFamily: FONT, fontStyle: 'italic', color: '#666655',
+        fontSize: '12px', fontFamily: FONT, fontStyle: 'italic', color: '#556677',
       }).setOrigin(0.5).setDepth(11).setAlpha(0);
       this._addStaggerEntry(moonText, H * 0.78, 700);
     }
 
     // --- Подсказка внизу ---
     const hintText = this.add.text(W / 2, H - 20, t('tap_to_hunt'), {
-      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#7B6040',
+      fontSize: '14px', fontFamily: FONT, fontStyle: 'italic', color: '#8A7A50',
     }).setOrigin(0.5).setDepth(11).setAlpha(0);
 
-    // Пульсация подсказки
+    // Пульсация подсказки 0.3 → 0.7
     this.tweens.add({
-      targets: hintText, alpha: { from: 0.4, to: 0.8 },
+      targets: hintText, alpha: { from: 0.3, to: 0.7 },
       duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       delay: 800,
     });
     this._addStaggerEntry(hintText, H - 20, 800);
 
-    // --- Переключатель языка (ornamental button) ---
+    // --- Переключатель языка (glass button) ---
     const langX = W - 44;
     // Safe area для iPhone Dynamic Island / notch
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     const langY = Math.max(envTop, 10) + 16;
     const langGfx = this.add.graphics().setDepth(15);
-    drawOrnamentalButton(langGfx, langX, langY, 50, 28);
+    drawGlassButton(langGfx, langX, langY, 46, 26);
 
     const langText = this.add.text(langX, langY, getLang() === 'ru' ? 'EN' : 'RU', {
       fontSize: '16px', fontFamily: FONT, fontStyle: 'bold', color: GOLD,
     }).setOrigin(0.5).setDepth(16);
 
-    const langZone = this.add.zone(langX, langY, 50, 28).setInteractive({ useHandCursor: true }).setDepth(17);
+    const langZone = this.add.zone(langX, langY, 46, 26).setInteractive({ useHandCursor: true }).setDepth(17);
 
     langZone.on('pointerover', () => {
-      drawOrnamentalButton(langGfx, langX, langY, 50, 28, {
-        fillTop: 0x3D2010, fillBot: 0x5B2A00,
-      });
+      drawGlassButton(langGfx, langX, langY, 46, 26, { hover: true });
     });
     langZone.on('pointerout', () => {
-      drawOrnamentalButton(langGfx, langX, langY, 50, 28);
+      drawGlassButton(langGfx, langX, langY, 46, 26);
     });
     langZone.on('pointerdown', () => {
       createEmberBurst(this, langX, langY, 4);
@@ -283,7 +279,7 @@ export class MenuScene extends Phaser.Scene {
     this.konamiTriggered = false;
     this.input.keyboard.on('keydown', (event) => this.checkKonami(event));
 
-    // --- Stagger entry анимация (вместо fadeIn) ---
+    // --- Stagger entry анимация ---
     this._playStaggerEntries();
   }
 
@@ -303,12 +299,10 @@ export class MenuScene extends Phaser.Scene {
       if (target.setAlpha) target.setAlpha(0);
 
       if (fadeOnly) {
-        // Только alpha — для Graphics с абсолютными координатами
         this.tweens.add({
           targets: target, alpha: 1, duration: 400, delay, ease: 'Cubic.easeOut',
         });
       } else {
-        // Alpha + Y-движение
         if (target.setY) target.setY(finalY + 20);
         this.tweens.add({
           targets: target, alpha: 1, y: finalY, duration: 400, delay, ease: 'Cubic.easeOut',
@@ -337,7 +331,7 @@ export class MenuScene extends Phaser.Scene {
     playOminous();
     const txt = this.add.text(this.W / 2, this.H / 2, t('butcher'), {
       fontSize: '28px', fontFamily: FONT, fontStyle: 'bold',
-      color: GOLD, stroke: '#3B1A00', strokeThickness: 5, align: 'center',
+      color: GOLD, stroke: BG_DARK, strokeThickness: 5, align: 'center',
     }).setOrigin(0.5).setDepth(50).setAlpha(0);
 
     this.tweens.add({
@@ -361,7 +355,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   drawTreeSilhouettes(gfx, baseY, alpha, width) {
-    gfx.fillStyle(0x150e05, alpha);
+    // Сине-серые деревья
+    gfx.fillStyle(0x15181E, alpha);
     for (let tx = 20; tx < width; tx += 50 + Math.random() * 30) {
       const h = 80 + Math.random() * 160;
       const w = 6 + Math.random() * 8;
@@ -390,34 +385,47 @@ export class MenuScene extends Phaser.Scene {
   }
 
   drawHunterGraphics(g) {
+    // Контур — amber
     g.lineStyle(1.5, GOLD_HEX, 0.4);
     g.strokeRoundedRect(-9, -21, 18, 46, 3);
-    g.fillStyle(0x3d2010);
+    // Ноги
+    g.fillStyle(0x4A3525);
     g.fillTriangle(-10, 10, -14, 24, -4, 24);
     g.fillTriangle(10, 10, 14, 24, 4, 24);
-    g.fillStyle(0x3d2010);
+    // Тело
+    g.fillStyle(0x4A3525);
     g.fillRoundedRect(-8, -2, 16, 18, 2);
-    g.fillStyle(0x7A4A1E);
+    // Пояс
+    g.fillStyle(0x8B5E3C);
     g.fillRect(-8, 8, 16, 2);
+    // Пряжка
     g.fillStyle(GOLD_HEX, 0.7);
     g.fillRect(-2, 7, 4, 4);
+    // Шляпа — поля
     g.fillStyle(GOLD_HEX, 0.8);
     g.fillEllipse(0, -12, 28, 7);
-    g.fillStyle(0x3d2010);
+    // Голова
+    g.fillStyle(0x4A3525);
     g.fillRoundedRect(-7, -21, 14, 11, 2);
+    // Полоса шляпы
     g.fillStyle(GOLD_HEX);
     g.fillRect(-7, -13, 14, 2);
+    // Лицо
     g.fillStyle(0xF0DDB0);
     g.fillRect(-4, -10, 8, 5);
-    g.fillStyle(0x1a0e06);
+    // Глаза
+    g.fillStyle(0x0d0f12);
     g.fillCircle(-2, -8, 1);
     g.fillCircle(2, -8, 1);
-    g.fillStyle(0x3d2010);
+    // Руки
+    g.fillStyle(0x4A3525);
     g.fillRect(-12, 0, 4, 11);
     g.fillRect(8, 0, 4, 11);
+    // Штаны
     g.fillStyle(0x2a1a0a);
     g.fillRect(-6, 16, 5, 8);
     g.fillRect(1, 16, 5, 8);
+    // Ботинки
     g.fillStyle(0x3d2510);
     g.fillRect(-7, 22, 6, 4);
     g.fillRect(1, 22, 6, 4);
@@ -454,12 +462,13 @@ export class MenuScene extends Phaser.Scene {
     this.menuHunter.setRotation((s.angle - Math.PI / 2) * 0.35);
     this.drawMenuHook(s.anchorX, s.anchorY);
 
+    // Верёвка — amber с пониженной альфой
     this.menuRope.clear();
     const midX = (s.anchorX + px) / 2;
     const midY = (s.anchorY + py) / 2;
     const cpX = midX + (py - s.anchorY) * 0.06;
     const cpY = midY + s.ropeLen * 0.06;
-    this.menuRope.lineStyle(2.5, GOLD_HEX, 0.5);
+    this.menuRope.lineStyle(2.5, GOLD_HEX, 0.4);
     this.menuRope.beginPath();
     this.menuRope.moveTo(s.anchorX, s.anchorY);
     for (let i = 1; i <= 16; i++) {
@@ -471,14 +480,17 @@ export class MenuScene extends Phaser.Scene {
     }
     this.menuRope.strokePath();
 
+    // Пепел + угольки
     this.ashGfx.clear();
     for (const p of this.ashParticles) {
       p.y += p.speed * dt;
       p.x += p.drift * dt;
-      if (p.y > H + 5) { p.y = -5; p.x = Phaser.Math.Between(0, W); }
+      // Пепел (speed > 0) уходит вниз, угольки (speed < 0) — вверх
+      if (p.speed > 0 && p.y > H + 5) { p.y = -5; p.x = Phaser.Math.Between(0, W); }
+      if (p.speed < 0 && p.y < -5) { p.y = H + 5; p.x = Phaser.Math.Between(0, W); }
       if (p.x < -5) p.x = W + 5;
       if (p.x > W + 5) p.x = -5;
-      this.ashGfx.fillStyle(GOLD_HEX, p.alpha * 0.5);
+      this.ashGfx.fillStyle(p.color, p.alpha);
       this.ashGfx.fillCircle(p.x, p.y, p.size);
     }
   }

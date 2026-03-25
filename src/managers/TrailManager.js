@@ -43,12 +43,12 @@ export class TrailManager {
         continue;
       }
       const frac = p.life / p.maxLife;
-      const alpha = frac * 0.6;
+      const alpha = frac * 0.7;
       const size = p.size * frac;
       // Ember: bright orange → dark red → fade
       const r = Math.floor(255 * frac);
-      const g = Math.floor(107 * frac * frac);
-      const b = Math.floor(20 * frac * frac * frac);
+      const g = Math.floor(120 * frac * frac);
+      const b = Math.floor(30 * frac * frac * frac);
       const hex = Phaser.Display.Color.GetColor(r, g, b);
       this.graphics.fillStyle(hex, alpha);
       this.graphics.fillCircle(p.x, p.y, size);

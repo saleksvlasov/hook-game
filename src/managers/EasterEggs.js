@@ -44,7 +44,7 @@ export class EasterEggs {
       fontFamily: FONT,
       fontStyle: 'bold',
       color: GOLD,
-      stroke: '#3B1A00',
+      stroke: '#1a1c20',
       strokeThickness: 5,
       padding: { x: 20, y: 10 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT);
@@ -89,9 +89,9 @@ export class EasterEggs {
     saveMoon();
     const W = this.scene.W;
 
-    // Свечение луны
+    // Свечение луны — blue-steel
     const moonGlow = this.scene.add.graphics().setScrollFactor(0).setDepth(Z.EASTER);
-    moonGlow.fillStyle(0x888866, 0.0);
+    moonGlow.fillStyle(0xAABBCC, 0.0);
     moonGlow.fillCircle(W * 0.72, 80, 50);
 
     this.scene.tweens.addCounter({
@@ -102,9 +102,9 @@ export class EasterEggs {
       onUpdate: (tw) => {
         const glowAlpha = tw.getValue() / 100;
         moonGlow.clear();
-        moonGlow.fillStyle(0xCCCCAA, glowAlpha);
+        moonGlow.fillStyle(0xCCDDEE, glowAlpha);
         moonGlow.fillCircle(W * 0.72, 80, 70);
-        moonGlow.fillStyle(0xEEEECC, glowAlpha * 0.5);
+        moonGlow.fillStyle(0xCCDDEE, glowAlpha * 0.5);
         moonGlow.fillCircle(W * 0.72, 80, 35);
       },
       onComplete: () => {
@@ -124,8 +124,8 @@ export class EasterEggs {
       fontSize: '22px',
       fontFamily: FONT,
       fontStyle: 'italic',
-      color: '#CCBB88',
-      stroke: '#0d0800',
+      color: '#D0C080',
+      stroke: '#0d0f12',
       strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT).setAlpha(0);
 

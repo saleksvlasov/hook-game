@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GROUND_Y, Z } from '../constants.js';
+import { GROUND_Y, STEEL, Z } from '../constants.js';
 import { ObjectPool } from './ObjectPool.js';
 
 // Менеджер болота + пузыри с object pool
@@ -17,19 +17,19 @@ export class SwampManager {
   create() {
     const W = this.scene.W;
 
-    // Визуал болота
+    // Визуал литейного пола
     const gfx = this.scene.add.graphics().setDepth(Z.SWAMP);
     const sx = -W * 2;
     const sw = W * 5;
-    gfx.fillStyle(0x0a0500);
+    gfx.fillStyle(0x0a0c10);
     gfx.fillRect(sx, GROUND_Y - 10, sw, 30);
-    gfx.fillStyle(0x1a0f00, 0.9);
+    gfx.fillStyle(0x15171c, 0.9);
     gfx.fillRect(sx, GROUND_Y - 16, sw, 6);
-    gfx.fillStyle(0x1a2a00, 0.3);
+    gfx.fillStyle(0x2a1a10, 0.3);
     gfx.fillRect(sx, GROUND_Y - 14, sw, 4);
     for (let x = sx; x < sx + sw; x += 8) {
       const h = 1 + Math.random() * 3;
-      gfx.fillStyle(0x2a3a00, 0.15 + Math.random() * 0.15);
+      gfx.fillStyle(STEEL, 0.1 + Math.random() * 0.1);
       gfx.fillRect(x, GROUND_Y - 16 - h, 6, h);
     }
 
@@ -67,7 +67,7 @@ export class SwampManager {
       }
       const frac = b.life / b.maxLife;
       const alpha = frac * 0.25;
-      this.graphics.lineStyle(1, 0x2a4a00, alpha);
+      this.graphics.lineStyle(1, 0x4A3020, alpha);
       this.graphics.strokeCircle(b.x, b.y, b.size * frac);
       this.active[writeIdx++] = b;
     }
