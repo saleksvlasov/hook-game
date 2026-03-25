@@ -1,16 +1,16 @@
 // ===================== ИГРОВЫЕ КОНСТАНТЫ =====================
 
 // Физика
-export const GRAVITY = 1200;
-export const HOOK_RANGE = 280;
-export const MAX_ROPE_LENGTH = 160;
-export const MIN_ROPE = 40;
-export const SWING_FRICTION = 0.997;
+export const GRAVITY = 980;              // Было 1200 — легче раскачиваться
+export const HOOK_RANGE = 300;           // Радиус зацепа
+export const MAX_ROPE_LENGTH = 280;      // Было 160 — верёвка = реальное расстояние, без телепорта
+export const MIN_ROPE = 50;
+export const SWING_FRICTION = 0.9985;    // Было 0.997 — маятник дольше держит энергию
 export const TRAIL_SPEED_THRESHOLD = 150;
 
 // Мир
 export const WORLD_HEIGHT = 100000;
-export const ANCHOR_SPACING_Y = 280;
+export const ANCHOR_SPACING_Y = 240;     // Было 280 — крюки ближе, достижимы раскачкой
 export const GROUND_Y = WORLD_HEIGHT - 10;
 export const SPAWN_Y = WORLD_HEIGHT - 200;
 
@@ -57,71 +57,71 @@ export const BIOMES = [
     name: 'foundry',
     startHeight: 0,
     endHeight: 1500,
-    bgTop: '#1a1e28',
-    bgMid: '#252a35',
-    bgBot: '#1e2230',
-    fogColor: 0x2a2e38,
-    fogAlpha: 0.08,
+    bgTop: '#222838',
+    bgMid: '#2e3545',
+    bgBot: '#283040',
+    fogColor: 0x353a48,
+    fogAlpha: 0.10,
     particleColor: 0xFF6B35,
-    particleAlpha: 0.35,
-    parallaxColor: 0x3A4050,
-    parallaxAlpha: 0.25,
+    particleAlpha: 0.45,
+    parallaxColor: 0x4A5068,
+    parallaxAlpha: 0.30,
   },
   {
     name: 'ironworks',
     startHeight: 1500,
     endHeight: 3000,
-    bgTop: '#1e2028',
-    bgMid: '#2a2535',
-    bgBot: '#252030',
-    fogColor: 0x352820,
-    fogAlpha: 0.10,
+    bgTop: '#282530',
+    bgMid: '#352e40',
+    bgBot: '#302838',
+    fogColor: 0x403025,
+    fogAlpha: 0.12,
     particleColor: 0xF0A030,
-    particleAlpha: 0.30,
-    parallaxColor: 0x5A3828,
-    parallaxAlpha: 0.20,
+    particleAlpha: 0.40,
+    parallaxColor: 0x6A4830,
+    parallaxAlpha: 0.25,
   },
   {
     name: 'furnace',
     startHeight: 3000,
     endHeight: 5000,
-    bgTop: '#28201a',
-    bgMid: '#3a2818',
-    bgBot: '#302218',
-    fogColor: 0x3a2510,
-    fogAlpha: 0.12,
+    bgTop: '#352820',
+    bgMid: '#483520',
+    bgBot: '#3D2E20',
+    fogColor: 0x483010,
+    fogAlpha: 0.14,
     particleColor: 0xFF4500,
-    particleAlpha: 0.40,
-    parallaxColor: 0x6A3018,
-    parallaxAlpha: 0.25,
+    particleAlpha: 0.50,
+    parallaxColor: 0x804020,
+    parallaxAlpha: 0.30,
   },
   {
     name: 'storm',
     startHeight: 5000,
     endHeight: 7000,
-    bgTop: '#141a2a',
-    bgMid: '#1e2840',
-    bgBot: '#182035',
-    fogColor: 0x253048,
-    fogAlpha: 0.14,
+    bgTop: '#1a2238',
+    bgMid: '#283550',
+    bgBot: '#202a45',
+    fogColor: 0x304060,
+    fogAlpha: 0.16,
     particleColor: 0x88AACC,
-    particleAlpha: 0.25,
-    parallaxColor: 0x3A4560,
-    parallaxAlpha: 0.28,
+    particleAlpha: 0.35,
+    parallaxColor: 0x4A5878,
+    parallaxAlpha: 0.32,
   },
   {
     name: 'cosmos',
     startHeight: 7000,
     endHeight: 99999,
-    bgTop: '#0a0e18',
-    bgMid: '#101828',
-    bgBot: '#0c1220',
-    fogColor: 0x182848,
-    fogAlpha: 0.06,
+    bgTop: '#101525',
+    bgMid: '#182238',
+    bgBot: '#141a30',
+    fogColor: 0x203050,
+    fogAlpha: 0.08,
     particleColor: 0xFFFFFF,
-    particleAlpha: 0.50,
-    parallaxColor: 0x284070,
-    parallaxAlpha: 0.15,
+    particleAlpha: 0.60,
+    parallaxColor: 0x385080,
+    parallaxAlpha: 0.20,
   },
 ];
 

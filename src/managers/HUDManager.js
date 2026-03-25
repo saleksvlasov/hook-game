@@ -1,8 +1,8 @@
-import { GOLD, BG_DARK, FONT, Z, HINT_COLOR, RECORD_COLOR, STEEL_LIGHT } from '../constants.js';
+import { GOLD, FONT, Z, HINT_COLOR, RECORD_COLOR } from '../constants.js';
 import { t } from '../i18n.js';
 import { createEmberBurst } from '../managers/UIFactory.js';
 
-// Менеджер HUD — счёт, рекорд, подсказка (Ember & Steel стиль)
+// Менеджер HUD — счёт, рекорд, подсказка (MUI-inspired brighter style)
 export class HUDManager {
   constructor(scene) {
     this.scene = scene;
@@ -10,6 +10,7 @@ export class HUDManager {
     this.maxHeightText = null;
     this.hintText = null;
     this.bgPanel = null;
+    this.bgShadow = null;
     this.lastMilestone = 0;
   }
 
@@ -17,17 +18,22 @@ export class HUDManager {
     const W = this.scene.W;
 
     // Отступ для safe area (Dynamic Island, notch, статусбар)
-    // env(safe-area-inset-top) работает с viewport-fit=cover в index.html
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     const safeTop = Math.max(envTop, 10);
 
-    // Тёмная стальная подложка за высотой
+    // Тень под панелью — мягкая elevation
+    this.bgShadow = this.scene.add.graphics();
+    this.bgShadow.fillStyle(0x000000, 0.2);
+    this.bgShadow.fillRoundedRect(W / 2 - 70, safeTop + 12, 140, 50, 6);
+    this.bgShadow.setScrollFactor(0).setDepth(Z.HUD);
+
+    // Blue-grey подложка за высотой — ярче чем было
     this.bgPanel = this.scene.add.graphics();
-    this.bgPanel.fillStyle(0x0d0f12, 0.6);
-    this.bgPanel.fillRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 4);
+    this.bgPanel.fillStyle(0x1E2535, 0.75);
+    this.bgPanel.fillRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 6);
     // Тонкая стальная рамка
-    this.bgPanel.lineStyle(1, STEEL_LIGHT, 0.15);
-    this.bgPanel.strokeRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 4);
+    this.bgPanel.lineStyle(1, 0x4A5568, 0.25);
+    this.bgPanel.strokeRoundedRect(W / 2 - 70, safeTop + 10, 140, 50, 6);
     this.bgPanel.setScrollFactor(0).setDepth(Z.HUD);
 
     this.heightText = this.scene.add.text(W / 2, safeTop + 18, `0${t('unit_m')}`, {
@@ -35,22 +41,22 @@ export class HUDManager {
       color: GOLD,
       fontFamily: FONT,
       fontStyle: 'bold',
-      stroke: BG_DARK,
+      stroke: '#151A25',
       strokeThickness: 4,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
     this.maxHeightText = this.scene.add.text(W / 2, safeTop + 54, `${t('record')}: 0${t('unit_m')}`, {
       fontSize: '15px',
-      color: RECORD_COLOR,
+      color: '#9A8A60',
       fontFamily: FONT,
-      stroke: BG_DARK,
+      stroke: '#151A25',
       strokeThickness: 2,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 
-    // Label — метка "ГЛУБИНА" (стальной серый)
+    // Label — метка "ГЛУБИНА" (blue-grey, читаемый)
     this.scene.add.text(W / 2, safeTop + 4, t('depth'), {
       fontSize: '12px',
-      color: '#6A6D75',
+      color: '#7A8090',
       fontFamily: FONT,
       letterSpacing: 3,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
@@ -60,7 +66,7 @@ export class HUDManager {
       color: HINT_COLOR,
       fontFamily: FONT,
       fontStyle: 'italic',
-      stroke: '#0d0f12',
+      stroke: '#151A25',
       strokeThickness: 3,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(Z.HUD);
 

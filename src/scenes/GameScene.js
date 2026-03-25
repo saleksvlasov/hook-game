@@ -144,7 +144,7 @@ export class GameScene extends Phaser.Scene {
 
     this.isHooked = true;
     this.currentAnchor = nearest;
-    // Верёвка: min 40px (стабильность), max 160px (короткие качели, нет халявы)
+    // Верёвка = реальное расстояние (без телепорта), clamp только снизу
     this.ropeLength = Phaser.Math.Clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
 
     this.player.body.allowGravity = false;
@@ -158,9 +158,9 @@ export class GameScene extends Phaser.Scene {
     const tangent = -vx * Math.sin(this.swingAngle) + vy * Math.cos(this.swingAngle);
     this.swingSpeed = tangent / this.ropeLength;
 
-    // Начальный импульс слабее — нужна инерция от предыдущего качения
-    if (Math.abs(this.swingSpeed) < 0.5) {
-      this.swingSpeed = px < nearest.x ? -1.2 : 1.2;
+    // Мягкий начальный импульс только если совсем без инерции (первый крюк)
+    if (Math.abs(this.swingSpeed) < 0.3) {
+      this.swingSpeed = px < nearest.x ? -0.8 : 0.8;
     }
 
     this.anchorMgr.highlightAnchor(nearest, true);

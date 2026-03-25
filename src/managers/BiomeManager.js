@@ -372,13 +372,15 @@ export class BiomeManager {
     const moonY = 300;
     const mx = this.W * 0.72;
 
-    // Холодная стальная луна
-    moonGfx.fillStyle(0x445566, 0.12);
+    // Яркое лунное свечение
+    moonGfx.fillStyle(0x667788, 0.08);
+    moonGfx.fillCircle(mx, moonY, 90);  // outer glow
+    moonGfx.fillStyle(0x6688AA, 0.25);
     moonGfx.fillCircle(mx, moonY, 70);
-    moonGfx.fillStyle(0x556677, 0.08);
+    moonGfx.fillStyle(0x7799BB, 0.18);
     moonGfx.fillCircle(mx - 10, moonY - 5, 62);
     // Кратеры
-    moonGfx.fillStyle(0x334455, 0.06);
+    moonGfx.fillStyle(0x5577AA, 0.10);
     moonGfx.fillCircle(mx + 18, moonY - 15, 14);
     moonGfx.fillCircle(mx - 22, moonY + 15, 9);
   }

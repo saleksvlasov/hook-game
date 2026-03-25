@@ -4,71 +4,62 @@ import {
 } from '../constants.js';
 
 // ===================== ПРОЦЕДУРНЫЕ UI УТИЛИТЫ =====================
-// Стиль Ember & Steel — glassmorphism + steel + amber glow
+// Стиль MUI + Hunt Showdown — чистый, яркий, с amber акцентами
 
-// Glassmorphism кнопка — чистый современный стиль
+// MUI-стиль кнопка — elevated card с amber бордером
 export function drawGlassButton(gfx, x, y, w, h, opts = {}) {
   const { pressed = false, hover = false } = opts;
-  const offsetY = pressed ? 1 : 0;
+  const offsetY = pressed ? 2 : 0;
   const left = x - w / 2;
   const top = y - h / 2 + offsetY;
 
   gfx.clear();
 
-  // Outer glow (только в обычном состоянии)
+  // Тень снизу (только если не нажата)
   if (!pressed) {
-    gfx.fillStyle(AMBER_GLOW, 0.06);
-    gfx.fillRoundedRect(left - 4, top - 4, w + 8, h + 8, 12);
+    gfx.fillStyle(0x000000, 0.3);
+    gfx.fillRoundedRect(left + 1, top + 3, w, h, 10);
   }
 
-  // Основной фон — стальной полупрозрачный
-  if (pressed) {
-    gfx.fillStyle(0x2A2D35, 0.8);
-  } else {
-    gfx.fillStyle(0x2A2D35, 0.7);
-  }
-  gfx.fillRoundedRect(left, top, w, h, 8);
+  // Основной фон — тёмный blue-grey, хорошо видно
+  gfx.fillStyle(0x2A3040, 0.85);
+  gfx.fillRoundedRect(left, top, w, h, 10);
 
   // Top highlight — белая полоска сверху
-  gfx.fillStyle(0xFFFFFF, 0.08);
-  gfx.fillRoundedRect(left + 2, top, w - 4, 2, { tl: 8, tr: 8, bl: 0, br: 0 });
+  gfx.fillStyle(0xFFFFFF, 0.10);
+  gfx.fillRoundedRect(left + 2, top, w - 4, 2, { tl: 10, tr: 10, bl: 0, br: 0 });
 
-  // Border — amber яркая
-  const borderAlpha = pressed ? 0.4 : hover ? 0.7 : 0.5;
+  // Border — amber, яркость зависит от состояния
+  const borderAlpha = pressed ? 0.3 : hover ? 0.6 : 0.4;
   gfx.lineStyle(1.5, AMBER_GLOW, borderAlpha);
-  gfx.strokeRoundedRect(left, top, w, h, 8);
+  gfx.strokeRoundedRect(left, top, w, h, 10);
 }
 
 // Обратная совместимость
 export { drawGlassButton as drawOrnamentalButton };
 
-// Цепной разделитель — маленькие звенья вместо верёвки
+// Пунктирная линия — маленькие точки каждые 12px
 export function drawChainDecoration(gfx, x1, y1, x2, y2) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy);
-  const steps = Math.floor(len / 10);
+  const steps = Math.floor(len / 12);
 
-  for (let i = 0; i < steps; i++) {
-    const t = i / steps;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / Math.max(steps, 1);
     const cx = x1 + dx * t;
     const cy = y1 + dy * t;
 
-    // Чередующиеся вертикальные и горизонтальные звенья
-    if (i % 2 === 0) {
-      gfx.fillStyle(STEEL_LIGHT, 0.3);
-      gfx.fillRoundedRect(cx - 3, cy - 1.5, 6, 3, 1);
-    } else {
-      gfx.fillStyle(STEEL_LIGHT, 0.2);
-      gfx.fillRoundedRect(cx - 1.5, cy - 2.5, 3, 5, 1);
-    }
+    // Простые точки — steel с лёгкой альфой
+    gfx.fillStyle(STEEL_LIGHT, 0.2);
+    gfx.fillCircle(cx, cy, 1.5);
   }
 }
 
 // Обратная совместимость
 export { drawChainDecoration as drawRopeDecoration };
 
-// Процедурные капли крови — чуть ярче
+// Процедурные капли крови — без изменений
 export function drawBloodSplatter(gfx, x, y, radius, intensity = 0.7) {
   const color = BLOOD_RED_HEX;
 
@@ -102,35 +93,22 @@ export function drawBloodSplatter(gfx, x, y, radius, intensity = 0.7) {
   }
 }
 
-// Стальная рамка — заменяет wanted poster
+// MUI-стиль рамка — elevated card
 export function drawSteelFrame(gfx, x, y, w, h) {
   const left = x - w / 2;
   const top = y - h / 2;
 
-  // Фон — тёмная сталь полупрозрачная
-  gfx.fillStyle(0x1a1c22, 0.5);
-  gfx.fillRoundedRect(left, top, w, h, 4);
+  // Фон — blue-grey полупрозрачный
+  gfx.fillStyle(0x252D3D, 0.7);
+  gfx.fillRoundedRect(left, top, w, h, 8);
 
   // Border — стальной
-  gfx.lineStyle(1, STEEL_LIGHT, 0.3);
-  gfx.strokeRoundedRect(left, top, w, h, 4);
+  gfx.lineStyle(1, 0x4A5568, 0.4);
+  gfx.strokeRoundedRect(left, top, w, h, 8);
 
-  // Inner highlight — белая линия сверху
-  gfx.fillStyle(0xFFFFFF, 0.03);
-  gfx.fillRect(left + 2, top + 1, w - 4, 1);
-
-  // Corner dots — amber
-  const cornerPad = 5;
-  const corners = [
-    [left + cornerPad, top + cornerPad],
-    [left + w - cornerPad, top + cornerPad],
-    [left + cornerPad, top + h - cornerPad],
-    [left + w - cornerPad, top + h - cornerPad],
-  ];
-  for (const [cx, cy] of corners) {
-    gfx.fillStyle(AMBER_GLOW, 0.3);
-    gfx.fillCircle(cx, cy, 1.5);
-  }
+  // Top highlight — белая линия сверху
+  gfx.fillStyle(0xFFFFFF, 0.06);
+  gfx.fillRoundedRect(left + 2, top, w - 4, 1, { tl: 8, tr: 8, bl: 0, br: 0 });
 }
 
 // Обратная совместимость
@@ -153,17 +131,17 @@ export function createTypewriterText(scene, x, y, text, style, charDelay = 40) {
   return textObj;
 }
 
-// Вспышка искр — ember стиль, чуть крупнее
+// Вспышка искр — яркий ember стиль, крупные частицы
 export function createEmberBurst(scene, x, y, count = 10, depth = 20) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 30 + Math.random() * 60;
     const dx = Math.cos(angle) * speed;
     const dy = Math.sin(angle) * speed - 20; // вверх
-    const size = 1 + Math.random() * 3; // чуть крупнее (было 1-2)
+    const size = 1.5 + Math.random() * 2; // 1.5–3.5px
 
     const ember = scene.add.graphics().setDepth(depth);
-    ember.fillStyle(EMBER_HEX, 0.8);
+    ember.fillStyle(EMBER_HEX, 0.9);
     ember.fillCircle(x, y, size);
 
     scene.tweens.add({

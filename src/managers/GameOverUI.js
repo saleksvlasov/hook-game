@@ -1,11 +1,11 @@
-import { GOLD, DARK_RED, FONT, Z, BLOOD_RED_HEX } from '../constants.js';
+import { GOLD, DARK_RED, FONT, Z } from '../constants.js';
 import { t } from '../i18n.js';
 import {
   drawBloodSplatter, drawWantedPosterFrame,
   drawRopeDecoration, createEmberBurst,
 } from '../managers/UIFactory.js';
 
-// Менеджер Game Over экрана — Ember & Steel glassmorphism стиль
+// Менеджер Game Over экрана — MUI-inspired brighter style
 export class GameOverUI {
   constructor(scene) {
     this.scene = scene;
@@ -42,9 +42,9 @@ export class GameOverUI {
       return obj;
     };
 
-    // Затемнение — тёмно-стальной синий
+    // Затемнение — тёмно-синий blue-grey
     this.overlayRect = makeUI(
-      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x0a0c14, 0.7)
+      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x0e1420, 0.75)
     );
 
     // Заголовок "YOU FELL"
@@ -58,16 +58,16 @@ export class GameOverUI {
       fontSize: '18px', color: GOLD, fontFamily: FONT,
     }).setOrigin(0.5));
 
-    // Рекорд (best)
+    // Рекорд (best) — обычный серо-золотой, при рекорде станет GOLD
     this.bestText = makeUI(this.scene.add.text(W / 2, H * 0.40, '', {
-      fontSize: '26px', color: '#8B7A50', fontFamily: FONT, fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
+      fontSize: '26px', color: '#9A8A60', fontFamily: FONT, fontStyle: 'bold',
+      stroke: '#0e1420', strokeThickness: 4,
     }).setOrigin(0.5));
 
     // НОВЫЙ РЕКОРД
     this.newBestText = makeUI(this.scene.add.text(W / 2, H * 0.45, t('new_record'), {
       fontSize: '20px', color: GOLD, fontFamily: FONT, fontStyle: 'bold italic',
-      stroke: '#1a1c20', strokeThickness: 4,
+      stroke: '#1a2030', strokeThickness: 4,
     }).setOrigin(0.5));
 
     // --- Чистые HTML кнопки поверх canvas ---
@@ -97,7 +97,7 @@ export class GameOverUI {
     document.body.appendChild(this.buttonsDiv);
   }
 
-  // Создание кнопки с glassmorphism стилями
+  // Создание кнопки с MUI elevation стилями
   _createButton(label, type) {
     const btn = document.createElement('button');
     btn.textContent = label;
@@ -107,36 +107,35 @@ export class GameOverUI {
       -webkit-tap-highlight-color: transparent;`;
 
     if (type === 'restart') {
+      // PRIMARY — amber gold с elevation
       btn.style.cssText = `${base}
-        background: rgba(15, 17, 22, 0.7);
+        background: rgba(30, 35, 48, 0.85);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         color: #F0A030;
-        border: 1px solid rgba(240, 160, 48, 0.3);
+        border: 1px solid rgba(240, 160, 48, 0.35);
         font-size: 20px; font-weight: bold;
         padding: 14px 48px;
-        border-radius: 8px;
-        box-shadow: 0 0 20px rgba(255, 107, 53, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
-        text-shadow: 0 0 10px rgba(240, 160, 48, 0.3);
-        transition: all 0.2s ease;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(240,160,48,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+        text-shadow: 0 0 8px rgba(240, 160, 48, 0.2);
+        transition: all 0.15s ease;
       `;
       const onEnter = () => {
-        btn.style.borderColor = 'rgba(240, 160, 48, 0.5)';
-        btn.style.boxShadow = '0 0 25px rgba(255, 107, 53, 0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
+        btn.style.borderColor = 'rgba(240, 160, 48, 0.55)';
+        btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.45), 0 0 24px rgba(240,160,48,0.12), inset 0 1px 0 rgba(255,255,255,0.08)';
       };
       const onLeave = () => {
-        btn.style.borderColor = 'rgba(240, 160, 48, 0.3)';
-        btn.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)';
+        btn.style.borderColor = 'rgba(240, 160, 48, 0.35)';
+        btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(240,160,48,0.08), inset 0 1px 0 rgba(255,255,255,0.08)';
       };
       const onDown = () => {
         btn.style.transform = 'scale(0.97)';
-        btn.style.background = 'rgba(15, 17, 22, 0.8)';
         btn.style.borderColor = 'rgba(240, 160, 48, 0.6)';
-        btn.style.boxShadow = '0 0 30px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)';
+        btn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.5), 0 0 12px rgba(240,160,48,0.06), inset 0 1px 0 rgba(255,255,255,0.08)';
       };
       const onUp = () => {
         btn.style.transform = '';
-        btn.style.background = 'rgba(15, 17, 22, 0.7)';
         onLeave();
       };
       btn.addEventListener('mouseenter', onEnter);
@@ -148,36 +147,35 @@ export class GameOverUI {
       btn.addEventListener('click', () => this.onRestart?.());
 
     } else if (type === 'continue') {
+      // SECONDARY — steel border, меньше размер
       btn.style.cssText = `${base}
-        background: rgba(15, 17, 22, 0.7);
+        background: rgba(30, 35, 48, 0.85);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         color: #F0A030;
-        border: 1px solid rgba(90, 93, 101, 0.4);
+        border: 1px solid rgba(90, 93, 101, 0.35);
         font-size: 15px; font-weight: bold;
         padding: 10px 36px;
-        border-radius: 8px;
-        box-shadow: 0 0 15px rgba(255, 107, 53, 0.05), inset 0 1px 0 rgba(255,255,255,0.05);
-        text-shadow: 0 0 10px rgba(240, 160, 48, 0.3);
-        transition: all 0.2s ease;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(240,160,48,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+        text-shadow: 0 0 8px rgba(240, 160, 48, 0.2);
+        transition: all 0.15s ease;
       `;
       const onEnter = () => {
-        btn.style.borderColor = 'rgba(90, 93, 101, 0.6)';
-        btn.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)';
+        btn.style.borderColor = 'rgba(90, 93, 101, 0.55)';
+        btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.45), 0 0 24px rgba(240,160,48,0.12), inset 0 1px 0 rgba(255,255,255,0.08)';
       };
       const onLeave = () => {
-        btn.style.borderColor = 'rgba(90, 93, 101, 0.4)';
-        btn.style.boxShadow = '0 0 15px rgba(255, 107, 53, 0.05), inset 0 1px 0 rgba(255,255,255,0.05)';
+        btn.style.borderColor = 'rgba(90, 93, 101, 0.35)';
+        btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4), 0 0 20px rgba(240,160,48,0.08), inset 0 1px 0 rgba(255,255,255,0.08)';
       };
       const onDown = () => {
         btn.style.transform = 'scale(0.97)';
-        btn.style.background = 'rgba(15, 17, 22, 0.8)';
-        btn.style.borderColor = 'rgba(90, 93, 101, 0.7)';
-        btn.style.boxShadow = '0 0 25px rgba(255, 107, 53, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)';
+        btn.style.borderColor = 'rgba(90, 93, 101, 0.6)';
+        btn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.5), 0 0 12px rgba(240,160,48,0.06), inset 0 1px 0 rgba(255,255,255,0.08)';
       };
       const onUp = () => {
         btn.style.transform = '';
-        btn.style.background = 'rgba(15, 17, 22, 0.7)';
         onLeave();
       };
       btn.addEventListener('mouseenter', onEnter);
@@ -189,21 +187,22 @@ export class GameOverUI {
       btn.addEventListener('click', () => this.onContinue?.());
 
     } else if (type === 'menu') {
+      // TERTIARY — прозрачный, только текст + underline on hover
       btn.style.cssText = `${base}
         background: transparent;
-        color: #5A5D65;
+        color: #6A7080;
         border: none;
         border-bottom: 1px solid transparent;
         font-size: 14px;
         padding: 8px 36px;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
       `;
       btn.addEventListener('mouseenter', () => {
         btn.style.color = '#F0A030';
         btn.style.borderBottomColor = 'rgba(240, 160, 48, 0.3)';
       });
       btn.addEventListener('mouseleave', () => {
-        btn.style.color = '#5A5D65';
+        btn.style.color = '#6A7080';
         btn.style.borderBottomColor = 'transparent';
       });
       const onDown = () => { btn.style.transform = 'scale(0.97)'; };
@@ -229,7 +228,7 @@ export class GameOverUI {
       this.bestText.setColor(GOLD);
     } else {
       this.newBestText.setVisible(false);
-      this.bestText.setColor('#8B7A50');
+      this.bestText.setColor('#9A8A60');
     }
 
     // === Кровавые брызги на фоне (depth Z.BLOOD) ===
@@ -255,11 +254,11 @@ export class GameOverUI {
       ease: 'Linear',
     });
 
-    // 0ms: overlay alpha 0 → 0.7 (400ms)
+    // 0ms: overlay alpha 0 → 0.75 (400ms)
     this.overlayRect.setVisible(true).setAlpha(0);
     this.scene.tweens.add({
       targets: this.overlayRect,
-      alpha: 0.7,
+      alpha: 0.75,
       duration: 400,
       ease: 'Linear',
     });
