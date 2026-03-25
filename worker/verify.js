@@ -47,12 +47,12 @@ export async function verifyTelegramDataAsync(initData, botToken) {
     const encoder = new TextEncoder();
 
     // secret_key = HMAC-SHA256("WebAppData", botToken)
-    const keyData = encoder.encode(botToken);
+    const webAppKey = encoder.encode('WebAppData');
     const secretKey = await crypto.subtle.importKey(
-      'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+      'raw', webAppKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
     );
     const secretBuf = await crypto.subtle.sign(
-      'HMAC', secretKey, encoder.encode('WebAppData')
+      'HMAC', secretKey, encoder.encode(botToken)
     );
 
     // result = HMAC-SHA256(secret_key, data_check_string)

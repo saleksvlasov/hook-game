@@ -63,6 +63,12 @@ export class GameScene extends Phaser.Scene {
     this.playerContainer.body.setMaxVelocity(900, 1200);
     this.player = this.playerContainer;
 
+    // Ghost — визуальный клон для wrap-around
+    this.ghostContainer = this.add.container(-9999, -9999).setDepth(Z.PLAYER);
+    this.ghostGfx = this.add.graphics();
+    this.ghostContainer.add(this.ghostGfx);
+    this.ghostContainer.setVisible(false);
+
     // Менеджеры подсистем
     this.trail = new TrailManager(this);
     this.trail.create();
@@ -85,6 +91,8 @@ export class GameScene extends Phaser.Scene {
       onRestart: () => this.handleRestart(),
       onMenu: () => {
         trackGameEnd();
+        this.gameOverUI.hide();
+        this.gameOverUI.destroy();
         this.scene.stop('GameScene');
         this.scene.start('MenuScene');
       },
@@ -92,8 +100,8 @@ export class GameScene extends Phaser.Scene {
 
     this.eggs = new EasterEggs(this);
 
-    // Камера — ручное управление по обеим осям в update()
-    this.cameras.main.scrollX = this.player.x - this.cameras.main.width / 2;
+    // Камера — X фиксирована, Y следит за игроком
+    this.cameras.main.scrollX = 0;
     this.cameras.main.scrollY = this.player.y - this.cameras.main.height / 2;
 
     // Input
@@ -290,16 +298,39 @@ export class GameScene extends Phaser.Scene {
   // ===================== UPDATE =====================
 
   update(time, delta) {
-    // Камера следит по обеим осям, X зажат чтобы не показывать пустоту
-    const targetX = Phaser.Math.Clamp(
-      this.player.x - this.W / 2,
-      -this.W * 0.5,
-      this.W * 0.5
-    );
+    // ===== 1. Wrap-around (только в свободном полёте) =====
+    if (!this.isDead && !this.isHooked) {
+      if (this.player.x < 0 || this.player.x > this.W) {
+        const offset = this.player.x < 0 ? this.W : -this.W;
+        const body = this.player.body;
+        this.player.x += offset;
+        body.position.x += offset;
+        body.prev.x += offset;
+        body.prevFrame.x += offset;
+      }
+    }
+
+    // ===== 2. Ghost sprite — только в свободном полёте у края =====
+    const edgeZone = 50;
+    const showGhost = !this.isDead && !this.isHooked
+      && (this.player.x < edgeZone || this.player.x > this.W - edgeZone);
+
+    if (showGhost) {
+      const ghostX = this.player.x < this.W / 2
+        ? this.player.x + this.W
+        : this.player.x - this.W;
+      this.ghostContainer.setPosition(ghostX, this.player.y);
+      this.ghostContainer.setRotation(this.playerContainer.rotation);
+      this.ghostContainer.setAlpha(this.playerContainer.alpha);
+      this.ghostContainer.setVisible(true);
+      this.hunter.drawPose(this.ghostGfx, this.hunter.coatTime);
+    } else {
+      this.ghostContainer.setVisible(false);
+    }
+
+    // ===== 3. Камера — X фиксирована, Y следит за игроком =====
+    this.cameras.main.scrollX = 0;
     const targetY = this.player.y - this.H * 0.55;
-    this.cameras.main.scrollX = Phaser.Math.Linear(
-      this.cameras.main.scrollX, targetX, 0.1
-    );
     this.cameras.main.scrollY = Phaser.Math.Linear(
       this.cameras.main.scrollY, targetY, 0.15
     );
@@ -311,14 +342,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Маятник с ограничением раскачки
+    // ===== 4. Физика маятника =====
     if (this.isHooked && this.currentAnchor) {
       const dt = delta / 1000;
       const angularAccel = (GRAVITY / this.ropeLength) * Math.cos(this.swingAngle);
       this.swingSpeed += angularAccel * dt;
-      this.swingSpeed *= SWING_FRICTION; // 0.997 — маятник быстрее теряет энергию
+      this.swingSpeed *= SWING_FRICTION;
 
-      // Полные 360° — без ограничений угла
       this.swingAngle += this.swingSpeed * dt;
 
       const newX = this.currentAnchor.x + Math.cos(this.swingAngle) * this.ropeLength;
@@ -330,14 +360,6 @@ export class GameScene extends Phaser.Scene {
       this.rope.draw(this.currentAnchor.x, this.currentAnchor.y, newX, newY, this.ropeLength);
     } else {
       this.rope.clear();
-
-      // Мягкие стенки — плавно возвращают к центру, сила растёт с удалением
-      const dt2 = delta / 1000;
-      if (this.player.x < 0) {
-        this.player.body.velocity.x += 400 * dt2 * (1 + Math.abs(this.player.x) / this.W);
-      } else if (this.player.x > this.W) {
-        this.player.body.velocity.x -= 400 * dt2 * (1 + (this.player.x - this.W) / this.W);
-      }
     }
 
     // Проверка смерти

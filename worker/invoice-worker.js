@@ -4,7 +4,7 @@
 
 import { verifyTelegramDataAsync } from './verify.js';
 
-const STAR_PRICE = 1;
+const STAR_PRICE = 6;
 const LEADERBOARD_SIZE = 100;
 
 export default {

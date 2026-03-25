@@ -16,8 +16,8 @@ export const GROUND_Y = WORLD_HEIGHT - 10;
 export const SPAWN_Y = WORLD_HEIGHT - 400;  // Было -200 — выше от земли, игрок успевает зацепиться
 
 // Пасхалки
-export const BOUNTY_HEIGHT = 100;
-export const MOON_HEIGHT = 300;
+export const BOUNTY_HEIGHT = 1000;
+export const MOON_HEIGHT = 3000;
 
 // ===== ПАЛИТРА EMBER & STEEL =====
 // Основные цвета

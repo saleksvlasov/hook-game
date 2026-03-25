@@ -141,18 +141,22 @@ src/
   storage.js       — localStorage: рекорд, луна
   audio.js         — 8 процедурных звуков через Web Audio API
   ads.js           — Заглушки рекламы (interstitial каждые 5 игр, rewarded)
+  telegram.js      — Telegram Mini App SDK, Stars оплата, leaderboard API
   scenes/
     MenuScene.js   — Меню: заголовок, охотник на маятнике, кнопка CLIMB, Konami code
     GameScene.js   — Игра: маятник, крюки, смерть, Game Over (HTML кнопки), пасхалки
+worker/
+  worker-bundle.js — Cloudflare Worker: invoice (Stars) + leaderboard (KV)
 ```
 
 ## КОНСТАНТЫ
 ```
-GRAVITY = 900, HOOK_RANGE = 500, WORLD_HEIGHT = 8000
-ANCHOR_SPACING_Y = 280, GROUND_Y = 7990, SPAWN_Y = 7920
-MAX_ROPE_LENGTH = 300 (в shootHook)
+GRAVITY = 980, HOOK_RANGE = 380, WORLD_HEIGHT = 100000
+ANCHOR_SPACING_Y = 240, GROUND_Y = WORLD_HEIGHT-10, SPAWN_Y = WORLD_HEIGHT-400
+MAX_ROPE_LENGTH = 220, MIN_ROPE = 50
+SWING_FRICTION = 0.9996, RELEASE_BOOST = 1.4
 WORLD_WIDTH = this.scale.width (динамический)
-arcade.gravity.y = 800
+arcade.gravity.y = 550
 ```
 
 ## localStorage
@@ -166,15 +170,18 @@ thehook_best, thehook_moon, thehook_games, thehook_lang
 - Game Over кнопки — чистый HTML (position:fixed, z-index:100)
 - Маятник: swingAngle/swingSpeed, только защита от переворота
 - Toggle click: тап — зацепиться, тап — отпустить
-- Камера: ручной lerp X(0.1) Y(0.15), X зажат [-W*0.5, W*0.5]
+- Камера: X фиксирована (scrollX=0), Y lerp(0.15) — для бесшовного wrap-around
+- Wrap-around: в свободном полёте x<0→x+=W, x>W→x-=W (синхронизация body.position/prev/prevFrame)
+- Ghost sprite: визуальный клон на противоположном краю, виден только в свободном полёте у края (50px)
 - Смерть после pendulum update: playerBottom >= GROUND_Y - 6
 - Hunt Showdown палитра, процедурная графика, процедурный звук
 
 ## TODO
+- [x] Telegram Mini App + Stars оплата (⭐6 за воскрешение)
+- [x] Leaderboard (Cloudflare KV, топ-100)
+- [x] Wrap-around (ghost sprite + фиксированная камера X)
 - [ ] Деплой Yandex Games + SDK
 - [ ] Тест на мобиле
 - [ ] Туториал первой игры
 - [ ] Движущиеся якоря
-- [ ] Leaderboard
-- [ ] APK / Telegram Mini App
 - [ ] Удалить counter.js, style.css, assets/

@@ -3,7 +3,7 @@
 // KV Binding: SCORES
 // Копировать ВЕСЬ этот файл в Cloudflare Workers Editor
 
-const STAR_PRICE = 1;
+const STAR_PRICE = 6;
 const LEADERBOARD_SIZE = 100;
 
 // ---- Telegram initData HMAC-SHA256 валидация ----
@@ -21,12 +21,13 @@ async function verifyTelegramData(initData, botToken) {
     const encoder = new TextEncoder();
 
     // secret_key = HMAC-SHA256("WebAppData", botToken)
-    const keyData = encoder.encode(botToken);
+    // Web Crypto: importKey = ключ HMAC, sign = данные
+    const webAppKey = encoder.encode('WebAppData');
     const secretKey = await crypto.subtle.importKey(
-      'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+      'raw', webAppKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
     );
     const secretBuf = await crypto.subtle.sign(
-      'HMAC', secretKey, encoder.encode('WebAppData')
+      'HMAC', secretKey, encoder.encode(botToken)
     );
 
     // result = HMAC-SHA256(secret_key, data_check_string)
