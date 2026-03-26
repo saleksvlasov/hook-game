@@ -43,6 +43,7 @@ export const LANGS = {
     skin_locked: 'Locked',
     skin_equipped: 'Equipped',
     skin_equip: 'Equip',
+    loading: 'Loading...',
   },
   ru: {
     title_sub: 'Как высоко заберёшься?',
@@ -86,6 +87,7 @@ export const LANGS = {
     skin_locked: 'Закрыт',
     skin_equipped: 'Надет',
     skin_equip: 'Надеть',
+    loading: 'Загрузка...',
   },
 };
 

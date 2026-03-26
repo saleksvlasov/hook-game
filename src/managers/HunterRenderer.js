@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { SKINS, drawSkinPose } from './SkinRenderer.js';
-import { getActiveSkin } from '../storage.js';
+import { profile } from '../data/index.js';
 
 // Рендер охотника — скин из SkinRenderer
 export class HunterRenderer {
@@ -21,7 +21,7 @@ export class HunterRenderer {
 
   // Загрузить активный скин из storage
   loadActiveSkin() {
-    this.setSkin(getActiveSkin());
+    this.setSkin(profile.activeSkin);
   }
 
   create(playerContainer) {

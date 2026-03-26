@@ -1,6 +1,7 @@
 import { t } from '../i18n.js';
 import { Z } from '../constants.js';
-import { fetchLeaderboard, getTelegramUserId } from '../telegram.js';
+import { profile } from '../data/index.js';
+import { getTelegramUserId } from '../telegram.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN = '#00F5D4';
@@ -9,18 +10,21 @@ const NEON_STEEL = '#4A5580';
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 
 // Панель лидерборда — HTML overlay, neon western glassmorphism
+// Пересоздаётся каждый раз при show() для надёжности на мобиле
 export class LeaderboardUI {
   constructor() {
     this.div = null;
-    this.list = null;
   }
 
-  // Создаёт DOM-панель лидерборда (скрыта по умолчанию)
-  create() {
-    this.div = document.createElement('div');
-    this.div.id = 'leaderboard-panel';
-    this.div.style.cssText = `
-      display: none; position: fixed; top: 0; left: 0;
+  // Показать лидерборд — создать панель, загрузить данные
+  async show() {
+    // Удаляем старую панель если есть
+    this.destroy();
+
+    const div = document.createElement('div');
+    div.id = 'leaderboard-panel';
+    div.style.cssText = `
+      display: flex; position: fixed; top: 0; left: 0;
       width: 100%; height: 100%; z-index: ${Z.HTML_BUTTONS + 10};
       background: rgba(5, 8, 16, 0.96);
       backdrop-filter: blur(16px);
@@ -28,10 +32,10 @@ export class LeaderboardUI {
       flex-direction: column; align-items: center;
       padding: 40px 16px 20px;
       overflow-y: auto;
-      opacity: 0; transition: opacity 0.3s ease;
     `;
+    this.div = div;
 
-    // Кнопка закрытия — neon cyan
+    // Кнопка закрытия
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '\u2715';
     closeBtn.style.cssText = `
@@ -39,14 +43,12 @@ export class LeaderboardUI {
       background: none; border: none; color: ${NEON_STEEL};
       font-size: 26px; cursor: pointer; pointer-events: auto;
       -webkit-tap-highlight-color: transparent;
-      transition: color 0.15s ease;
     `;
-    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.color = NEON_CYAN; });
-    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.color = NEON_STEEL; });
     closeBtn.addEventListener('click', () => this.hide());
-    this.div.appendChild(closeBtn);
+    closeBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.hide(); });
+    div.appendChild(closeBtn);
 
-    // Заголовок — neon amber
+    // Заголовок
     const title = document.createElement('div');
     title.textContent = `\uD83C\uDFC6 ${t('leaderboard')}`;
     title.style.cssText = `
@@ -54,27 +56,26 @@ export class LeaderboardUI {
       color: ${NEON_AMBER}; margin-bottom: 24px; letter-spacing: 3px;
       text-transform: uppercase;
     `;
-    this.div.appendChild(title);
+    div.appendChild(title);
 
-    // Контейнер для списка
-    this.list = document.createElement('div');
-    this.list.style.cssText = `
-      width: 100%; max-width: 360px;
-    `;
-    this.div.appendChild(this.list);
+    // Список — сначала загрузка
+    const list = document.createElement('div');
+    list.style.cssText = 'width: 100%; max-width: 360px;';
+    list.innerHTML = `<div style="color:${NEON_STEEL};font-family:${NEON_FONT};text-align:center;padding:40px 0;font-size:16px">⏳ ${t('loading')}</div>`;
+    div.appendChild(list);
 
-    document.body.appendChild(this.div);
-  }
+    document.body.appendChild(div);
 
-  // Показать лидерборд — загрузить данные и анимировать появление
-  async show() {
-    const lb = await fetchLeaderboard();
+    // Загружаем данные
+    const lb = await profile.fetchLeaderboard();
+    // Проверяем что панель не была закрыта пока грузились
+    if (!this.div) return;
+
     const myId = getTelegramUserId();
-
-    this.list.innerHTML = '';
+    list.innerHTML = '';
 
     if (lb.length === 0) {
-      this.list.innerHTML = `<div style="color:${NEON_STEEL};font-family:${NEON_FONT};text-align:center;padding:40px 0;font-size:16px">${t('lb_empty')}</div>`;
+      list.innerHTML = `<div style="color:${NEON_STEEL};font-family:${NEON_FONT};text-align:center;padding:40px 0;font-size:16px">${t('lb_empty')}</div>`;
     } else {
       lb.forEach((entry, i) => {
         const isMe = myId && entry.userId === myId;
@@ -97,29 +98,24 @@ export class LeaderboardUI {
           </span>
           <span style="color:${NEON_AMBER};font-size:16px;font-weight:bold">${entry.score}${t('unit_m')}</span>
         `;
-        this.list.appendChild(row);
+        list.appendChild(row);
       });
     }
-
-    this.div.style.display = 'flex';
-    requestAnimationFrame(() => {
-      this.div.style.opacity = '1';
-    });
   }
 
-  // Скрыть лидерборд с анимацией fade out
+  // Скрыть — просто удаляем из DOM
   hide() {
-    this.div.style.opacity = '0';
-    setTimeout(() => {
-      this.div.style.display = 'none';
-    }, 300);
+    this.destroy();
   }
 
   // Удалить DOM-элемент
   destroy() {
-    const lb = document.getElementById('leaderboard-panel');
-    if (lb) lb.remove();
-    this.div = null;
-    this.list = null;
+    if (this.div) {
+      this.div.remove();
+      this.div = null;
+    }
+    // Fallback: убрать по id если ссылка потерялась
+    const stale = document.getElementById('leaderboard-panel');
+    if (stale) stale.remove();
   }
 }

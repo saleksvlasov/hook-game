@@ -2,7 +2,7 @@ import { BOUNTY_HEIGHT, MOON_HEIGHT, Z } from '../constants.js';
 
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 import { playBounty, playMoonwalker } from '../audio.js';
-import { saveMoon } from '../storage.js';
+import { profile } from '../data/index.js';
 import { t } from '../i18n.js';
 import { drawWantedPosterFrame, createEmberBurst } from '../managers/UIFactory.js';
 
@@ -89,7 +89,7 @@ export class EasterEggs {
 
   _showMoonwalker() {
     playMoonwalker();
-    saveMoon();
+    profile.saveMoon();
     const W = this.scene.W;
 
     // Свечение луны — neon cyan

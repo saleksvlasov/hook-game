@@ -4,6 +4,13 @@
 После каждого [CODE] изменения → автоматически [TEST].
 Никакого деплоя без "✅ READY TO DEPLOY" от TEST агента.
 
+## ПРИНЦИПЫ АРХИТЕКТУРЫ
+- **SOLID** — Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- После кода — всегда тест, проверка на утечки памяти, оптимизация, скорость алгоритмов
+- Никаких костылей: setTimeout для UI, кнопки вне DOM-дерева, дублирование состояния
+- Серверный источник правды: данные пользователя хранятся на сервере (Cloudflare KV), localStorage только как кэш
+- Деплой только с согласия владельца
+
 ---
 
 ## [CODE] — Senior Software Engineer

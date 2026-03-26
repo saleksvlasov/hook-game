@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getActiveSkin, setActiveSkin, isSkinUnlocked } from '../storage.js';
+import { profile } from '../data/index.js';
 import { SKINS, drawSkinPose } from './SkinRenderer.js';
 import { getLang } from '../i18n.js';
 import { t } from '../i18n.js';
@@ -57,7 +57,7 @@ export class SkinCarousel {
     const H = s.H;
     const cellW = 56;
     const y = H * 0.88;
-    const activeSkin = getActiveSkin();
+    const activeSkin = profile.activeSkin;
     const activeIdx = SKINS.findIndex(sk => sk.id === activeSkin);
     const totalW = SKINS.length * cellW;
 
@@ -83,7 +83,7 @@ export class SkinCarousel {
     for (let i = 0; i < SKINS.length; i++) {
       const skin = SKINS[i];
       const x = this._skinScrollX + i * cellW + cellW / 2;
-      const unlocked = isSkinUnlocked(skin.id);
+      const unlocked = profile.isSkinUnlocked(skin.id);
       const isActive = skin.id === activeSkin;
 
       const container = s.add.container(x, y).setDepth(19);
@@ -214,7 +214,7 @@ export class SkinCarousel {
     this._tooltipElements.push(nameText);
 
     // Условие получения
-    const unlocked = isSkinUnlocked(skin.id);
+    const unlocked = profile.isSkinUnlocked(skin.id);
     let conditionText;
     if (unlocked) {
       conditionText = t('skin_equipped');
@@ -231,7 +231,7 @@ export class SkinCarousel {
     this._tooltipElements.push(condText);
 
     // Кнопка EQUIP или LOCKED
-    if (unlocked && skin.id !== getActiveSkin()) {
+    if (unlocked && skin.id !== profile.activeSkin) {
       const equipText = s.add.text(cx, cy + 85, t('skin_equip'), {
         fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold',
         color: NEON_AMBER_STR, backgroundColor: 'rgba(255,184,0,0.1)',
@@ -239,7 +239,7 @@ export class SkinCarousel {
       }).setOrigin(0.5).setDepth(32).setInteractive({ useHandCursor: true });
 
       equipText.on('pointerdown', () => {
-        setActiveSkin(skin.id);
+        profile.setActiveSkin(skin.id);
         // Обновить охотника в меню через scene
         if (s.menuHunterObj) s.menuHunterObj.redraw(skinIndex);
         this.hideTooltip();

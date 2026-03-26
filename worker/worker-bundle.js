@@ -70,6 +70,8 @@ export default {
       if (url.pathname === '/claim-skin') return handleClaimSkin(request, env);
       if (url.pathname === '/sync-challenges') return handleSyncChallenges(request, env);
       if (url.pathname === '/sync-profile') return handleSyncProfile(request, env);
+      if (url.pathname === '/save-active-skin') return handleSaveActiveSkin(request, env);
+      if (url.pathname === '/save-moon') return handleSaveMoon(request, env);
       if (url.pathname === '/track-event') return handleTrackEvent(request, env);
     }
 
@@ -371,7 +373,7 @@ async function handleSyncProfile(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
 
-  const { initData } = body;
+  const { initData, clientData } = body;
   if (!initData) return jsonResponse({ error: 'Missing initData' }, 400);
 
   const user = await verifyTelegramData(initData, env.BOT_TOKEN);
@@ -379,18 +381,83 @@ async function handleSyncProfile(request, env) {
 
   const userId = String(user.id);
 
-  // Параллельно читаем рекорд и челленджи
-  const [scoreData, challengeData] = await Promise.all([
+  // Параллельно читаем рекорд, челленджи и профиль
+  const [scoreData, challengeData, profileData] = await Promise.all([
     env.SCORES ? env.SCORES.get(`user:${userId}`, 'json') : null,
     env.CHALLENGES ? env.CHALLENGES.get(`challenges:${userId}`, 'json') : null,
+    env.SCORES ? env.SCORES.get(`profile:${userId}`, 'json') : null,
   ]);
+
+  // Если клиент прислал данные — мержим на сервер (первая синхронизация)
+  if (clientData && env.SCORES) {
+    const currentProfile = profileData || {};
+    let changed = false;
+    if (clientData.moonReached && !currentProfile.moonReached) {
+      currentProfile.moonReached = true;
+      changed = true;
+    }
+    if (clientData.activeSkin && clientData.activeSkin !== 'default') {
+      currentProfile.activeSkin = clientData.activeSkin;
+      changed = true;
+    }
+    if (changed) {
+      await env.SCORES.put(`profile:${userId}`, JSON.stringify(currentProfile));
+    }
+  }
+
+  const serverProfile = profileData || {};
 
   return jsonResponse({
     bestScore: scoreData?.score || 0,
     unlockedSkins: challengeData?.unlockedSkins || ['default'],
-    activeSkin: challengeData?.activeSkin || 'default',
+    activeSkin: challengeData?.activeSkin || serverProfile.activeSkin || 'default',
     weeklyProgress: challengeData?.weeklyProgress || {},
+    moonReached: serverProfile.moonReached || false,
   });
+}
+
+// ---- Save Active Skin ----
+
+async function handleSaveActiveSkin(request, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData, skinId } = body;
+  if (!initData || !skinId) return jsonResponse({ error: 'Missing fields' }, 400);
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+  const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+  profile.activeSkin = skinId;
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+
+  return jsonResponse({ ok: true });
+}
+
+// ---- Save Moon ----
+
+async function handleSaveMoon(request, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData } = body;
+  if (!initData) return jsonResponse({ error: 'Missing initData' }, 400);
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+  const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+  profile.moonReached = true;
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+
+  return jsonResponse({ ok: true });
 }
 
 // ---- Analytics: трекинг событий монетизации ----

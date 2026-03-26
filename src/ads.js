@@ -3,8 +3,9 @@
 // Interstitial: UnitID 25944 (между играми)
 // Fallback на заглушку если SDK не загружен (вне Telegram)
 
+import { profile } from './data/index.js';
+
 const INTERSTITIAL_EVERY = 5;
-const GAMES_KEY = 'thehook_games';
 
 const REWARDED_BLOCK_ID = '25943';
 const INTERSTITIAL_BLOCK_ID = 'int-25944';
@@ -43,24 +44,12 @@ function getInterstitialController() {
   }
 }
 
-// ---- Счётчик игр ----
-
-function getGameCount() {
-  return parseInt(localStorage.getItem(GAMES_KEY) || '0', 10);
-}
-
-function incrementGameCount() {
-  const n = getGameCount() + 1;
-  localStorage.setItem(GAMES_KEY, String(n));
-  return n;
-}
-
 export function shouldShowInterstitial() {
-  return getGameCount() > 0 && getGameCount() % INTERSTITIAL_EVERY === 0;
+  return profile.gamesCount > 0 && profile.gamesCount % INTERSTITIAL_EVERY === 0;
 }
 
 export function trackGameEnd() {
-  return incrementGameCount();
+  return profile.incrementGames();
 }
 
 // ---- Interstitial (между играми, каждые 5) ----

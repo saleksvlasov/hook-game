@@ -1,7 +1,7 @@
 import { Z, FONT_MONO } from '../constants.js';
 import { t } from '../i18n.js';
 import { SKINS } from './SkinRenderer.js';
-import { isTelegram } from '../telegram.js';
+import { profile } from '../data/index.js';
 import {
   drawBloodSplatter, drawWantedPosterFrame,
   drawRopeDecoration, createEmberBurst,
@@ -34,7 +34,7 @@ export class GameOverUI {
     this.posterGfx = null;
     this.overlayRect = null;
 
-    // Лидерборд — отдельный модуль
+    // Лидерборд — создаётся при каждом показе
     this.leaderboardUI = new LeaderboardUI();
 
     // Callbacks
@@ -114,7 +114,7 @@ export class GameOverUI {
     this.buttonsDiv.appendChild(this.continueAdBtn);
 
     // CONTINUE STARS — платное воскрешение через Stars (только Telegram, без лимита)
-    if (isTelegram()) {
+    if (profile.isAuthorized) {
       this.continueStarBtn = this._createButton(t('continue_star'), 'continue_star');
       this.buttonsDiv.appendChild(this.continueStarBtn);
     }
@@ -124,7 +124,7 @@ export class GameOverUI {
     this.buttonsDiv.appendChild(this.restartBtn);
 
     // LEADERBOARD (только в Telegram)
-    if (isTelegram()) {
+    if (profile.isAuthorized) {
       this.leaderboardBtn = this._createButton(t('leaderboard'), 'leaderboard');
       this.buttonsDiv.appendChild(this.leaderboardBtn);
     }
@@ -134,9 +134,6 @@ export class GameOverUI {
     this.buttonsDiv.appendChild(this.menuBtn);
 
     document.body.appendChild(this.buttonsDiv);
-
-    // Панель лидерборда (HTML overlay)
-    this.leaderboardUI.create();
   }
 
   // Neon glass стиль кнопок — все кнопки одинаковая база, цвет зависит от типа

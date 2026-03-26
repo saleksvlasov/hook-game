@@ -1,4 +1,4 @@
-import { getCurrentWeek, getChallenges, saveChallenges, unlockSkin } from '../storage.js';
+import { profile, getCurrentWeek } from '../data/index.js';
 import { SKINS } from './SkinRenderer.js';
 
 // Пул типов испытаний
@@ -13,7 +13,7 @@ const CHALLENGE_TYPES = [
 export class ChallengeManager {
   constructor() {
     this.week = getCurrentWeek();
-    this.data = getChallenges();
+    this.data = { unlockedSkins: profile.unlockedSkins, weeklyProgress: { ...profile.weeklyProgress } };
     this._ensureWeekChallenge();
     this.cleanupOldWeeks(); // Чистим старые недели при каждом запуске
   }
@@ -31,7 +31,7 @@ export class ChallengeManager {
       if (existing.target !== correctTarget && !existing.completed) {
         existing.target = correctTarget;
         existing.type = ct.type; // тип тоже мог устареть
-        saveChallenges(this.data);
+        profile.updateWeeklyProgress(this.data.weeklyProgress);
       }
       return;
     }
@@ -54,7 +54,7 @@ export class ChallengeManager {
       rewardSkin,
       claimed: false,      // награда забрана
     };
-    saveChallenges(this.data);
+    profile.updateWeeklyProgress(this.data.weeklyProgress);
   }
 
   // Получить текущее испытание
@@ -112,7 +112,7 @@ export class ChallengeManager {
         break;
     }
 
-    if (changed) saveChallenges(this.data);
+    if (changed) profile.updateWeeklyProgress(this.data.weeklyProgress);
     return ch.completed;
   }
 
@@ -122,8 +122,9 @@ export class ChallengeManager {
     if (!ch || !ch.completed || ch.claimed) return null;
 
     ch.claimed = true;
-    unlockSkin(ch.rewardSkin);
-    saveChallenges(this.data);
+    // Разблокируем скин через profile API
+    profile.unlockSkin(ch.rewardSkin);
+    profile.updateWeeklyProgress(this.data.weeklyProgress);
     return ch.rewardSkin;
   }
 
@@ -136,6 +137,6 @@ export class ChallengeManager {
         delete this.data.weeklyProgress[key];
       }
     }
-    saveChallenges(this.data);
+    profile.updateWeeklyProgress(this.data.weeklyProgress);
   }
 }

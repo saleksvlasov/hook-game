@@ -1,17 +1,17 @@
 import Phaser from 'phaser';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
-import { syncProfile } from './telegram.js';
+import { profile } from './data/index.js';
 
-// Telegram Mini App — раскрываем на весь экран + синхронизация профиля
+// Telegram Mini App — раскрываем на весь экран
 if (window.Telegram?.WebApp) {
   const tg = window.Telegram.WebApp;
   tg.ready();
   tg.expand();
-
-  // Подтягиваем рекорд и скины с сервера → localStorage (fire-and-forget)
-  syncProfile();
 }
+
+// Инициализация профиля — подтягивает данные с сервера (fire-and-forget)
+profile.init();
 
 // Safe area: set CSS variable from env() for JS access
 const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');

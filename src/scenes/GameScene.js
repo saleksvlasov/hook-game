@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit } from '../audio.js';
-import { getBest, saveBest } from '../storage.js';
+import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
-import { isTelegram, purchaseContinue, saveScoreOnline, saveChallengeOnline, trackEvent } from '../telegram.js';
+import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
 import { GROUND_Y, SPAWN_Y, Z } from '../constants.js';
 
@@ -54,7 +54,7 @@ export class GameScene extends Phaser.Scene {
     this.swingAngle = 0;
     this.swingSpeed = 0;
     this.maxHeight = 0;
-    this.sessionBest = getBest();
+    this.sessionBest = profile.bestScore;
     this.isDead = false;
     this.lastReleaseTime = 0;    // Кулдаун хука
     this.bugHitCooldown = 0;     // Защита от повторных ударов жуков
@@ -228,13 +228,8 @@ export class GameScene extends Phaser.Scene {
       duration: 400,
     });
 
-    const isNewBest = saveBest(this.maxHeight);
-    this.sessionBest = getBest();
-
-    // Сохраняем рекорд онлайн ВСЕГДА — сервер сам решает обновлять ли
-    if (this.maxHeight > 0) {
-      saveScoreOnline(this.maxHeight);
-    }
+    const isNewBest = profile.saveBest(this.maxHeight);
+    this.sessionBest = profile.bestScore;
 
     // Обновляем прогресс еженедельного испытания ПЕРЕД show() —
     // чтобы кнопка CLAIM SKIN появилась сразу при завершении челленджа
@@ -246,7 +241,7 @@ export class GameScene extends Phaser.Scene {
 
     // Серверная верификация (fire-and-forget, не блокирует UI)
     const gameTime = (Date.now() - this.gameStartTime) / 1000;
-    saveChallengeOnline(this.maxHeight, this.hitCount, gameTime);
+    profile.saveChallenge(this.maxHeight, this.hitCount, gameTime);
 
     this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0);
 

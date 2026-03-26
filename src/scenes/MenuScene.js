@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { getBest, getMoon } from '../storage.js';
+import { profile } from '../data/index.js';
 import { playOminous } from '../audio.js';
-import { t, getLang, setLang } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 import {
   drawGlassButton, drawChip,
   createTypewriterText, createEmberBurst,
@@ -143,7 +143,7 @@ export class MenuScene extends Phaser.Scene {
     this._createClimbButton(W, H);
 
     // --- Рекорд ---
-    const best = getBest();
+    const best = profile.bestScore;
     const recordY = H * 0.75;
     if (best > 0) {
       const chipGfx = this.add.graphics().setDepth(10).setAlpha(0);
@@ -156,7 +156,7 @@ export class MenuScene extends Phaser.Scene {
       this._addStaggerFade(chipGfx, 700);
       this._addStaggerEntry(recordText, recordY, 700);
     }
-    if (getMoon()) {
+    if (profile.moonReached) {
       const moonText = this.add.text(W / 2, H * 0.78, t('moon_reached'), {
         fontSize: '12px', fontFamily: NEON_FONT, fontStyle: 'italic', color: '#4A5580',
       }).setOrigin(0.5).setDepth(11).setAlpha(0);
@@ -171,30 +171,38 @@ export class MenuScene extends Phaser.Scene {
     const skinsText = this.add.text(W / 2, skinsY, t('skins_title'), {
       fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_CYAN_STR,
     }).setOrigin(0.5).setDepth(16).setAlpha(0);
-    const skinsZone = this.add.zone(W / 2, skinsY, 120, 32)
+    const skinsZone = this.add.zone(W / 2, skinsY, 160, 44)
       .setInteractive({ useHandCursor: true }).setDepth(17);
     skinsZone.on('pointerdown', () => this._skinCarousel.toggle());
     this._addStaggerFade(skinsGfx, 750);
     this._addStaggerEntry(skinsText, skinsY, 750);
 
-    // --- Кнопка ТОП (лидерборд) ---
+    // --- Кнопка ТОП (лидерборд) — HTML поверх canvas для надёжного тача ---
     const topY = skinsY + 40;
     const topGfx = this.add.graphics().setDepth(15);
     drawGlassButton(topGfx, W / 2, topY, 120, 32);
-    const topText = this.add.text(W / 2, topY, t('top_button'), {
-      fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_CYAN_STR,
-    }).setOrigin(0.5).setDepth(16).setAlpha(0);
-    const topZone = this.add.zone(W / 2, topY, 120, 32)
-      .setInteractive({ useHandCursor: true }).setDepth(17);
-    topZone.on('pointerdown', () => {
-      if (!this.leaderboardUI) {
-        this.leaderboardUI = new LeaderboardUI();
-        this.leaderboardUI.create();
-      }
-      this.leaderboardUI.show();
-    });
     this._addStaggerFade(topGfx, 800);
-    this._addStaggerEntry(topText, topY, 800);
+
+    this._topBtn = document.createElement('button');
+    this._topBtn.textContent = t('top_button');
+    this._topBtn.style.cssText = `
+      position: fixed; left: 50%; transform: translateX(-50%);
+      top: ${topY - 16}px; width: 140px; height: 36px;
+      background: transparent; border: none; color: ${NEON_CYAN_STR};
+      font-size: 14px; font-weight: bold; font-family: ${NEON_FONT};
+      cursor: pointer; pointer-events: auto; z-index: 10;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0; transition: opacity 0.25s ease;
+    `;
+    this._topBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Каждый раз создаём заново — надёжно на мобиле
+      const lb = new LeaderboardUI();
+      lb.show();
+    });
+    document.body.appendChild(this._topBtn);
+    // Stagger fade in через задержку (вместо Phaser tween)
+    setTimeout(() => { if (this._topBtn) this._topBtn.style.opacity = '1'; }, 800);
 
     // --- Подсказка ---
     const hintText = this.add.text(W / 2, H - 24, t('tap_to_hunt'), {
@@ -283,7 +291,7 @@ export class MenuScene extends Phaser.Scene {
     langZone.on('pointerout', () => drawGlassButton(langGfx, langX, langY, 46, 26));
     langZone.on('pointerdown', () => {
       createEmberBurst(this, langX, langY, 4);
-      setLang(getLang() === 'ru' ? 'en' : 'ru');
+      profile.setLang(getLang() === 'ru' ? 'en' : 'ru');
       this.scene.restart();
     });
   }
@@ -392,8 +400,11 @@ export class MenuScene extends Phaser.Scene {
 
   shutdown() {
     if (this._konamiHandler) this.input.keyboard.off('keydown', this._konamiHandler);
+    if (this._topBtn) { this._topBtn.remove(); this._topBtn = null; }
     if (this._skinCarousel) this._skinCarousel.destroy();
-    if (this.leaderboardUI) this.leaderboardUI.destroy();
+    // Лидерборд — убираем если открыт
+    const lbPanel = document.getElementById('leaderboard-panel');
+    if (lbPanel) lbPanel.remove();
     if (this.menuHunterObj) this.menuHunterObj.destroy();
   }
 }

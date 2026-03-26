@@ -1,4 +1,4 @@
-import { getActiveSkin } from '../storage.js';
+import { profile } from '../data/index.js';
 import { SKINS, drawSkinPose } from './SkinRenderer.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
@@ -96,7 +96,7 @@ export class MenuHunter {
   // --- Приватные ---
 
   _drawHunter(g) {
-    const skinIdx = SKINS.findIndex(sk => sk.id === getActiveSkin());
+    const skinIdx = SKINS.findIndex(sk => sk.id === profile.activeSkin);
     drawSkinPose(g, skinIdx >= 0 ? skinIdx : 0, 0);
   }
 
