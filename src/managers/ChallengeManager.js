@@ -65,20 +65,15 @@ export class ChallengeManager {
       // Если устройство новое (нет thehook_challenges) — просто ставим версию
       const hasExistingData = !!localStorage.getItem('thehook_challenges') || !!localStorage.getItem('thehook_best');
       if (hasExistingData) {
-        // Сбрасываем скины и прогресс испытаний
+        // Сбрасываем только скины и прогресс испытаний (локальный кэш)
+        // bestScore НЕ трогаем — сервер является источником правды
         profile.updateWeeklyProgress({});
         profile._data.unlockedSkins = ['default'];
         profile._data.activeSkin = 'default';
         profile._provider.saveField('unlockedSkins', ['default']).catch(() => {});
         profile._provider.saveField('activeSkin', 'default').catch(() => {});
-        // Сбрасываем рекорд (напрямую в localStorage, т.к. saveScore проверяет > current)
-        profile._data.bestScore = 0;
-        try { localStorage.setItem('thehook_best', '0'); } catch {}
-        // Сбрасываем счётчик игр и луну
         profile._data.gamesCount = 0;
-        profile._data.moonReached = false;
         profile._provider.saveField('gamesCount', 0).catch(() => {});
-        profile._provider.saveField('moonReached', false).catch(() => {});
       }
       try { localStorage.setItem('thehook_challenge_ver', String(CHALLENGE_DATA_VERSION)); } catch {}
     }
