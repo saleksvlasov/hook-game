@@ -42,15 +42,21 @@ export class HUDManager {
     this._depthStr = t('depth');
     this._recordStr = `${t('record')}: 0${t('unit_m')}`;
 
-    // Виджет еженедельного испытания
+    // Виджет еженедельного испытания — показываем всегда
     const ch = this._challengeMgr ? this._challengeMgr.getCurrentChallenge() : null;
-    if (ch && !ch.completed) {
+    if (ch) {
       this._hasChallengeWidget = true;
       this._updateChallengeStr(ch);
     }
   }
 
   _updateChallengeStr(ch) {
+    const weekNum = this._challengeMgr.week;
+    if (ch.completed) {
+      // Испытание выполнено — показываем что именно пройдено
+      this._challengeStr = `WEEK ${weekNum}: ${t('challenge_completed')}`;
+      return;
+    }
     const labelMap = {
       reach: 'challenge_reach',
       total: 'challenge_total',
@@ -59,7 +65,6 @@ export class HUDManager {
       streak: 'challenge_streak',
     };
     const label = tf(labelMap[ch.type] || 'challenge_reach', ch.target, ch.count || 3);
-    const weekNum = this._challengeMgr.week;
     this._challengeStr = `WEEK ${weekNum}: ${label} — ${ch.progress}/${ch.target}`;
   }
 
@@ -192,9 +197,9 @@ export class HUDManager {
     ctx.restore();
     ctx.globalAlpha = 1;
 
-    // === Виджет еженедельного испытания ===
+    // === Виджет еженедельного испытания (отступ от подсказки) ===
     if (this._hasChallengeWidget) {
-      const chipY = safeTop + 102;
+      const chipY = safeTop + 114;
       ctx.globalAlpha = 0.85;
       ctx.font = `13px ${NEON_FONT}`;
       ctx.textAlign = 'center';

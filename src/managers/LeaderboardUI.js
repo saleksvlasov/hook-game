@@ -74,14 +74,30 @@ export class LeaderboardUI {
         const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
         const rank = medal || `${i + 1}`;
 
-        // Ранг, имя, счёт — inline стили для мелких элементов внутри строки
-        row.innerHTML = `
-          <span style="width:36px;text-align:center;font-size:${medal ? '20px' : '15px'};color:#4A5580">${rank}</span>
-          <span style="flex:1;color:${isMe ? '#00F5D4' : '#E0F0FF'};font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${entry.name}${isMe ? ` <span style="font-size:12px;color:#00F5D4">${t('lb_you')}</span>` : ''}
-          </span>
-          <span style="color:#FFB800;font-size:16px;font-weight:bold">${entry.score}${t('unit_m')}</span>
-        `;
+        // Ранг
+        const rankEl = document.createElement('span');
+        rankEl.style.cssText = `width:36px;text-align:center;font-size:${medal ? '20px' : '15px'};color:#4A5580`;
+        rankEl.textContent = rank;
+        row.appendChild(rankEl);
+
+        // Имя — textContent для защиты от XSS
+        const nameEl = document.createElement('span');
+        nameEl.style.cssText = `flex:1;color:${isMe ? '#00F5D4' : '#E0F0FF'};font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`;
+        nameEl.textContent = entry.name;
+        if (isMe) {
+          const youTag = document.createElement('span');
+          youTag.style.cssText = 'font-size:12px;color:#00F5D4;margin-left:4px';
+          youTag.textContent = t('lb_you');
+          nameEl.appendChild(youTag);
+        }
+        row.appendChild(nameEl);
+
+        // Счёт
+        const scoreEl = document.createElement('span');
+        scoreEl.style.cssText = 'color:#FFB800;font-size:16px;font-weight:bold';
+        scoreEl.textContent = `${entry.score}${t('unit_m')}`;
+        row.appendChild(scoreEl);
+
         this._list.appendChild(row);
       });
     }

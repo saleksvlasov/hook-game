@@ -16,6 +16,7 @@ export class Engine {
     this.canvas.style.position = 'absolute';
     this.canvas.style.top = '0';
     this.canvas.style.left = '0';
+    this.canvas.style.zIndex = '1'; // Выше фона, ниже UI overlay
     this.ctx = this.canvas.getContext('2d');
 
     // Вставляем canvas в parent

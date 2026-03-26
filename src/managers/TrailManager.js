@@ -43,12 +43,16 @@ export class TrailManager {
     }
     this.active.length = writeIdx;
 
-    // Жёсткий лимит
+    // Жёсткий лимит — без splice (write-pointer)
     if (this.active.length > 80) {
-      for (let i = 0; i < this.active.length - 80; i++) {
+      const excess = this.active.length - 80;
+      for (let i = 0; i < excess; i++) {
         this.pool.release(this.active[i]);
       }
-      this.active.splice(0, this.active.length - 80);
+      for (let i = 0; i < 80; i++) {
+        this.active[i] = this.active[i + excess];
+      }
+      this.active.length = 80;
     }
   }
 

@@ -565,6 +565,7 @@ export class MenuScene extends Scene {
   }
 
   shutdown() {
+    if (this._onPointerDown) this.input.off('pointerdown', this._onPointerDown);
     if (this._konamiHandler) document.removeEventListener('keydown', this._konamiHandler);
     if (this._skinCarousel) this._skinCarousel.destroy();
     if (this._leaderboardUI) { this._leaderboardUI.destroy(); this._leaderboardUI = null; }

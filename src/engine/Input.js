@@ -25,6 +25,7 @@ export class Input {
     canvas.style.touchAction = 'none';
     canvas.style.userSelect = 'none';
     canvas.style.webkitUserSelect = 'none';
+    canvas.style.webkitTapHighlightColor = 'transparent';
   }
 
   // Обновить позицию камеры для пересчёта координат
@@ -64,6 +65,7 @@ export class Input {
 
   // Приватный обработчик — пересчёт координат + вызов listeners
   _handle(event, e) {
+    e.preventDefault(); // Предотвращаем двойное срабатывание (touch→mouse emulation)
     const rect = this._canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;

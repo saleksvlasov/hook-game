@@ -22,8 +22,9 @@ if (!sat || sat === '0px') {
   document.documentElement.style.setProperty('--sat', isNotched ? '47px' : '0px');
 }
 
-const W = document.documentElement.clientWidth;
-const H = document.documentElement.clientHeight;
+// Размеры берём после expand() — используем максимальные из доступных
+const W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+const H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
 // Корневой контейнер для всех UI overlay — единая точка монтирования
 const gameUI = document.createElement('div');

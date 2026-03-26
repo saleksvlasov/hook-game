@@ -111,6 +111,8 @@ export class TweenManager {
   update(delta) {
     for (let i = this._tweens.length - 1; i >= 0; i--) {
       const tw = this._tweens[i];
+      // Защита: clear() мог обнулить массив во время итерации (switchScene из onComplete)
+      if (!tw) break;
 
       // Задержка
       if (tw.delay > 0) {
