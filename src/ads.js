@@ -1,8 +1,49 @@
-// Ads stub — replace with real Yandex Ads SDK calls when ready.
-// All functions return Promises so call sites stay async-ready.
+// Adsgram SDK — реклама в Telegram Mini Apps
+// Rewarded: UnitID 25943 (воскрешение)
+// Interstitial: UnitID 25944 (между играми)
+// Fallback на заглушку если SDK не загружен (вне Telegram)
 
 const INTERSTITIAL_EVERY = 5;
 const GAMES_KEY = 'thehook_games';
+
+const REWARDED_BLOCK_ID = '25943';
+const INTERSTITIAL_BLOCK_ID = 'int-25944';
+
+// Adsgram контроллеры — инициализируем лениво
+let rewardedController = null;
+let interstitialController = null;
+
+function getAdsgram() {
+  return window.Adsgram || null;
+}
+
+function getRewardedController() {
+  if (rewardedController) return rewardedController;
+  const sdk = getAdsgram();
+  if (!sdk) return null;
+  try {
+    rewardedController = sdk.init({ blockId: REWARDED_BLOCK_ID, debug: false });
+    return rewardedController;
+  } catch (e) {
+    console.warn('Adsgram rewarded init error:', e);
+    return null;
+  }
+}
+
+function getInterstitialController() {
+  if (interstitialController) return interstitialController;
+  const sdk = getAdsgram();
+  if (!sdk) return null;
+  try {
+    interstitialController = sdk.init({ blockId: INTERSTITIAL_BLOCK_ID, debug: false });
+    return interstitialController;
+  } catch (e) {
+    console.warn('Adsgram interstitial init error:', e);
+    return null;
+  }
+}
+
+// ---- Счётчик игр ----
 
 function getGameCount() {
   return parseInt(localStorage.getItem(GAMES_KEY) || '0', 10);
@@ -14,8 +55,6 @@ function incrementGameCount() {
   return n;
 }
 
-// ---- Interstitial (fullscreen between games) ----
-
 export function shouldShowInterstitial() {
   return getGameCount() > 0 && getGameCount() % INTERSTITIAL_EVERY === 0;
 }
@@ -24,14 +63,46 @@ export function trackGameEnd() {
   return incrementGameCount();
 }
 
-/**
- * Show interstitial ad.
- * Returns a Promise that resolves when ad is closed.
- * Stub: shows a simple overlay for 2 seconds.
- */
+// ---- Interstitial (между играми, каждые 5) ----
+
 export function showInterstitial() {
-  // TODO: Replace with real Yandex Ads SDK interstitial
-  // window.yaSDK.adv.showFullscreenAdv({ callbacks: { ... } })
+  const ctrl = getInterstitialController();
+  if (ctrl) {
+    // Adsgram SDK — реальная реклама, при ошибке тихо пропускаем
+    return ctrl.show().catch(() => {});
+  }
+  // Fallback — заглушка вне Telegram
+  return showInterstitialStub();
+}
+
+// ---- Rewarded (воскрешение) ----
+
+export function showRewarded() {
+  const ctrl = getRewardedController();
+  if (ctrl) {
+    // Adsgram SDK — rewarded видео
+    // При ошибке (блок не активен, нет рекламы) → fallback на заглушку
+    return ctrl.show()
+      .then(() => true)
+      .catch(() => showRewardedStub());
+  }
+  // Fallback — заглушка вне Telegram
+  return showRewardedStub();
+}
+
+// ---- Fallback заглушки (для браузера без Adsgram) ----
+
+function createOverlay() {
+  const div = document.createElement('div');
+  div.style.cssText = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.85);z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  return div;
+}
+
+function showInterstitialStub() {
   return new Promise((resolve) => {
     const overlay = createOverlay();
     overlay.innerHTML = `
@@ -58,16 +129,7 @@ export function showInterstitial() {
   });
 }
 
-// ---- Rewarded ad (continue after death) ----
-
-/**
- * Show rewarded video ad.
- * Returns a Promise that resolves with true if reward granted, false if skipped/error.
- * Stub: shows overlay with a "Watch" button, auto-completes after 3s.
- */
-export function showRewarded() {
-  // TODO: Replace with real Yandex Ads SDK rewarded
-  // window.yaSDK.adv.showRewardedVideo({ callbacks: { ... } })
+function showRewardedStub() {
   return new Promise((resolve) => {
     const overlay = createOverlay();
     overlay.innerHTML = `
@@ -104,16 +166,4 @@ export function showRewarded() {
       if (sec <= 0) finish(true);
     }, 1000);
   });
-}
-
-// ---- Helpers ----
-
-function createOverlay() {
-  const div = document.createElement('div');
-  div.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    background:rgba(0,0,0,0.85);z-index:9999;
-    display:flex;align-items:center;justify-content:center;
-  `;
-  return div;
 }

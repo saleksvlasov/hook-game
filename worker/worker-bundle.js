@@ -3,7 +3,7 @@
 // KV Binding: SCORES
 // Копировать ВЕСЬ этот файл в Cloudflare Workers Editor
 
-const STAR_PRICE = 6;
+const STAR_PRICE = 50;
 const LEADERBOARD_SIZE = 100;
 
 // ---- Telegram initData HMAC-SHA256 валидация ----
@@ -70,10 +70,12 @@ export default {
       if (url.pathname === '/claim-skin') return handleClaimSkin(request, env);
       if (url.pathname === '/sync-challenges') return handleSyncChallenges(request, env);
       if (url.pathname === '/sync-profile') return handleSyncProfile(request, env);
+      if (url.pathname === '/track-event') return handleTrackEvent(request, env);
     }
 
     if (request.method === 'GET') {
       if (url.pathname === '/leaderboard') return handleLeaderboard(env);
+      if (url.pathname === '/analytics') return handleAnalytics(url, env);
     }
 
     return new Response('Not found', { status: 404 });
@@ -389,6 +391,87 @@ async function handleSyncProfile(request, env) {
     activeSkin: challengeData?.activeSkin || 'default',
     weeklyProgress: challengeData?.weeklyProgress || {},
   });
+}
+
+// ---- Analytics: трекинг событий монетизации ----
+
+// События: death, ad_shown, ad_completed, ad_skipped, stars_attempt, stars_success, stars_fail
+// KV ключ: analytics:YYYY-MM-DD — агрегация по дням
+async function handleTrackEvent(request, env) {
+  if (!env.SCORES) return jsonResponse({ ok: true }); // без KV — молча пропускаем
+
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { event, height, gameTime } = body;
+  const validEvents = ['death', 'ad_shown', 'ad_completed', 'ad_skipped', 'stars_attempt', 'stars_success', 'stars_fail'];
+  if (!event || !validEvents.includes(event)) {
+    return jsonResponse({ error: 'Invalid event' }, 400);
+  }
+
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const key = `analytics:${today}`;
+
+  const existing = await env.SCORES.get(key, 'json') || {
+    date: today,
+    deaths: 0,
+    avgDeathHeight: 0,
+    totalDeathHeight: 0,
+    ad_shown: 0,
+    ad_completed: 0,
+    ad_skipped: 0,
+    stars_attempt: 0,
+    stars_success: 0,
+    stars_fail: 0,
+  };
+
+  if (event === 'death') {
+    existing.deaths += 1;
+    existing.totalDeathHeight += (height || 0);
+    existing.avgDeathHeight = Math.round(existing.totalDeathHeight / existing.deaths);
+  } else {
+    existing[event] = (existing[event] || 0) + 1;
+  }
+
+  // TTL 90 дней — автоочистка старых данных
+  await env.SCORES.put(key, JSON.stringify(existing), { expirationTtl: 90 * 86400 });
+
+  return jsonResponse({ ok: true });
+}
+
+// GET /analytics?days=7 — сводка по дням
+async function handleAnalytics(url, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  const days = Math.min(parseInt(url.searchParams.get('days') || '7', 10), 90);
+  const results = [];
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    const data = await env.SCORES.get(`analytics:${d}`, 'json');
+    if (data) results.push(data);
+  }
+
+  // Суммарные метрики
+  const totals = results.reduce((acc, d) => {
+    acc.deaths += d.deaths;
+    acc.totalHeight += d.totalDeathHeight;
+    acc.ad_shown += d.ad_shown;
+    acc.ad_completed += d.ad_completed;
+    acc.ad_skipped += d.ad_skipped;
+    acc.stars_attempt += d.stars_attempt;
+    acc.stars_success += d.stars_success;
+    acc.stars_fail += d.stars_fail;
+    return acc;
+  }, { deaths: 0, totalHeight: 0, ad_shown: 0, ad_completed: 0, ad_skipped: 0, stars_attempt: 0, stars_success: 0, stars_fail: 0 });
+
+  totals.avgDeathHeight = totals.deaths > 0 ? Math.round(totals.totalHeight / totals.deaths) : 0;
+  totals.adCompletionRate = totals.ad_shown > 0 ? Math.round(totals.ad_completed / totals.ad_shown * 100) : 0;
+  totals.starsConversionRate = totals.stars_attempt > 0 ? Math.round(totals.stars_success / totals.stars_attempt * 100) : 0;
+  totals.adPerDeath = totals.deaths > 0 ? Math.round(totals.ad_shown / totals.deaths * 100) : 0;
+  totals.starsPerDeath = totals.deaths > 0 ? Math.round(totals.stars_attempt / totals.deaths * 100) : 0;
+
+  return jsonResponse({ period: `${days} days`, totals, daily: results });
 }
 
 // ---- Helpers ----

@@ -38,14 +38,16 @@ export class GameOverUI {
     this.leaderboardUI = new LeaderboardUI();
 
     // Callbacks
-    this.onContinue = null;
+    this.onContinueAd = null;
+    this.onContinueStars = null;
     this.onRestart = null;
     this.onMenu = null;
   }
 
-  create({ onContinue, onRestart, onMenu, challengeMgr }) {
+  create({ onContinueAd, onContinueStars, onRestart, onMenu, challengeMgr }) {
     this._challengeMgr = challengeMgr || null;
-    this.onContinue = onContinue;
+    this.onContinueAd = onContinueAd;
+    this.onContinueStars = onContinueStars;
     this.onRestart = onRestart;
     this.onMenu = onMenu;
 
@@ -107,10 +109,15 @@ export class GameOverUI {
       opacity: 0; transition: opacity 0.3s ease;
     `;
 
-    // CONTINUE — Stars в Telegram, AD вне Telegram
-    const continueLabel = isTelegram() ? t('continue_star') : t('continue_ad');
-    this.continueBtn = this._createButton(continueLabel, 'continue');
-    this.buttonsDiv.appendChild(this.continueBtn);
+    // CONTINUE AD — бесплатное воскрешение через рекламу (1 раз за игру)
+    this.continueAdBtn = this._createButton(t('continue_ad'), 'continue_ad');
+    this.buttonsDiv.appendChild(this.continueAdBtn);
+
+    // CONTINUE STARS — платное воскрешение через Stars (только Telegram, без лимита)
+    if (isTelegram()) {
+      this.continueStarBtn = this._createButton(t('continue_star'), 'continue_star');
+      this.buttonsDiv.appendChild(this.continueStarBtn);
+    }
 
     // RESTART
     this.restartBtn = this._createButton(t('restart'), 'restart');
@@ -138,11 +145,11 @@ export class GameOverUI {
     btn.textContent = label;
 
     const isSmall = type === 'menu' || type === 'leaderboard';
-    const fontSize = isSmall ? '14px' : type === 'continue' ? '16px' : '20px';
-    const padding = isSmall ? '10px 32px' : type === 'continue' ? '12px 40px' : '14px 52px';
+    const isContinue = type === 'continue_ad' || type === 'continue_star';
+    const fontSize = isSmall ? '14px' : isContinue ? '16px' : '20px';
+    const padding = isSmall ? '10px 32px' : isContinue ? '12px 40px' : '14px 52px';
 
     // Цвета зависят от типа кнопки
-    const isContinue = type === 'continue';
     const isMenu = type === 'menu';
 
     // Базовый цвет текста и бордера
@@ -219,7 +226,8 @@ export class GameOverUI {
     // Click handler по типу
     const handlers = {
       restart: () => this.onRestart?.(),
-      continue: () => this.onContinue?.(),
+      continue_ad: () => this.onContinueAd?.(),
+      continue_star: () => this.onContinueStars?.(),
       menu: () => this.onMenu?.(),
       leaderboard: () => this.leaderboardUI.show(),
     };
@@ -228,7 +236,7 @@ export class GameOverUI {
     return btn;
   }
 
-  show(score, best, isNewBest, continueUsed) {
+  show(score, best, isNewBest) {
     const W = this.scene.W;
     const H = this.scene.H;
 
@@ -293,7 +301,10 @@ export class GameOverUI {
     // 700ms: HTML кнопки opacity 0 -> 1
     this.buttonsDiv.style.display = 'flex';
     this.buttonsDiv.style.opacity = '0';
-    this.continueBtn.style.display = continueUsed ? 'none' : 'block';
+    // AD кнопка — всегда видна (больше просмотров рекламы = больше доход)
+    this.continueAdBtn.style.display = 'block';
+    // Stars кнопка — всегда видна в Telegram (без лимита)
+    if (this.continueStarBtn) this.continueStarBtn.style.display = 'block';
 
     this.scene.time.delayedCall(700, () => {
       this.buttonsDiv.style.opacity = '1';
@@ -384,10 +395,6 @@ export class GameOverUI {
         if (el && el.active) el.setVisible(false).setAlpha(1);
       }
     }, 200);
-  }
-
-  showContinueBtn(visible) {
-    this.continueBtn.style.display = visible ? 'block' : 'none';
   }
 
   destroy() {

@@ -158,6 +158,15 @@ export async function syncProfile() {
   }
 }
 
+// Трекинг событий аналитики (fire-and-forget)
+export function trackEvent(event, data = {}) {
+  fetch(`${WORKER_URL}/track-event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, ...data }),
+  }).catch(() => {}); // молча — аналитика не должна ломать игру
+}
+
 // Загрузить лидерборд
 export async function fetchLeaderboard() {
   try {

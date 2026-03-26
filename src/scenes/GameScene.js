@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit } from '../audio.js';
 import { getBest, saveBest } from '../storage.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
-import { isTelegram, purchaseContinue, saveScoreOnline, saveChallengeOnline } from '../telegram.js';
+import { isTelegram, purchaseContinue, saveScoreOnline, saveChallengeOnline, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
 import { GROUND_Y, SPAWN_Y, Z } from '../constants.js';
 
@@ -56,7 +56,6 @@ export class GameScene extends Phaser.Scene {
     this.maxHeight = 0;
     this.sessionBest = getBest();
     this.isDead = false;
-    this.continueUsed = false;
     this.lastReleaseTime = 0;    // Кулдаун хука
     this.bugHitCooldown = 0;     // Защита от повторных ударов жуков
 
@@ -109,7 +108,8 @@ export class GameScene extends Phaser.Scene {
 
     this.gameOverUI = new GameOverUI(this);
     this.gameOverUI.create({
-      onContinue: () => this.continueWithAd(),
+      onContinueAd: () => this.continueWithAd(),
+      onContinueStars: () => this.continueWithStars(),
       onRestart: () => this.handleRestart(),
       onMenu: () => {
         trackGameEnd();
@@ -248,41 +248,59 @@ export class GameScene extends Phaser.Scene {
     const gameTime = (Date.now() - this.gameStartTime) / 1000;
     saveChallengeOnline(this.maxHeight, this.hitCount, gameTime);
 
-    this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0, this.continueUsed);
+    this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0);
+
+    // Аналитика смерти
+    trackEvent('death', { height: this.maxHeight, gameTime });
 
     playDeath();
   }
 
+  // Воскрешение через rewarded ad (бесплатно, без лимита)
   async continueWithAd() {
-    // НЕ скрываем UI до результата — просто ждём ответ
-    const rewarded = isTelegram()
-      ? await purchaseContinue()
-      : await showRewarded();
-    if (!this.isDead) return;
-    if (!this.scene.isActive()) return;
-
+    trackEvent('ad_shown', { height: this.maxHeight });
+    const rewarded = await showRewarded();
+    if (!this.isDead || !this.scene.isActive()) return;
     if (rewarded) {
-      // Успех — скрываем UI и респавним
-      this.gameOverUI.hide();
-      this.isDead = false;
-      this.continueUsed = true;
-
-      const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
-      const targetY = GROUND_Y - targetHeight * 10;
-
-      this.anchorMgr.generateAnchorsUpTo(targetY - 1500);
-      this.obstacles.generateUpTo(targetY - 1500, this.anchorMgr.anchors);
-
-      this.player.setPosition(this.W / 2, targetY);
-      this.player.body.reset(this.W / 2, targetY);
-      this.player.body.allowGravity = true;
-      this.player.body.setVelocity(0, -300);
-      this.playerContainer.setAlpha(1);
-
-      this.cameras.main.scrollY = targetY - this.H * 0.55;
-      this.hud.setHint('click_hook');
+      trackEvent('ad_completed', { height: this.maxHeight });
+      this._respawnPlayer();
+    } else {
+      trackEvent('ad_skipped', { height: this.maxHeight });
     }
-    // Отмена — ничего не делаем, кнопки уже видны
+  }
+
+  // Воскрешение через Stars (платно, без лимита)
+  async continueWithStars() {
+    trackEvent('stars_attempt', { height: this.maxHeight });
+    const paid = await purchaseContinue();
+    if (!this.isDead || !this.scene.isActive()) return;
+    if (paid) {
+      trackEvent('stars_success', { height: this.maxHeight });
+      this._respawnPlayer();
+    } else {
+      trackEvent('stars_fail', { height: this.maxHeight });
+    }
+  }
+
+  // Общий респавн после любого типа воскрешения
+  _respawnPlayer() {
+    this.gameOverUI.hide();
+    this.isDead = false;
+
+    const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
+    const targetY = GROUND_Y - targetHeight * 10;
+
+    this.anchorMgr.generateAnchorsUpTo(targetY - 1500);
+    this.obstacles.generateUpTo(targetY - 1500, this.anchorMgr.anchors);
+
+    this.player.setPosition(this.W / 2, targetY);
+    this.player.body.reset(this.W / 2, targetY);
+    this.player.body.allowGravity = true;
+    this.player.body.setVelocity(0, -300);
+    this.playerContainer.setAlpha(1);
+
+    this.cameras.main.scrollY = targetY - this.H * 0.55;
+    this.hud.setHint('click_hook');
   }
 
   async handleRestart() {
