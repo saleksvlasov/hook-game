@@ -14,6 +14,23 @@ const INTERSTITIAL_BLOCK_ID = 'int-25944';
 let rewardedController = null;
 let interstitialController = null;
 
+// Ожидание загрузки Adsgram SDK (до 3с)
+let _adsgramReady = null;
+function waitForAdsgram() {
+  if (_adsgramReady) return _adsgramReady;
+  if (window.Adsgram) return Promise.resolve(window.Adsgram);
+  _adsgramReady = new Promise((resolve) => {
+    const start = Date.now();
+    const check = () => {
+      if (window.Adsgram) { resolve(window.Adsgram); return; }
+      if (Date.now() - start > 3000) { resolve(null); return; }
+      setTimeout(check, 50);
+    };
+    check();
+  });
+  return _adsgramReady;
+}
+
 function getAdsgram() {
   return window.Adsgram || null;
 }
@@ -54,28 +71,25 @@ export function trackGameEnd() {
 
 // ---- Interstitial (между играми, каждые 5) ----
 
-export function showInterstitial() {
+export async function showInterstitial() {
+  await waitForAdsgram();
   const ctrl = getInterstitialController();
   if (ctrl) {
-    // Adsgram SDK — реальная реклама, при ошибке тихо пропускаем
     return ctrl.show().catch(() => {});
   }
-  // Fallback — заглушка вне Telegram
   return showInterstitialStub();
 }
 
 // ---- Rewarded (воскрешение) ----
 
-export function showRewarded() {
+export async function showRewarded() {
+  await waitForAdsgram();
   const ctrl = getRewardedController();
   if (ctrl) {
-    // Adsgram SDK — rewarded видео
-    // При ошибке (блок не активен, нет рекламы) → fallback на заглушку
     return ctrl.show()
       .then(() => true)
       .catch(() => showRewardedStub());
   }
-  // Fallback — заглушка вне Telegram
   return showRewardedStub();
 }
 
