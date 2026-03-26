@@ -25,13 +25,23 @@ export const GROUND_Y = WORLD_HEIGHT - 10;
 export const SPAWN_Y = WORLD_HEIGHT - 400;
 
 // Пасхалки
-export const BOUNTY_HEIGHT = 1000;
-export const MOON_HEIGHT = 3000;
+export const BOUNTY_HEIGHT = 500;
+export const MOON_HEIGHT = 1500;
 
 // Препятствия — жуки
 export const OBSTACLE_START_HEIGHT = 50;    // метры — начало спавна (ближе для видимости)
 export const OBSTACLE_CHANCE = 0.4;         // 40% шанс жука на уровне каждого крюка
 export const OBSTACLE_HIT_RADIUS = 22;      // пиксели — радиус коллизии
+
+// Сердца / жизни
+export const HEARTS_MAX = 6;                  // Половинки (3 полных сердца)
+export const HEARTS_MAX_BONUS = 8;            // С бонусом (4 полных сердца)
+export const HEART_DAMAGE = 1;                // Урон от жука (1 половинка = 0.5 сердца)
+export const HEART_PICKUP_CHANCE = 0.08;      // 8% шанс на уровне
+export const HEART_PICKUP_MIN_HEIGHT = 150;   // Минимальная высота для спавна (метры)
+export const HEART_PICKUP_MIN_DISTANCE = 15000; // Минимум 1500м между пикапами (пиксели)
+export const HEART_PICKUP_RADIUS = 28;        // Радиус коллизии пикапа
+export const HEART_BONUS_DURATION = 30000;    // 30 секунд бонусного 4-го сердца
 
 // ===== ПАЛИТРА NEON WESTERN =====
 // Неоновый вестерн — яркий неон на глубоком тёмном фоне

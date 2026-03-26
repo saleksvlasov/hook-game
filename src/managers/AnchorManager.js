@@ -64,9 +64,13 @@ export class AnchorManager {
     anchor.scale = active ? 1.2 : 1;
   }
 
-  // Отрисовка всех якорей — вызывается из GameScene.update()
+  // Отрисовка якорей — только видимые
   draw(ctx) {
+    const cam = this.scene.camera;
+    const top = cam.scrollY - 50;
+    const bot = cam.scrollY + this.scene.H + 50;
     for (const a of this.anchors) {
+      if (a.y < top || a.y > bot) continue;
       ctx.save();
       ctx.translate(a.x, a.y);
       ctx.scale(a.scale, a.scale);

@@ -162,7 +162,13 @@ export class TweenManager {
               tw.target[key] = val.to !== undefined ? val.to : tw.startValues[key];
             }
             if (tw.onComplete) tw.onComplete();
-            this._tweens.splice(i, 1);
+            // Swap-and-pop вместо splice (O(1) вместо O(n))
+            // Guard: onComplete мог вызвать clear()
+            if (this._tweens.length > 0) {
+              const last = this._tweens.length - 1;
+              if (i < last) this._tweens[i] = this._tweens[last];
+              this._tweens.length = last;
+            }
           }
         }
       }

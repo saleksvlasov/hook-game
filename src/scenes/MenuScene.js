@@ -163,10 +163,10 @@ export class MenuScene extends Scene {
     // Hint
     this.tweens.add({ targets: this._ui, hintAlpha: 1, hintY: H - 24, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
 
-    // Пульсация кнопки CLIMB
+    // Пульсация кнопки CLIMB — плавный масштаб + свечение
     this.tweens.add({
-      targets: this._ui.btnGlowPulse, alpha: 0.24, scaleX: 1.05, scaleY: 1.05,
-      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: this._ui.btnGlowPulse, alpha: 0.35, scaleX: 1.04, scaleY: 1.04,
+      duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
     // Пульсация hint
     this.tweens.add({
@@ -433,26 +433,35 @@ export class MenuScene extends Scene {
     ctx.textBaseline = 'middle';
     ctx.fillText(this._subtitleText.substring(0, this._subtitleChars), W / 2, ui.subtitleY);
 
-    // === Кнопка CLIMB ===
+    // === Кнопка CLIMB — пульсация самой кнопки ===
     const btnW = 250, btnH = 64;
-    // Glow
+    const pulse = ui.btnGlowPulse;
+    const btnScale = pulse.scaleX; // 1.0 → 1.04
+
+    ctx.save();
+    ctx.translate(W / 2, ui.btnY);
+    ctx.scale(btnScale, btnScale);
+
+    // Мягкий ореол под кнопкой (cyan glow, пульсирует вместе)
     if (ui.btnGlowAlpha > 0.01) {
-      ctx.globalAlpha = ui.btnGlowAlpha * ui.btnGlowPulse.alpha;
+      ctx.globalAlpha = ui.btnGlowAlpha * pulse.alpha * 0.5;
+      ctx.shadowColor = NEON_CYAN_STR;
+      ctx.shadowBlur = 30 + pulse.alpha * 20;
       ctx.fillStyle = NEON_CYAN_STR;
-      ctx.save();
-      ctx.translate(W / 2, ui.btnY);
-      ctx.scale(ui.btnGlowPulse.scaleX, ui.btnGlowPulse.scaleY);
+      const r = 12;
       ctx.beginPath();
-      ctx.rect(-(btnW + 20) / 2, -(btnH + 20) / 2, btnW + 20, btnH + 20);
+      ctx.roundRect(-btnW / 2, -btnH / 2, btnW, btnH, r);
       ctx.fill();
-      ctx.restore();
+      ctx.shadowBlur = 0;
     }
-    // Button
+
+    // Кнопка
     if (ui.btnGfxAlpha > 0.01) {
       ctx.globalAlpha = ui.btnGfxAlpha;
-      drawGlassButton(ctx, W / 2, ui.btnY, btnW, btnH);
+      drawGlassButton(ctx, 0, 0, btnW, btnH);
     }
-    // Text
+
+    // Текст
     ctx.globalAlpha = ui.btnTextAlpha;
     ctx.font = `bold 32px ${NEON_FONT}`;
     ctx.fillStyle = NEON_AMBER_STR;
@@ -461,10 +470,13 @@ export class MenuScene extends Scene {
     ctx.strokeStyle = BG_DARK_STR;
     ctx.lineWidth = 4;
     ctx.shadowColor = '#FFB800';
-    ctx.shadowBlur = 4;
-    ctx.strokeText(t('play'), W / 2, ui.btnTextY);
-    ctx.fillText(t('play'), W / 2, ui.btnTextY);
+    ctx.shadowBlur = 4 + pulse.alpha * 6;
+    const textOffsetY = ui.btnTextY - ui.btnY; // учитываем анимацию появления
+    ctx.strokeText(t('play'), 0, textOffsetY);
+    ctx.fillText(t('play'), 0, textOffsetY);
     ctx.shadowBlur = 0;
+
+    ctx.restore();
 
     // === Рекорд ===
     if (ui.best > 0) {

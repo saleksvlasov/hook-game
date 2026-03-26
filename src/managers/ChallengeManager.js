@@ -1,21 +1,40 @@
 import { profile, getCurrentWeek } from '../data/index.js';
 import { SKINS } from './SkinRenderer.js';
 
-// Пул типов испытаний
+// Пул типов испытаний (цели повышены до 100к — тестовый период)
 const CHALLENGE_TYPES = [
-  { type: 'reach', genTarget: (w) => 6000 + w * 200 },          // набрать Xм за одну игру
-  { type: 'total', genTarget: (w) => 8000 + w * 1000 },         // суммарно Xм за неделю
-  { type: 'no_hit', genTarget: (w) => 5500 + w * 200 },         // Xм без столкновений с жуками
-  { type: 'games', genTarget: (w) => 30 + w * 5 },              // сыграть X игр за неделю
-  { type: 'streak', genTarget: (w) => 5300 + w * 100, count: 3 }, // набрать Xм 3 раза подряд
+  { type: 'reach', genTarget: (w) => 100000 + w * 5000 },         // набрать Xм за одну игру
+  { type: 'total', genTarget: (w) => 150000 + w * 10000 },        // суммарно Xм за неделю
+  { type: 'no_hit', genTarget: (w) => 100000 + w * 5000 },        // Xм без столкновений с жуками
+  { type: 'games', genTarget: (w) => 500 + w * 50 },              // сыграть X игр за неделю
+  { type: 'streak', genTarget: (w) => 100000 + w * 5000, count: 3 }, // набрать Xм 3 раза подряд
 ];
+
+// Версия данных — при изменении сбрасывает скины и прогресс (тестовый период)
+const CHALLENGE_DATA_VERSION = 2;
 
 export class ChallengeManager {
   constructor() {
     this.week = getCurrentWeek();
+    this._migrateIfNeeded();
     this.data = { unlockedSkins: profile.unlockedSkins, weeklyProgress: { ...profile.weeklyProgress } };
     this._ensureWeekChallenge();
     this.cleanupOldWeeks(); // Чистим старые недели при каждом запуске
+  }
+
+  // Сброс скинов и прогресса при изменении версии данных
+  _migrateIfNeeded() {
+    const stored = parseInt(localStorage.getItem('thehook_challenge_ver') || '0', 10);
+    if (stored < CHALLENGE_DATA_VERSION) {
+      // Сбрасываем все разблокированные скины и прогресс
+      profile.updateWeeklyProgress({});
+      // Сбрасываем unlockedSkins через saveField
+      profile._data.unlockedSkins = ['default'];
+      profile._data.activeSkin = 'default';
+      profile._provider.saveField('unlockedSkins', ['default']).catch(() => {});
+      profile._provider.saveField('activeSkin', 'default').catch(() => {});
+      try { localStorage.setItem('thehook_challenge_ver', String(CHALLENGE_DATA_VERSION)); } catch {}
+    }
   }
 
   // Генерация испытания для текущей недели (детерминированная по номеру недели)

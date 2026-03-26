@@ -146,11 +146,15 @@ export class BiomeManager {
     const sparks = sparkLayer.sparks;
     const sf = sparkLayer.sf;
     const spanX = this.W / sf;
+    const W = this.W;
+    const H = this.scene.H;
+    // Viewport culling с запасом
+    const margin = 30;
 
     for (let i = 0; i < sparks.length; i++) {
       const s = sparks[i];
 
-      // Движение
+      // Движение (всегда обновляем позицию)
       const drift = Math.sin(time * 0.001 + s.driftPhase) * s.driftAmp * 0.008;
       s.baseX += s.speedX + drift;
       s.baseY += s.speedY;
@@ -164,16 +168,20 @@ export class BiomeManager {
         if (s.baseY > s.yEnd) s.baseY -= spanY;
       }
 
+      // Экранные координаты с parallax
+      const screenX = s.baseX - camera.scrollX * sf;
+      const screenY = s.baseY - camera.scrollY * sf;
+
+      // Viewport culling — пропускаем невидимые искры
+      if (screenX < -margin || screenX > W + margin ||
+          screenY < -margin || screenY > H + margin) continue;
+
       // Мерцание
       const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * s.flickerSpeed + s.flickerPhase));
       const scale = 0.6 + flicker * 0.4;
       const sz = s.size * scale;
 
       const alpha = layerAlpha * s.baseAlpha * flicker;
-
-      // Экранные координаты с parallax
-      const screenX = s.baseX - camera.scrollX * sf;
-      const screenY = s.baseY - camera.scrollY * sf;
 
       // Ядро искры
       ctx.globalAlpha = alpha;

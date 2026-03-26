@@ -13,6 +13,7 @@ export class EasterEggs {
     this.scene = scene;
     this.bountyShown = false;
     this.moonReached = false;
+    this.onHeartBonus = null; // callback для бонуса сердец
 
     // Анимация Bounty
     this._bountyActive = false;
@@ -41,10 +42,12 @@ export class EasterEggs {
     if (currentHeight >= BOUNTY_HEIGHT && !this.bountyShown) {
       this.bountyShown = true;
       this._startBounty();
+      if (this.onHeartBonus) this.onHeartBonus();
     }
     if (currentHeight >= MOON_HEIGHT && !this.moonReached) {
       this.moonReached = true;
       this._startMoonwalker();
+      if (this.onHeartBonus) this.onHeartBonus();
     }
   }
 

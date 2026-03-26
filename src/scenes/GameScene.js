@@ -1,11 +1,11 @@
 import { Scene } from '../engine/Scene.js';
 import { clamp, lerp } from '../engine/math.js';
-import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit } from '../audio.js';
+import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup } from '../audio.js';
 import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
-import { GROUND_Y, SPAWN_Y } from '../constants.js';
+import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
 import { TrailManager } from '../managers/TrailManager.js';
@@ -65,6 +65,12 @@ export class GameScene extends Scene {
     this.lastReleaseTime = 0;
     this.bugHitCooldown = 0;
 
+    // Hearts / Lives
+    this.hearts = HEARTS_MAX;        // 6 половинок = 3 сердца
+    this.maxHearts = HEARTS_MAX;
+    this.heartBonusTimer = 0;
+    this._heartsDisabled = false;    // true = 0 сердец, падение без хука
+
     // Физика маятника — чистые расчёты
     this.physics_ = new SwingPhysics();
 
@@ -119,6 +125,22 @@ export class GameScene extends Scene {
     });
 
     this.eggs = new EasterEggs(this);
+    this.eggs.onHeartBonus = () => {
+      if (this.hearts < HEARTS_MAX) {
+        // Восстановить все сердца
+        this.hearts = HEARTS_MAX;
+        this.maxHearts = HEARTS_MAX;
+      } else {
+        // Бонусное 4-е сердце на 30 секунд
+        this.maxHearts = HEARTS_MAX_BONUS;
+        this.hearts = HEARTS_MAX_BONUS;
+        this.heartBonusTimer = HEART_BONUS_DURATION;
+      }
+      this.hud.updateHearts(this.hearts, this.maxHearts);
+    };
+
+    // HUD hearts
+    this.hud.updateHearts(this.hearts, this.maxHearts);
 
     // Камера
     this.camera.scrollX = 0;
@@ -148,7 +170,7 @@ export class GameScene extends Scene {
   // ===================== INPUT =====================
 
   handlePointerDown() {
-    if (this.isDead) return;
+    if (this.isDead || this._heartsDisabled) return;
     if (this.isHooked) {
       this.releaseHook();
     } else {
@@ -180,6 +202,10 @@ export class GameScene extends Scene {
     this.player.allowGravity = false;
     this.player.vx = 0;
     this.player.vy = 0;
+
+    // Сразу ставим игрока на конец верёвки — без "телепортации" через кадр
+    this.player.x = result.anchor.x + Math.cos(result.swingAngle) * result.ropeLength;
+    this.player.y = result.anchor.y + Math.sin(result.swingAngle) * result.ropeLength;
 
     this.anchorMgr.highlightAnchor(result.anchor, true);
 
@@ -278,6 +304,13 @@ export class GameScene extends Scene {
 
   _respawnPlayer() {
     this.gameOverUI.hide();
+
+    // Восстановить сердца
+    this.hearts = HEARTS_MAX;
+    this.maxHearts = HEARTS_MAX;
+    this.heartBonusTimer = 0;
+    this._heartsDisabled = false;
+    this.hud.updateHearts(this.hearts, this.maxHearts);
 
     const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
     const targetY = GROUND_Y - targetHeight * 10;
@@ -418,6 +451,7 @@ export class GameScene extends Scene {
 
         this.swingAngle = result.angle;
         this.swingSpeed = result.speed;
+        this.ropeLength = result.ropeLen; // Плавное подтягивание верёвки
 
         p.x = result.x;
         p.y = result.y;
@@ -526,9 +560,12 @@ export class GameScene extends Scene {
     this.obstacles.update(delta, p.y);
 
     // ===== 9. Коллизия с жуками =====
-    if (!this.isDead && this.bugHitCooldown <= 0
+    if (!this.isDead && !this._heartsDisabled && this.bugHitCooldown <= 0
         && this.obstacles.checkCollision(p.x, p.y)) {
       this.hitCount++;
+      this.hearts = Math.max(0, this.hearts - 1); // -0.5 сердца
+      this.hud.updateHearts(this.hearts, this.maxHearts);
+
       if (this.isHooked) this.releaseHook();
       // Откидывание вниз и в сторону
       const knockX = (Math.random() - 0.5) * 300;
@@ -546,11 +583,36 @@ export class GameScene extends Scene {
       p.alpha = 0.4;
       this._blinkActive = true;
       this._blinkTime = 0;
-      this._blinkDuration = 600; // 6 blinks * 100ms
-      // После мигания, через 1.5сек плавно возвращаем
+      this._blinkDuration = 600;
       this._invulnTime = 1500;
+
+      // 0 сердец → неизбежная смерть (падение без возможности зацепиться)
+      if (this.hearts <= 0) {
+        this._heartsDisabled = true;
+      }
+    }
+
+    // ===== 9.5 Подбор сердца =====
+    if (!this.isDead && !this._heartsDisabled
+        && this.obstacles.checkHeartPickup(p.x, p.y)) {
+      if (this.hearts < this.maxHearts) {
+        this.hearts = Math.min(this.hearts + 2, this.maxHearts); // +1 полное сердце
+        this.hud.updateHearts(this.hearts, this.maxHearts);
+        playHeartPickup();
+        navigator.vibrate?.(10);
+      }
     }
     if (this.bugHitCooldown > 0) this.bugHitCooldown -= delta;
+
+    // Heart bonus timer — 4-е сердце временное
+    if (this.maxHearts > HEARTS_MAX && this.heartBonusTimer > 0) {
+      this.heartBonusTimer -= delta;
+      if (this.heartBonusTimer <= 0) {
+        this.maxHearts = HEARTS_MAX;
+        this.hearts = Math.min(this.hearts, HEARTS_MAX);
+        this.hud.updateHearts(this.hearts, this.maxHearts);
+      }
+    }
 
     // ===== 10. Пасхалки =====
     this.eggs.check(currentHeight);

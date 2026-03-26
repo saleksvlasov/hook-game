@@ -201,6 +201,12 @@ export function playBugHit() {
   } catch(e) { /* audio context closed or unavailable */ }
 }
 
+// Подбор сердца — восходящий мелодичный тон
+export function playHeartPickup() {
+  osc('sine', 523, 0.15, 0.15, 784);    // C5 → G5
+  osc('triangle', 659, 0.12, 0.1, 1047); // E5 → C6
+}
+
 export function destroyAudio() {
   if (ctx && ctx.state !== 'closed') {
     ctx.close().catch(() => {});

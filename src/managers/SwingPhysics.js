@@ -28,15 +28,16 @@ export class SwingPhysics {
     let minDist = Infinity;
 
     for (const anchor of anchors) {
+      // Быстрый фильтр по Y — пропускаем далёкие якоря без sqrt
+      const dy = py - anchor.y;
+      if (dy < -effectiveRange || dy > effectiveRange) continue;
+
       // Якоря выше — полный радиус, якоря ниже — уменьшенный (но не запрещены)
       const isBelow = anchor.y > py + 50;
       const range = isBelow ? effectiveRange * 0.75 : effectiveRange;
-      // Wrap-aware расстояние по X — учитываем телепортацию
-      const dx1 = Math.abs(px - anchor.x);
-      const dx2 = Math.abs(px - anchor.x + screenW);
-      const dx3 = Math.abs(px - anchor.x - screenW);
-      const dx = Math.min(dx1, dx2, dx3);
-      const dy = py - anchor.y;
+      // Простое расстояние по X (без wrap — избегаем телепортации через край экрана)
+      const dx = Math.abs(px - anchor.x);
+      if (dx > range) continue;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < minDist && dist < range) {
         minDist = dist;
@@ -47,7 +48,8 @@ export class SwingPhysics {
     // Промах — нет якорей в радиусе
     if (!nearest) return null;
 
-    const ropeLength = clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
+    // Не клампим сверху — стартуем с реального расстояния, плавно подтягиваем в updatePendulum
+    const ropeLength = Math.max(minDist, MIN_ROPE);
 
     const dx = px - nearest.x;
     const dy = py - nearest.y;
@@ -90,16 +92,22 @@ export class SwingPhysics {
    * @returns {{ x: number, y: number, angle: number, speed: number }}
    */
   updatePendulum(dt, anchor, state) {
-    const angularAccel = (GRAVITY / state.ropeLen) * Math.cos(state.angle);
+    // Плавное подтягивание верёвки к MAX_ROPE_LENGTH (~300px/сек)
+    let ropeLen = state.ropeLen;
+    if (ropeLen > MAX_ROPE_LENGTH) {
+      ropeLen = Math.max(MAX_ROPE_LENGTH, ropeLen - 300 * dt);
+    }
+
+    const angularAccel = (GRAVITY / ropeLen) * Math.cos(state.angle);
     let speed = state.speed + angularAccel * dt;
     speed *= SWING_FRICTION;
 
     const angle = state.angle + speed * dt;
 
-    const x = anchor.x + Math.cos(angle) * state.ropeLen;
-    const y = anchor.y + Math.sin(angle) * state.ropeLen;
+    const x = anchor.x + Math.cos(angle) * ropeLen;
+    const y = anchor.y + Math.sin(angle) * ropeLen;
 
-    return { x, y, angle, speed };
+    return { x, y, angle, speed, ropeLen };
   }
 
   // ===================== WRAP-AROUND =====================

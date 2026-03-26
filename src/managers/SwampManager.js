@@ -58,12 +58,16 @@ export class SwampManager {
     }
     this.active.length = writeIdx;
 
-    // Жёсткий лимит
+    // Жёсткий лимит (write-pointer, без splice)
     if (this.active.length > 20) {
-      for (let i = 0; i < this.active.length - 20; i++) {
+      const excess = this.active.length - 20;
+      for (let i = 0; i < excess; i++) {
         this.pool.release(this.active[i]);
       }
-      this.active.splice(0, this.active.length - 20);
+      for (let i = 0; i < 20; i++) {
+        this.active[i] = this.active[i + excess];
+      }
+      this.active.length = 20;
     }
   }
 

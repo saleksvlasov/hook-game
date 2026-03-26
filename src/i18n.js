@@ -45,6 +45,8 @@ export const LANGS = {
     skin_locked: 'Locked',
     skin_equipped: 'Equipped',
     skin_equip: 'Equip',
+    heart_bonus: '+HEART!',
+    hearts_restored: 'HEARTS RESTORED!',
     loading: 'Loading...',
   },
   ru: {
@@ -91,6 +93,8 @@ export const LANGS = {
     skin_locked: 'Закрыт',
     skin_equipped: 'Надет',
     skin_equip: 'Надеть',
+    heart_bonus: '+СЕРДЦЕ!',
+    hearts_restored: 'СЕРДЦА ВОССТАНОВЛЕНЫ!',
     loading: 'Загрузка...',
   },
 };

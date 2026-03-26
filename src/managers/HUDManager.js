@@ -31,6 +31,12 @@ export class HUDManager {
     this._hintAlpha = 1;
     this._hintPulseTime = 0;
 
+    // Hearts
+    this._hearts = 6;
+    this._maxHearts = 6;
+    this._heartBlink = false;
+    this._heartBlinkTime = 0;
+
     // Safe area отступ
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     this._safeTop = Math.max(envTop, 10);
@@ -83,6 +89,15 @@ export class HUDManager {
   setHint(key) {
     this._hintStr = t(key);
     this._hintScale = 1.15;
+  }
+
+  updateHearts(hearts, maxHearts) {
+    if (hearts < this._hearts) {
+      this._heartBlink = true;
+      this._heartBlinkTime = 0;
+    }
+    this._hearts = hearts;
+    this._maxHearts = maxHearts;
   }
 
   updateChallenge(progress, target) {
@@ -197,6 +212,28 @@ export class HUDManager {
     ctx.restore();
     ctx.globalAlpha = 1;
 
+    // === Сердца — правый верхний угол ===
+    const heartCount = Math.ceil(this._maxHearts / 2); // 3 или 4
+    const heartSize = 12;
+    const heartGap = 6;
+
+    // Blink при ударе
+    if (this._heartBlink) {
+      this._heartBlinkTime += delta;
+      if (this._heartBlinkTime > 500) this._heartBlink = false;
+    }
+    const showHearts = !this._heartBlink || Math.floor(this._heartBlinkTime / 80) % 2 === 0;
+
+    if (showHearts) {
+      for (let i = 0; i < heartCount; i++) {
+        const hx = W - 20 - i * (heartSize * 2 + heartGap);
+        const hy = safeTop + 20;
+        const halfHearts = this._hearts - i * 2;
+        const state = halfHearts >= 2 ? 'full' : halfHearts === 1 ? 'half' : 'empty';
+        this._drawHUDHeart(ctx, hx, hy, heartSize, state);
+      }
+    }
+
     // === Виджет еженедельного испытания (отступ от подсказки) ===
     if (this._hasChallengeWidget) {
       const chipY = safeTop + 114;
@@ -217,6 +254,57 @@ export class HUDManager {
       ctx.fillText(this._challengeStr, W / 2, chipY);
       ctx.globalAlpha = 1;
     }
+  }
+
+  // Рисование одного HUD-сердца (full/half/empty)
+  _drawHUDHeart(ctx, x, y, size, state) {
+    ctx.save();
+    ctx.translate(x, y);
+    const s = size / 12;
+
+    // Bezier path сердца
+    const heartPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(0, 6 * s);
+      ctx.bezierCurveTo(-8 * s, -1 * s, -12 * s, -7 * s, -7 * s, -11 * s);
+      ctx.bezierCurveTo(-3 * s, -14 * s, 0, -11 * s, 0, -8 * s);
+      ctx.bezierCurveTo(0, -11 * s, 3 * s, -14 * s, 7 * s, -11 * s);
+      ctx.bezierCurveTo(12 * s, -7 * s, 8 * s, -1 * s, 0, 6 * s);
+    };
+
+    if (state === 'full') {
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#FF2E63';
+      heartPath();
+      ctx.fill();
+    } else if (state === 'half') {
+      // Левая половина заполнена
+      ctx.save();
+      heartPath();
+      ctx.clip();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#FF2E63';
+      ctx.fillRect(-14 * s, -16 * s, 14 * s, 24 * s);
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#FF2E63';
+      ctx.fillRect(0, -16 * s, 14 * s, 24 * s);
+      ctx.restore();
+      // Контур
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = '#FF2E63';
+      ctx.lineWidth = 1;
+      heartPath();
+      ctx.stroke();
+    } else {
+      // Empty — только контур
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = '#FF2E63';
+      ctx.lineWidth = 1;
+      heartPath();
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   destroy() {

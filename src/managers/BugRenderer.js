@@ -185,12 +185,38 @@ export function drawFirefly(ctx) {
   ctx.globalAlpha = 1;
 }
 
-// Универсальный роутер — рисует жука по типу (0-3)
+// Heart pickup — neon pink сердце с cyan свечением
+export function drawHeart(ctx) {
+  // Свечение
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#FF2E63';
+  fillCircle(ctx, 0, 0, 18);
+
+  // Сердце — bezier path
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#FF2E63';
+  ctx.beginPath();
+  ctx.moveTo(0, 8);
+  ctx.bezierCurveTo(-10, 0, -14, -8, -8, -13);
+  ctx.bezierCurveTo(-3, -17, 0, -13, 0, -9);
+  ctx.bezierCurveTo(0, -13, 3, -17, 8, -13);
+  ctx.bezierCurveTo(14, -8, 10, 0, 0, 8);
+  ctx.fill();
+
+  // Блик
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#FFFFFF';
+  fillCircle(ctx, -4, -10, 2.5);
+  ctx.globalAlpha = 1;
+}
+
+// Универсальный роутер — рисует жука по типу (0-4)
 export function drawBug(ctx, type) {
   switch (type) {
     case 0: drawBeetle(ctx); break;
     case 1: drawSpider(ctx); break;
     case 2: drawScorpion(ctx); break;
     case 3: drawFirefly(ctx); break;
+    case 4: drawHeart(ctx); break;
   }
 }
