@@ -151,12 +151,9 @@ class UserProfile {
 
   _hasChanges(newData) {
     if (!this._data) return true;
-    return (
-      newData.bestScore !== this._data.bestScore ||
-      newData.moonReached !== this._data.moonReached ||
-      newData.activeSkin !== this._data.activeSkin ||
-      newData.unlockedSkins?.length !== this._data.unlockedSkins?.length
-    );
+    // Всегда нотифицировать при серверной синхронизации — данные могут отличаться
+    // по weeklyProgress, которые сложно сравнивать поверхностно
+    return true;
   }
 }
 
