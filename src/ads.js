@@ -5,7 +5,7 @@
 
 import { profile } from './data/index.js';
 
-const INTERSTITIAL_EVERY = 5;
+const INTERSTITIAL_EVERY = 8;
 
 const REWARDED_BLOCK_ID = '25943';
 const INTERSTITIAL_BLOCK_ID = 'int-25944';
