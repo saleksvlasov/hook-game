@@ -10,8 +10,8 @@ const CHALLENGE_TYPES = [
   { type: 'streak', genTarget: (w) => 100000 + w * 5000, count: 3 }, // набрать Xм 3 раза подряд
 ];
 
-// Версия данных — при изменении сбрасывает скины и прогресс (тестовый период)
-const CHALLENGE_DATA_VERSION = 2;
+// Версия данных — при изменении сбрасывает ВСЁ: рекорды + скины + прогресс (тестовый период)
+const CHALLENGE_DATA_VERSION = 4;
 
 export class ChallengeManager {
   constructor() {
@@ -22,17 +22,24 @@ export class ChallengeManager {
     this.cleanupOldWeeks(); // Чистим старые недели при каждом запуске
   }
 
-  // Сброс скинов и прогресса при изменении версии данных
+  // Полный сброс при изменении версии данных
   _migrateIfNeeded() {
     const stored = parseInt(localStorage.getItem('thehook_challenge_ver') || '0', 10);
     if (stored < CHALLENGE_DATA_VERSION) {
-      // Сбрасываем все разблокированные скины и прогресс
+      // Сбрасываем скины и прогресс испытаний
       profile.updateWeeklyProgress({});
-      // Сбрасываем unlockedSkins через saveField
       profile._data.unlockedSkins = ['default'];
       profile._data.activeSkin = 'default';
       profile._provider.saveField('unlockedSkins', ['default']).catch(() => {});
       profile._provider.saveField('activeSkin', 'default').catch(() => {});
+      // Сбрасываем рекорд (напрямую в localStorage, т.к. saveScore проверяет > current)
+      profile._data.bestScore = 0;
+      try { localStorage.setItem('thehook_best', '0'); } catch {}
+      // Сбрасываем счётчик игр и луну
+      profile._data.gamesCount = 0;
+      profile._data.moonReached = false;
+      profile._provider.saveField('gamesCount', 0).catch(() => {});
+      profile._provider.saveField('moonReached', false).catch(() => {});
       try { localStorage.setItem('thehook_challenge_ver', String(CHALLENGE_DATA_VERSION)); } catch {}
     }
   }

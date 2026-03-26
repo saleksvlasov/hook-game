@@ -80,6 +80,11 @@ export default {
       if (url.pathname === '/analytics') return handleAnalytics(url, env);
     }
 
+    // Admin: сброс лидерборда (POST /admin/reset-leaderboard?key=SECRET)
+    if (request.method === 'POST' && url.pathname === '/admin/reset-leaderboard') {
+      return handleResetLeaderboard(url, env);
+    }
+
     return new Response('Not found', { status: 404 });
   },
 };
@@ -539,6 +544,66 @@ async function handleAnalytics(url, env) {
   totals.starsPerDeath = totals.deaths > 0 ? Math.round(totals.stars_attempt / totals.deaths * 100) : 0;
 
   return jsonResponse({ period: `${days} days`, totals, daily: results });
+}
+
+// ---- Admin: Reset Leaderboard ----
+
+async function handleResetLeaderboard(url, env) {
+  // Защита: ключ должен совпадать с ADMIN_KEY из env
+  const key = url.searchParams.get('key');
+  if (!key || key !== env.ADMIN_KEY) {
+    return jsonResponse({ error: 'Unauthorized' }, 403);
+  }
+
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  // Очищаем лидерборд
+  await env.SCORES.put('leaderboard', JSON.stringify([]));
+
+  // Очищаем все user:* ключи (рекорды игроков)
+  let cursor = null;
+  let deletedCount = 0;
+  do {
+    const list = await env.SCORES.list({ prefix: 'user:', cursor, limit: 100 });
+    for (const key of list.keys) {
+      await env.SCORES.delete(key.name);
+      deletedCount++;
+    }
+    cursor = list.list_complete ? null : list.cursor;
+  } while (cursor);
+
+  // Очищаем все challenges:* ключи
+  cursor = null;
+  let challengesDeleted = 0;
+  do {
+    const list = env.CHALLENGES ? await env.CHALLENGES.list({ prefix: 'challenges:', cursor, limit: 100 }) : { keys: [], list_complete: true };
+    for (const key of list.keys) {
+      await env.CHALLENGES.delete(key.name);
+      challengesDeleted++;
+    }
+    cursor = list.list_complete ? null : list.cursor;
+  } while (cursor);
+
+  // Очищаем все profile:* ключи
+  cursor = null;
+  let profilesDeleted = 0;
+  do {
+    const list = await env.SCORES.list({ prefix: 'profile:', cursor, limit: 100 });
+    for (const key of list.keys) {
+      await env.SCORES.delete(key.name);
+      profilesDeleted++;
+    }
+    cursor = list.list_complete ? null : list.cursor;
+  } while (cursor);
+
+  return jsonResponse({
+    ok: true,
+    deleted: {
+      scores: deletedCount,
+      challenges: challengesDeleted,
+      profiles: profilesDeleted,
+    },
+  });
 }
 
 // ---- Helpers ----
