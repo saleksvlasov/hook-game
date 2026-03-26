@@ -1,6 +1,6 @@
 import { Scene } from '../engine/Scene.js';
 import { clamp, lerp } from '../engine/math.js';
-import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup } from '../audio.js';
+import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo } from '../audio.js';
 import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
@@ -305,8 +305,8 @@ export class GameScene extends Scene {
   _respawnPlayer() {
     this.gameOverUI.hide();
 
-    // Восстановить сердца
-    this.hearts = HEARTS_MAX;
+    // Восстановить пол сердца (1 половинку) — не все три
+    this.hearts = 1;
     this.maxHearts = HEARTS_MAX;
     this.heartBonusTimer = 0;
     this._heartsDisabled = false;
@@ -332,6 +332,7 @@ export class GameScene extends Scene {
     this._countdownTime = 0;
     this._countdownActive = true;
     this.isDead = true; // Блокируем input до конца отсчёта
+    playCountdownTick(); // Звук для "3"
   }
 
   _finishCountdown() {
@@ -505,7 +506,10 @@ export class GameScene extends Scene {
         this._countdownTime -= 1000;
         this._countdown--;
         if (this._countdown <= 0) {
+          playCountdownGo();
           this._finishCountdown();
+        } else {
+          playCountdownTick(); // Звук для "2" и "1"
         }
       }
       // Рисуем счётчик по центру экрана

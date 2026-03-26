@@ -201,6 +201,18 @@ export function playBugHit() {
   } catch(e) { /* audio context closed or unavailable */ }
 }
 
+// Тик обратного отсчёта 3-2-1 (короткий электронный "бип")
+export function playCountdownTick() {
+  osc('sine', 880, 0.12, 0.2, 880);
+  osc('square', 440, 0.08, 0.05, 440);
+}
+
+// Финальный "GO!" — восходящий аккорд
+export function playCountdownGo() {
+  osc('sine', 523, 0.15, 0.2, 1047);
+  osc('triangle', 659, 0.12, 0.15, 1318);
+}
+
 // Подбор сердца — восходящий мелодичный тон
 export function playHeartPickup() {
   osc('sine', 523, 0.15, 0.15, 784);    // C5 → G5
