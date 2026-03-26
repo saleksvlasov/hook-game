@@ -30,8 +30,8 @@ import './ui.css';
     tg.expand();
   }
 
-  // Инициализация профиля — подтягивает данные с сервера (fire-and-forget)
-  profile.init();
+  // Инициализация профиля — ждём серверные данные перед стартом игры
+  await profile.init();
 
   // Safe area: set CSS variable from env() for JS access
   const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');
