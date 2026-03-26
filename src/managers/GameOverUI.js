@@ -158,10 +158,11 @@ export class GameOverUI {
     // Кнопки с задержкой 700ms — управляется в draw()
     this._buttonsShown = false;
 
-    // === Кнопка CLAIM SKIN ===
+    // === Кнопка CLAIM SKIN — только если испытание выполнено И скин ещё не получен ===
     const challengeMgr = this._challengeMgr;
     const ch = challengeMgr ? challengeMgr.getCurrentChallenge() : null;
-    if (ch && ch.completed && !ch.claimed) {
+    const skinAlreadyUnlocked = ch ? profile.isSkinUnlocked(ch.rewardSkin) : true;
+    if (ch && ch.completed && !ch.claimed && !skinAlreadyUnlocked) {
       this.claimBtn = this._createButton(t('challenge_claim'), 'claim');
       this.claimBtn.classList.add('btn-neon--amber');
       this.claimBtn.addEventListener('click', () => {

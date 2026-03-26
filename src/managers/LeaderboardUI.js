@@ -51,18 +51,63 @@ export class LeaderboardUI {
   // Показать лидерборд — добавить класс видимости, загрузить данные
   async show() {
     this._build();
-    this._list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:16px;color:#4A5580;padding:40px 0">\u23F3 ${t('loading')}</div>`;
+    this._showLoading();
     this._panel.classList.add('overlay--visible');
+    await this._fetchAndRender();
+  }
 
-    // Загружаем данные
-    const lb = await profile.fetchLeaderboard();
+  _showLoading() {
+    this._list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:24px;color:#4A5580;padding:40px 0">
+      <span style="display:inline-block;animation:spin 1s linear infinite">\u23F3</span>
+      <span style="margin-left:8px;font-size:16px">${t('loading')}</span>
+    </div>`;
+    // Добавляем CSS анимацию если ещё нет
+    if (!document.getElementById('lb-spin-style')) {
+      const style = document.createElement('style');
+      style.id = 'lb-spin-style';
+      style.textContent = '@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}';
+      document.head.appendChild(style);
+    }
+  }
+
+  async _fetchAndRender() {
+    // Загружаем данные с timeout 5с
+    let lb = [];
+    let fetchError = false;
+    try {
+      const fetchPromise = profile.fetchLeaderboard();
+      const timeoutPromise = new Promise((_, reject) => {
+        this._fetchTimeout = window.setTimeout(() => reject(new Error('timeout')), 5000);
+      });
+      lb = await Promise.race([fetchPromise, timeoutPromise]);
+      window.clearTimeout(this._fetchTimeout);
+    } catch {
+      window.clearTimeout(this._fetchTimeout);
+      fetchError = true;
+    }
+
     // Проверяем что панель не была закрыта пока грузились
-    if (!this._panel.classList.contains('overlay--visible')) return;
+    if (!this._panel || !this._panel.classList.contains('overlay--visible')) return;
 
     const myId = getTelegramUserId();
     this._list.innerHTML = '';
 
-    if (lb.length === 0) {
+    if (fetchError) {
+      // Ошибка — показываем текст + кнопку retry
+      const errorDiv = document.createElement('div');
+      errorDiv.classList.add('leaderboard__row');
+      errorDiv.style.cssText = 'justify-content:center;flex-direction:column;align-items:center;font-size:16px;color:#4A5580;padding:30px 0;gap:16px';
+      errorDiv.textContent = t('lb_error');
+      const retryBtn = document.createElement('button');
+      retryBtn.classList.add('btn-neon', 'btn-neon--small');
+      retryBtn.textContent = t('lb_retry');
+      retryBtn.addEventListener('click', () => {
+        this._showLoading();
+        this._fetchAndRender();
+      });
+      errorDiv.appendChild(retryBtn);
+      this._list.appendChild(errorDiv);
+    } else if (lb.length === 0) {
       this._list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:16px;color:#4A5580;padding:40px 0">${t('lb_empty')}</div>`;
     } else {
       lb.forEach((entry, i) => {

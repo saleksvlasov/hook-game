@@ -53,8 +53,8 @@ export class HUDManager {
   _updateChallengeStr(ch) {
     const weekNum = this._challengeMgr.week;
     if (ch.completed) {
-      // Испытание выполнено — показываем что именно пройдено
-      this._challengeStr = `WEEK ${weekNum}: ${t('challenge_completed')}`;
+      // Испытание выполнено
+      this._challengeStr = `🏆 WEEK ${weekNum}: ${t('challenge_completed')}`;
       return;
     }
     const labelMap = {

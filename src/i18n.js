@@ -24,6 +24,8 @@ export const LANGS = {
     unit_m: 'm',
     leaderboard: 'TOP',
     lb_empty: 'No records yet',
+    lb_error: 'Server issue, waiting for results...',
+    lb_retry: 'RETRY',
     lb_you: 'YOU',
     // Еженедельные испытания
     challenge_title: 'WEEKLY CHALLENGE',
@@ -68,6 +70,8 @@ export const LANGS = {
     unit_m: 'м',
     leaderboard: 'ТОП',
     lb_empty: 'Пока нет рекордов',
+    lb_error: 'Проблема на сервере, ждём результатов...',
+    lb_retry: 'ПОВТОРИТЬ',
     lb_you: 'ТЫ',
     // Еженедельные испытания
     challenge_title: 'ИСПЫТАНИЕ НЕДЕЛИ',

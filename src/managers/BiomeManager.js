@@ -49,9 +49,9 @@ export class BiomeManager {
       this.layers.push(layer);
     }
 
-    // Луна — просто данные для отрисовки
-    this._moonX = this.W * 0.72;
-    this._moonY = 300;
+    // Луна — правый верхний угол экрана
+    this._moonX = this.W * 0.78;
+    this._moonY = 120;
   }
 
   _fillSparkLayer(sparkLayer, biome, count, minSize, maxSize, minAlpha, maxAlpha) {
@@ -204,29 +204,37 @@ export class BiomeManager {
   }
 
   _drawMoon(ctx) {
-    const mx = this._moonX;
-    const my = this._moonY;
+    // Луна — далёкий объект, слабый параллакс (scrollFactor 0.02)
+    // Чем выше игрок поднимается, тем чуть выше сдвигается луна
+    const camera = this.scene.camera;
+    const parallax = 0.02;
+    const mx = this._moonX - camera.scrollX * parallax;
+    const my = this._moonY - camera.scrollY * parallax;
+    const R = 65;
 
-    // Внешнее cyan свечение
-    ctx.globalAlpha = 0.05;
+    // Neon Western луна — тёмная стальная с мягким cyan свечением
+
+    // Внешнее cyan свечение (аура) — мягкое, не яркое
+    ctx.globalAlpha = 0.03;
     ctx.fillStyle = '#00F5D4';
-    ctx.beginPath(); ctx.arc(mx, my, 90, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx, my, R + 25, 0, Math.PI * 2); ctx.fill();
 
-    // Тело луны
+    // Тело — тёмная сталь
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = '#4A5580';
-    ctx.beginPath(); ctx.arc(mx, my, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fill();
 
-    // Подсветка
+    // Подсветка слева-сверху — чуть светлее
     ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#6688AA';
-    ctx.beginPath(); ctx.arc(mx - 10, my - 5, 62, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4A5580';
+    ctx.beginPath(); ctx.arc(mx - 6, my - 4, R - 5, 0, Math.PI * 2); ctx.fill();
 
     // Кратеры
-    ctx.globalAlpha = 0.12;
+    ctx.globalAlpha = 0.10;
     ctx.fillStyle = '#2A3050';
-    ctx.beginPath(); ctx.arc(mx + 18, my - 15, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(mx - 22, my + 15, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 15, my - 14, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx - 18, my + 10, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 4, my + 20, 5, 0, Math.PI * 2); ctx.fill();
 
     ctx.globalAlpha = 1;
   }

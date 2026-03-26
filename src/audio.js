@@ -41,25 +41,48 @@ export function playRelease() {
   osc('sawtooth', 600, 0.12, 0.12, 150);
 }
 
-// Low thud + descending tone
+// Грустно-забавный "wa-wa-waaaa" (нисходящий тромбон)
 export function playDeath() {
   try {
     const c = getCtx();
+    const now = c.currentTime;
 
-    // Thud — noise-like via detuned square
+    // Нота 1: "wa" (высокая)
     const o1 = c.createOscillator();
     const g1 = c.createGain();
-    o1.type = 'square';
-    o1.frequency.setValueAtTime(50, c.currentTime);
-    o1.frequency.exponentialRampToValueAtTime(20, c.currentTime + 0.3);
-    g1.gain.setValueAtTime(0.3, c.currentTime);
-    g1.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3);
+    o1.type = 'triangle';
+    o1.frequency.setValueAtTime(440, now);
+    o1.frequency.setValueAtTime(440, now + 0.15);
+    g1.gain.setValueAtTime(0.2, now);
+    g1.gain.setValueAtTime(0, now + 0.18);
     o1.connect(g1).connect(c.destination);
-    o1.start();
-    o1.stop(c.currentTime + 0.3);
+    o1.start(now);
+    o1.stop(now + 0.2);
 
-    // Descending tone
-    osc('sine', 400, 0.3, 0.15, 80);
+    // Нота 2: "wa" (чуть ниже)
+    const o2 = c.createOscillator();
+    const g2 = c.createGain();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(392, now + 0.2);
+    g2.gain.setValueAtTime(0, now + 0.19);
+    g2.gain.setValueAtTime(0.2, now + 0.2);
+    g2.gain.setValueAtTime(0, now + 0.38);
+    o2.connect(g2).connect(c.destination);
+    o2.start(now + 0.2);
+    o2.stop(now + 0.4);
+
+    // Нота 3: "waaaa" (низкая, длинная, грустная)
+    const o3 = c.createOscillator();
+    const g3 = c.createGain();
+    o3.type = 'triangle';
+    o3.frequency.setValueAtTime(330, now + 0.42);
+    o3.frequency.exponentialRampToValueAtTime(220, now + 0.9);
+    g3.gain.setValueAtTime(0, now + 0.41);
+    g3.gain.setValueAtTime(0.2, now + 0.42);
+    g3.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+    o3.connect(g3).connect(c.destination);
+    o3.start(now + 0.42);
+    o3.stop(now + 1.0);
   } catch(e) { /* audio context closed or unavailable */ }
 }
 

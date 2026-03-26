@@ -22,12 +22,14 @@
   align-items: center;
   overflow-y: auto;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, visibility 0.3s;
 }
 
 .overlay--visible {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 
@@ -116,12 +118,15 @@
   gap: 16px;
   padding-top: 50%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  visibility: hidden; /* блокирует клики на детях даже с pointer-events:auto */
+  transition: opacity 0.3s ease, visibility 0.3s;
   z-index: 100;
 }
 
 .gameover-buttons--visible {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* === Leaderboard === */

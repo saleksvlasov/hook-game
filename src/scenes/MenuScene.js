@@ -229,6 +229,12 @@ export class MenuScene extends Scene {
       return;
     }
 
+    // Когда карусель скинов открыта — блокируем остальные кнопки
+    if (this._skinCarousel.isOpen) {
+      this._skinCarousel.handleTap(x, y);
+      return;
+    }
+
     // Кнопка CLIMB
     const btnW = 250, btnH = 64;
     if (x >= W / 2 - btnW / 2 && x <= W / 2 + btnW / 2 &&

@@ -138,6 +138,11 @@ export class GameScene extends Scene {
 
     // Delayed calls (замена this.time.delayedCall)
     this._delayedCalls = [];
+
+    // Обратный отсчёт при воскрешении
+    this._countdownActive = false;
+    this._countdown = 0;
+    this._countdownTime = 0;
   }
 
   // ===================== INPUT =====================
@@ -273,7 +278,6 @@ export class GameScene extends Scene {
 
   _respawnPlayer() {
     this.gameOverUI.hide();
-    this.isDead = false;
 
     const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
     const targetY = GROUND_Y - targetHeight * 10;
@@ -284,11 +288,25 @@ export class GameScene extends Scene {
     this.player.x = this.W / 2;
     this.player.y = targetY;
     this.player.vx = 0;
-    this.player.vy = -300;
-    this.player.allowGravity = true;
+    this.player.vy = 0;
+    this.player.allowGravity = false; // Замораживаем до конца счётчика
     this.player.alpha = 1;
 
     this.camera.scrollY = targetY - this.H * 0.55;
+
+    // Обратный отсчёт 3-2-1
+    this._countdown = 3;
+    this._countdownTime = 0;
+    this._countdownActive = true;
+    this.isDead = true; // Блокируем input до конца отсчёта
+  }
+
+  _finishCountdown() {
+    this._countdownActive = false;
+    this._countdown = 0;
+    this.isDead = false;
+    this.player.vy = -300;
+    this.player.allowGravity = true;
     this.hud.setHint('click_hook');
   }
 
@@ -445,6 +463,34 @@ export class GameScene extends Scene {
 
     // 5.10 Camera reset
     this.camera.resetTransform(ctx);
+
+    // Обратный отсчёт при воскрешении (3-2-1)
+    if (this._countdownActive) {
+      this._countdownTime += delta;
+      if (this._countdownTime >= 1000) {
+        this._countdownTime -= 1000;
+        this._countdown--;
+        if (this._countdown <= 0) {
+          this._finishCountdown();
+        }
+      }
+      // Рисуем счётчик по центру экрана
+      const num = this._countdown;
+      if (num > 0) {
+        ctx.globalAlpha = 0.9;
+        ctx.font = `bold 120px 'Inter', sans-serif`;
+        ctx.fillStyle = '#00F5D4';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#00F5D4';
+        ctx.shadowBlur = 20;
+        ctx.fillText(String(num), this.W / 2, this.H * 0.4);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+      this.hud.draw(ctx, delta);
+      return;
+    }
 
     // Если мёртв — обновляем болото и Game Over, выходим
     if (this.isDead) {

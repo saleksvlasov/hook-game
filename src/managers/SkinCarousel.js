@@ -33,6 +33,19 @@ export class SkinCarousel {
     this._onPointerUp = null;
   }
 
+  get isOpen() { return this.skinSelectorOpen; }
+
+  // Обработка тапа когда карусель открыта (вне карусели — закрыть)
+  handleTap(x, y) {
+    const H = this.scene.H;
+    const stripY = H * 0.88;
+    // Если тап в зоне карусели — обрабатывается через pointer handlers
+    // Если тап вне — закрываем карусель
+    if (y < stripY - 45 || y > stripY + 45) {
+      this._close();
+    }
+  }
+
   toggle() {
     if (this.skinSelectorOpen) {
       this._close();
