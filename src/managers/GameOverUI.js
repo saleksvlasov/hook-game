@@ -34,7 +34,7 @@ export class GameOverUI {
     this.posterGfx = null;
     this.overlayRect = null;
 
-    // Лидерборд — создаётся при каждом показе
+    // Лидерборд — создаётся один раз
     this.leaderboardUI = new LeaderboardUI();
 
     // Callbacks
@@ -97,17 +97,9 @@ export class GameOverUI {
       stroke: NEON_BG, strokeThickness: 4,
     }).setOrigin(0.5));
 
-    // --- HTML кнопки поверх canvas — neon glass ---
+    // --- HTML кнопки поверх canvas — neon glass, в #game-ui ---
     this.buttonsDiv = document.createElement('div');
-    this.buttonsDiv.id = 'game-over-buttons';
-    this.buttonsDiv.style.cssText = `
-      display: none; position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%; z-index: ${Z.HTML_BUTTONS};
-      pointer-events: none;
-      flex-direction: column; align-items: center; justify-content: center;
-      gap: 16px; padding-top: 50%;
-      opacity: 0; transition: opacity 0.3s ease;
-    `;
+    this.buttonsDiv.classList.add('gameover-buttons');
 
     // CONTINUE AD — бесплатное воскрешение через рекламу (1 раз за игру)
     this.continueAdBtn = this._createButton(t('continue_ad'), 'continue_ad');
@@ -123,102 +115,41 @@ export class GameOverUI {
     this.restartBtn = this._createButton(t('restart'), 'restart');
     this.buttonsDiv.appendChild(this.restartBtn);
 
-    // LEADERBOARD (только в Telegram)
-    if (profile.isAuthorized) {
-      this.leaderboardBtn = this._createButton(t('leaderboard'), 'leaderboard');
-      this.buttonsDiv.appendChild(this.leaderboardBtn);
-    }
+    // LEADERBOARD — всегда показываем
+    this.leaderboardBtn = this._createButton(t('leaderboard'), 'leaderboard');
+    this.buttonsDiv.appendChild(this.leaderboardBtn);
 
     // MENU
     this.menuBtn = this._createButton(t('menu'), 'menu');
     this.buttonsDiv.appendChild(this.menuBtn);
 
-    document.body.appendChild(this.buttonsDiv);
+    // Вставляем в корневой UI контейнер
+    const root = document.getElementById('game-ui');
+    if (root) {
+      root.appendChild(this.buttonsDiv);
+    } else {
+      document.body.appendChild(this.buttonsDiv);
+    }
   }
 
-  // Neon glass стиль кнопок — все кнопки одинаковая база, цвет зависит от типа
+  // Neon glass кнопка — CSS классы вместо inline styles
   _createButton(label, type) {
     const btn = document.createElement('button');
     btn.textContent = label;
 
+    // Базовый класс
+    btn.classList.add('btn-neon');
+
+    // Размер
     const isSmall = type === 'menu' || type === 'leaderboard';
     const isContinue = type === 'continue_ad' || type === 'continue_star';
-    const fontSize = isSmall ? '14px' : isContinue ? '16px' : '20px';
-    const padding = isSmall ? '10px 32px' : isContinue ? '12px 40px' : '14px 52px';
+    if (isSmall) btn.classList.add('btn-neon--small');
+    else if (isContinue) btn.classList.add('btn-neon--medium');
 
-    // Цвета зависят от типа кнопки
+    // Цвет
     const isMenu = type === 'menu';
-
-    // Базовый цвет текста и бордера
-    const textColor = isContinue ? NEON_AMBER : isMenu ? NEON_STEEL : NEON_CYAN;
-    const borderBase = isContinue
-      ? 'rgba(255, 184, 0, 0.3)'
-      : isMenu
-        ? 'rgba(74, 85, 128, 0.3)'
-        : 'rgba(0, 245, 212, 0.3)';
-
-    // Neon text-shadow — amber для continue, cyan для restart/leaderboard, без для menu
-    const textShadow = isContinue
-      ? 'text-shadow: 0 0 4px rgba(255, 184, 0, 0.6);'
-      : isMenu
-        ? ''
-        : 'text-shadow: 0 0 4px rgba(0, 245, 212, 0.6);';
-
-    btn.style.cssText = `
-      font-family: ${NEON_FONT}; cursor: pointer;
-      outline: none; pointer-events: auto;
-      -webkit-tap-highlight-color: transparent;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-      background: rgba(10, 14, 26, 0.8);
-      color: ${textColor};
-      border: 1px solid ${borderBase};
-      font-size: ${fontSize}; font-weight: bold;
-      padding: ${padding};
-      border-radius: 12px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      transition: all 0.12s ease;
-      ${textShadow}
-    `;
-
-    // Hover/press — цвета зависят от типа
-    const hoverBorder = isContinue
-      ? 'rgba(255, 184, 0, 0.5)'
-      : isMenu
-        ? 'rgba(0, 245, 212, 0.3)'
-        : 'rgba(0, 245, 212, 0.5)';
-    const hoverShadowColor = isContinue
-      ? 'rgba(255, 184, 0, 0.3)'
-      : 'rgba(0, 245, 212, 0.3)';
-    const hoverTextColor = isMenu ? NEON_CYAN : textColor;
-
-    const onEnter = () => {
-      btn.style.borderColor = hoverBorder;
-      btn.style.textShadow = `0 0 5px ${hoverShadowColor}`;
-      if (isMenu) btn.style.color = hoverTextColor;
-    };
-    const onLeave = () => {
-      btn.style.borderColor = borderBase;
-      btn.style.textShadow = 'none';
-      if (isMenu) btn.style.color = textColor;
-    };
-    const onDown = () => {
-      btn.style.transform = 'scale(0.97)';
-      btn.style.background = 'rgba(10, 14, 26, 0.9)';
-    };
-    const onUp = () => {
-      btn.style.transform = '';
-      btn.style.background = 'rgba(10, 14, 26, 0.8)';
-      onLeave();
-    };
-
-    btn.addEventListener('mouseenter', onEnter);
-    btn.addEventListener('mouseleave', onLeave);
-    btn.addEventListener('touchstart', onDown, { passive: true });
-    btn.addEventListener('mousedown', onDown);
-    btn.addEventListener('touchend', onUp, { passive: true });
-    btn.addEventListener('mouseup', onUp);
+    if (isContinue) btn.classList.add('btn-neon--amber');
+    else if (isMenu) btn.classList.add('btn-neon--steel');
 
     // Click handler по типу
     const handlers = {
@@ -295,16 +226,14 @@ export class GameOverUI {
       duration: 400, delay: 500, ease: 'Cubic.easeOut',
     });
 
-    // 700ms: HTML кнопки opacity 0 -> 1
-    this.buttonsDiv.style.display = 'flex';
-    this.buttonsDiv.style.opacity = '0';
+    // 700ms: HTML кнопки — показываем через CSS класс, Phaser delayedCall
     // AD кнопка — всегда видна (больше просмотров рекламы = больше доход)
     this.continueAdBtn.style.display = 'block';
     // Stars кнопка — всегда видна в Telegram (без лимита)
     if (this.continueStarBtn) this.continueStarBtn.style.display = 'block';
 
     this.scene.time.delayedCall(700, () => {
-      this.buttonsDiv.style.opacity = '1';
+      this.buttonsDiv.classList.add('gameover-buttons--visible');
     });
 
     // Новый рекорд: пульсация + искры
@@ -330,27 +259,21 @@ export class GameOverUI {
     const challengeMgr = this._challengeMgr;
     const ch = challengeMgr ? challengeMgr.getCurrentChallenge() : null;
     if (ch && ch.completed && !ch.claimed) {
-      const claimBtn = this._createButton(t('challenge_claim'), 'claim');
-      // Переопределяем стиль — amber цвет и amber border
-      claimBtn.style.color = NEON_AMBER;
-      claimBtn.style.borderColor = 'rgba(255, 184, 0, 0.5)';
+      this.claimBtn = this._createButton(t('challenge_claim'), 'claim');
+      // Amber стиль для claim
+      this.claimBtn.classList.add('btn-neon--amber');
 
-      // Удаляем старый click listener и добавляем свой
-      const newClaimBtn = claimBtn.cloneNode(true);
-      newClaimBtn.addEventListener('click', () => {
+      // Обработчик claim
+      this.claimBtn.addEventListener('click', () => {
         const skinId = challengeMgr.claimReward();
         if (skinId) {
-          newClaimBtn.textContent = t('challenge_claimed');
-          newClaimBtn.disabled = true;
-          newClaimBtn.style.opacity = '0.5';
-          newClaimBtn.style.pointerEvents = 'none';
+          this.claimBtn.textContent = t('challenge_claimed');
+          this.claimBtn.classList.add('btn-neon--disabled');
         }
       });
 
       // Вставляем перед кнопкой MENU (последняя кнопка)
-      this.buttonsDiv.insertBefore(newClaimBtn, this.menuBtn);
-      // Сохраняем ссылку для очистки
-      this.claimBtn = newClaimBtn;
+      this.buttonsDiv.insertBefore(this.claimBtn, this.menuBtn);
     }
   }
 
@@ -378,10 +301,11 @@ export class GameOverUI {
       });
     }
 
-    // HTML кнопки — fade out, потом hide
-    this.buttonsDiv.style.opacity = '0';
-    setTimeout(() => {
-      this.buttonsDiv.style.display = 'none';
+    // HTML кнопки — fade out через CSS transition, cleanup по transitionend
+    this.buttonsDiv.classList.remove('gameover-buttons--visible');
+
+    const onTransitionDone = () => {
+      this.buttonsDiv.removeEventListener('transitionend', onTransitionDone);
       // Удаляем кнопку claim если была
       if (this.claimBtn) {
         this.claimBtn.remove();
@@ -391,15 +315,15 @@ export class GameOverUI {
       for (const el of this.elements) {
         if (el && el.active) el.setVisible(false).setAlpha(1);
       }
-    }, 200);
+    };
+    this.buttonsDiv.addEventListener('transitionend', onTransitionDone);
   }
 
   destroy() {
     if (this.bloodGfx) { this.bloodGfx.destroy(); this.bloodGfx = null; }
     if (this.posterGfx) { this.posterGfx.destroy(); this.posterGfx = null; }
     if (this.scanlines) { this.scanlines.destroy(); this.scanlines = null; }
-    const el = document.getElementById('game-over-buttons');
-    if (el) el.remove();
+    if (this.buttonsDiv) { this.buttonsDiv.remove(); this.buttonsDiv = null; }
     this.leaderboardUI.destroy();
   }
 }

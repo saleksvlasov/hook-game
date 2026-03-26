@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { profile } from './data/index.js';
+import './ui.css';
 
 // Telegram Mini App — раскрываем на весь экран
 if (window.Telegram?.WebApp) {
@@ -41,8 +42,12 @@ const config = {
       debug: false,
     },
   },
-  dom: { createContainer: true },
   scene: [MenuScene, GameScene],
 };
+
+// Корневой контейнер для всех UI overlay — единая точка монтирования
+const gameUI = document.createElement('div');
+gameUI.id = 'game-ui';
+document.body.appendChild(gameUI);
 
 new Phaser.Game(config);

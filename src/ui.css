@@ -1,0 +1,189 @@
+/* THE HOOK — UI overlay система
+   Единые CSS классы для всех HTML overlay поверх Phaser canvas.
+   Никаких inline styles, setTimeout, display:none хаков. */
+
+/* Корневой контейнер — все UI элементы внутри */
+#game-ui {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* === Overlay (полноэкранная панель) === */
+
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.overlay--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Фон overlay — neon dark glassmorphism */
+.overlay--dark {
+  background: rgba(5, 8, 16, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.overlay--gameover {
+  background: rgba(5, 8, 16, 0.85);
+}
+
+/* === Кнопки — neon glass === */
+
+.btn-neon {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  cursor: pointer;
+  outline: none;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: bold;
+  background: rgba(10, 14, 26, 0.8);
+  border: 1px solid rgba(0, 245, 212, 0.3);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.12s ease;
+  color: #00F5D4;
+  text-shadow: 0 0 4px rgba(0, 245, 212, 0.6);
+  font-size: 20px;
+  padding: 14px 52px;
+}
+
+.btn-neon:active {
+  transform: scale(0.97);
+  background: rgba(10, 14, 26, 0.9);
+}
+
+/* Amber — continue кнопки */
+.btn-neon--amber {
+  color: #FFB800;
+  border-color: rgba(255, 184, 0, 0.3);
+  text-shadow: 0 0 4px rgba(255, 184, 0, 0.6);
+}
+
+/* Steel — menu, мелкие кнопки */
+.btn-neon--steel {
+  color: #4A5580;
+  border-color: rgba(74, 85, 128, 0.3);
+  text-shadow: none;
+}
+
+/* Маленькие кнопки */
+.btn-neon--small {
+  font-size: 14px;
+  padding: 10px 32px;
+}
+
+/* Средние кнопки (continue) */
+.btn-neon--medium {
+  font-size: 16px;
+  padding: 12px 40px;
+}
+
+/* Disabled */
+.btn-neon--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* === Game Over кнопки контейнер === */
+
+.gameover-buttons {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 100;
+}
+
+.gameover-buttons--visible {
+  opacity: 1;
+}
+
+/* === Leaderboard === */
+
+.leaderboard {
+  padding: 40px 16px 20px;
+  z-index: 110;
+}
+
+.leaderboard__title {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  font-size: 26px;
+  font-weight: bold;
+  color: #FFB800;
+  margin-bottom: 24px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.leaderboard__list {
+  width: 100%;
+  max-width: 360px;
+}
+
+.leaderboard__row {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: rgba(10, 14, 26, 0.70);
+  border: 1px solid rgba(42, 48, 80, 0.40);
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+}
+
+.leaderboard__row--me {
+  background: rgba(0, 245, 212, 0.08);
+  border-color: rgba(0, 245, 212, 0.30);
+}
+
+.leaderboard__close {
+  position: absolute;
+  top: 12px; right: 16px;
+  background: none;
+  border: none;
+  color: #4A5580;
+  font-size: 26px;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* === Ad overlay заглушки === */
+
+.ad-overlay {
+  z-index: 200;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.ad-overlay__content {
+  text-align: center;
+  color: #aaa;
+  font-family: monospace;
+}

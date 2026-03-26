@@ -81,78 +81,120 @@ export function showRewarded() {
 
 // ---- Fallback заглушки (для браузера без Adsgram) ----
 
+// Создать overlay в #game-ui с CSS классами
 function createOverlay() {
   const div = document.createElement('div');
-  div.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    background:rgba(0,0,0,0.85);z-index:9999;
-    display:flex;align-items:center;justify-content:center;
-  `;
+  div.classList.add('overlay', 'overlay--visible', 'ad-overlay');
+  const root = document.getElementById('game-ui');
+  if (root) {
+    root.appendChild(div);
+  } else {
+    document.body.appendChild(div);
+  }
   return div;
 }
 
 function showInterstitialStub() {
   return new Promise((resolve) => {
     const overlay = createOverlay();
-    overlay.innerHTML = `
-      <div style="text-align:center;color:#aaa;font-family:monospace">
-        <div style="font-size:14px;margin-bottom:20px;color:#666">AD</div>
-        <div style="font-size:18px;color:#fff;margin-bottom:8px">Interstitial Ad</div>
-        <div style="font-size:12px;color:#888">This is a stub. Real ad will appear here.</div>
-        <div id="ad-timer" style="font-size:24px;color:#4488ff;margin-top:20px">2</div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
 
-    let sec = 2;
-    const timer = setInterval(() => {
-      sec--;
-      const el = document.getElementById('ad-timer');
-      if (el) el.textContent = String(sec);
-      if (sec <= 0) {
-        clearInterval(timer);
-        overlay.remove();
-        resolve();
+    // Контент заглушки
+    const content = document.createElement('div');
+    content.classList.add('ad-overlay__content');
+    content.innerHTML = `
+      <div style="font-size:14px;margin-bottom:20px;color:#666">AD</div>
+      <div style="font-size:18px;color:#fff;margin-bottom:8px">Interstitial Ad</div>
+      <div style="font-size:12px;color:#888">This is a stub. Real ad will appear here.</div>
+    `;
+    overlay.appendChild(content);
+
+    // Таймер — элемент внутри content
+    const timerEl = document.createElement('div');
+    timerEl.style.cssText = 'font-size:24px;color:#4488ff;margin-top:20px';
+    timerEl.textContent = '2';
+    content.appendChild(timerEl);
+
+    // Обратный отсчёт через requestAnimationFrame
+    let remaining = 2;
+    let lastTick = performance.now();
+
+    const tick = (now) => {
+      const elapsed = now - lastTick;
+      if (elapsed >= 1000) {
+        lastTick = now;
+        remaining--;
+        timerEl.textContent = String(remaining);
+        if (remaining <= 0) {
+          overlay.remove();
+          resolve();
+          return;
+        }
       }
-    }, 1000);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   });
 }
 
 function showRewardedStub() {
   return new Promise((resolve) => {
     const overlay = createOverlay();
-    overlay.innerHTML = `
-      <div style="text-align:center;color:#aaa;font-family:monospace">
-        <div style="font-size:14px;margin-bottom:20px;color:#666">REWARDED AD</div>
-        <div style="font-size:16px;color:#fff;margin-bottom:6px">Watch ad to continue</div>
-        <div style="font-size:12px;color:#888;margin-bottom:24px">This is a stub. Real video ad will play here.</div>
-        <div id="ad-reward-timer" style="font-size:28px;color:#ffcc00;margin-bottom:24px">3</div>
-        <button id="ad-skip" style="
-          background:none;border:1px solid #555;color:#888;
-          padding:8px 24px;font-family:monospace;font-size:13px;cursor:pointer;
-        ">Skip</button>
-      </div>
-    `;
-    document.body.appendChild(overlay);
 
-    let sec = 3;
+    // Контент заглушки
+    const content = document.createElement('div');
+    content.classList.add('ad-overlay__content');
+    content.innerHTML = `
+      <div style="font-size:14px;margin-bottom:20px;color:#666">REWARDED AD</div>
+      <div style="font-size:16px;color:#fff;margin-bottom:6px">Watch ad to continue</div>
+      <div style="font-size:12px;color:#888;margin-bottom:24px">This is a stub. Real video ad will play here.</div>
+    `;
+    overlay.appendChild(content);
+
+    // Таймер
+    const timerEl = document.createElement('div');
+    timerEl.style.cssText = 'font-size:28px;color:#ffcc00;margin-bottom:24px';
+    timerEl.textContent = '3';
+    content.appendChild(timerEl);
+
+    // Кнопка Skip — прямая ссылка вместо getElementById
+    const skipBtn = document.createElement('button');
+    skipBtn.textContent = 'Skip';
+    skipBtn.style.cssText = `
+      background:none;border:1px solid #555;color:#888;
+      padding:8px 24px;font-family:monospace;font-size:13px;cursor:pointer;
+    `;
+    content.appendChild(skipBtn);
+
     let done = false;
+    let rafId = null;
 
     const finish = (rewarded) => {
       if (done) return;
       done = true;
-      clearInterval(timer);
+      if (rafId) cancelAnimationFrame(rafId);
       overlay.remove();
       resolve(rewarded);
     };
 
-    document.getElementById('ad-skip').onclick = () => finish(false);
+    skipBtn.addEventListener('click', () => finish(false));
 
-    const timer = setInterval(() => {
-      sec--;
-      const el = document.getElementById('ad-reward-timer');
-      if (el) el.textContent = String(sec);
-      if (sec <= 0) finish(true);
-    }, 1000);
+    // Обратный отсчёт через requestAnimationFrame
+    let remaining = 3;
+    let lastTick = performance.now();
+
+    const tick = (now) => {
+      const elapsed = now - lastTick;
+      if (elapsed >= 1000) {
+        lastTick = now;
+        remaining--;
+        timerEl.textContent = String(remaining);
+        if (remaining <= 0) {
+          finish(true);
+          return;
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
   });
 }
