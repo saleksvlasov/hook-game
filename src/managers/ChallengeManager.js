@@ -10,13 +10,10 @@ const CHALLENGE_TYPES = [
   { type: 'streak', genTarget: (w) => 100000 + w * 5000, count: 3 }, // набрать Xм 3 раза подряд
 ];
 
-// Версия данных — при изменении сбрасывает ВСЁ: рекорды + скины + прогресс (тестовый период)
-const CHALLENGE_DATA_VERSION = 5;
-
 export class ChallengeManager {
   constructor() {
     this.week = getCurrentWeek();
-    this._migrateIfNeeded();
+    // Данные приходят из profile (который уже загрузил с сервера)
     this.data = { unlockedSkins: profile.unlockedSkins, weeklyProgress: { ...profile.weeklyProgress } };
     this._ensureWeekChallenge();
     this.cleanupOldWeeks();
@@ -27,15 +24,15 @@ export class ChallengeManager {
     });
   }
 
-  // Обновить состояние из серверных данных (merge: берём максимум прогресса)
+  // Обновить состояние из серверных данных (сервер = правда)
   _syncFromServer(serverData) {
     if (!serverData?.weeklyProgress) return;
 
     const weekKey = `week${this.week}`;
     const serverChallenge = serverData.weeklyProgress[weekKey];
-    const localChallenge = this.data.weeklyProgress[weekKey];
 
     if (serverChallenge) {
+      const localChallenge = this.data.weeklyProgress[weekKey];
       if (!localChallenge) {
         // Локально нет — берём серверное целиком
         this.data.weeklyProgress[weekKey] = serverChallenge;
@@ -57,41 +54,19 @@ export class ChallengeManager {
     }
   }
 
-  // Полный сброс при изменении версии данных
-  _migrateIfNeeded() {
-    const stored = parseInt(localStorage.getItem('thehook_challenge_ver') || '0', 10);
-    if (stored < CHALLENGE_DATA_VERSION) {
-      // Если на устройстве УЖЕ были данные — сбрасываем (реальная миграция)
-      // Если устройство новое (нет thehook_challenges) — просто ставим версию
-      const hasExistingData = !!localStorage.getItem('thehook_challenges') || !!localStorage.getItem('thehook_best');
-      if (hasExistingData) {
-        // Сбрасываем только скины и прогресс испытаний (локальный кэш)
-        // bestScore НЕ трогаем — сервер является источником правды
-        profile.updateWeeklyProgress({});
-        profile._data.unlockedSkins = ['default'];
-        profile._data.activeSkin = 'default';
-        profile._provider.saveField('unlockedSkins', ['default']).catch(() => {});
-        profile._provider.saveField('activeSkin', 'default').catch(() => {});
-        profile._data.gamesCount = 0;
-        profile._provider.saveField('gamesCount', 0).catch(() => {});
-      }
-      try { localStorage.setItem('thehook_challenge_ver', String(CHALLENGE_DATA_VERSION)); } catch {}
-    }
-  }
-
   // Генерация испытания для текущей недели (детерминированная по номеру недели)
   _ensureWeekChallenge() {
     const weekKey = `week${this.week}`;
     const existing = this.data.weeklyProgress[weekKey];
 
-    // Миграция: всегда пересчитываем таргет по формуле, сохраняя прогресс
+    // Пересчитываем таргет по клиентской формуле, сохраняя прогресс
     if (existing) {
       const typeIdx = this.week % CHALLENGE_TYPES.length;
       const ct = CHALLENGE_TYPES[typeIdx];
       const correctTarget = ct.genTarget(this.week);
       if (existing.target !== correctTarget && !existing.completed) {
         existing.target = correctTarget;
-        existing.type = ct.type; // тип тоже мог устареть
+        existing.type = ct.type;
         profile.updateWeeklyProgress(this.data.weeklyProgress);
       }
       return;
@@ -102,29 +77,26 @@ export class ChallengeManager {
     const ct = CHALLENGE_TYPES[typeIdx];
 
     // Скин = циклический (week 1 → skin 1, week 11 → skin 1 снова)
-    const skinIdx = ((this.week - 1) % (SKINS.length - 1)) + 1; // skip 'default' (idx 0)
+    const skinIdx = ((this.week - 1) % (SKINS.length - 1)) + 1;
     const rewardSkin = SKINS[skinIdx]?.id || 'default';
 
     this.data.weeklyProgress[weekKey] = {
       type: ct.type,
       target: ct.genTarget(this.week),
       count: ct.count || 1,
-      progress: 0,        // текущий прогресс
-      streakCount: 0,     // для streak типа
+      progress: 0,
+      streakCount: 0,
       completed: false,
       rewardSkin,
-      claimed: false,      // награда забрана
+      claimed: false,
     };
     profile.updateWeeklyProgress(this.data.weeklyProgress);
   }
 
-  // Получить текущее испытание
   getCurrentChallenge() {
     return this.data.weeklyProgress[`week${this.week}`] || null;
   }
 
-  // Обновить прогресс после игры
-  // gameResult = { height, hitCount, gamesPlayed }
   updateProgress(gameResult) {
     const ch = this.getCurrentChallenge();
     if (!ch || ch.completed) return false;
@@ -177,19 +149,16 @@ export class ChallengeManager {
     return ch.completed;
   }
 
-  // Забрать награду (разблокировать скин)
   claimReward() {
     const ch = this.getCurrentChallenge();
     if (!ch || !ch.completed || ch.claimed) return null;
 
     ch.claimed = true;
-    // Разблокируем скин через profile API
     profile.unlockSkin(ch.rewardSkin);
     profile.updateWeeklyProgress(this.data.weeklyProgress);
     return ch.rewardSkin;
   }
 
-  // Очистка старых недель (оставляем только текущую + 2 предыдущие)
   cleanupOldWeeks() {
     const keys = Object.keys(this.data.weeklyProgress);
     for (const key of keys) {

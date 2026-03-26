@@ -1,9 +1,7 @@
-import { LocalProvider, getCurrentWeek } from './LocalProvider.js';
-import { TelegramProvider } from './TelegramProvider.js';
-import { YandexProvider } from './YandexProvider.js';
+import { TelegramProvider, getCurrentWeek } from './TelegramProvider.js';
 
 // Единая точка входа к данным пользователя
-// Определяет платформу, даёт синхронные геттеры (из кэша) и async сеттеры (кэш + сервер)
+// Архитектура: СЕРВЕР = единственный источник правды, localStorage = кэш
 class UserProfile {
   constructor() {
     this._provider = null;
@@ -12,43 +10,27 @@ class UserProfile {
     this._initialized = false;
   }
 
-  // Инициализация — вызвать один раз в main.js
-  // Мгновенно читает кэш, async подтягивает сервер
+  // Инициализация — вызвать один раз в main.js (await обязателен)
   async init() {
-    // Определяем платформу
-    if (window.Telegram?.WebApp?.initData) {
-      this._provider = new TelegramProvider();
-    } else if (window.YaGames) {
-      this._provider = new YandexProvider();
-    } else {
-      this._provider = new LocalProvider();
-    }
+    this._provider = new TelegramProvider();
 
-    // Мгновенно: читаем кэш для синхронного доступа
-    if (this._provider instanceof LocalProvider || this._provider instanceof YandexProvider) {
-      this._data = this._provider.readCache();
-    } else {
-      // TelegramProvider: сначала кэш, потом сервер
-      const localCache = new LocalProvider();
-      this._data = localCache.readCache();
-    }
-
+    // Мгновенно: кэш для первого кадра
+    this._data = this._provider.readCache();
     this._initialized = true;
 
-    // Async: подтягиваем серверные данные
+    // Async: загружаем серверные данные (сервер ПЕРЕЗАПИСЫВАЕТ кэш)
     try {
       const serverData = await this._provider.loadProfile();
       if (serverData) {
-        const changed = this._hasChanges(serverData);
         this._data = serverData;
-        if (changed) this._notify();
+        this._notify();
       }
     } catch {
       // Сервер недоступен — работаем с кэшем
     }
   }
 
-  // --- Синхронные геттеры (из кэша) ---
+  // --- Синхронные геттеры (из кэша/серверных данных) ---
 
   get bestScore() { return this._data?.bestScore || 0; }
   get moonReached() { return this._data?.moonReached || false; }
@@ -60,14 +42,12 @@ class UserProfile {
   get isAuthorized() { return this._provider?.isAuthorized() || false; }
   get currentWeek() { return getCurrentWeek(); }
 
-  // Проверить разблокирован ли скин
   isSkinUnlocked(skinId) {
     return this.unlockedSkins.includes(skinId);
   }
 
-  // --- Сеттеры (кэш + async сервер) ---
+  // --- Сеттеры (обновляют _data + сервер + кэш) ---
 
-  // Сохранить рекорд → boolean (isNewBest)
   saveBest(score) {
     if (score <= this._data.bestScore) return false;
     this._data.bestScore = score;
@@ -85,7 +65,6 @@ class UserProfile {
     this._provider.saveField('activeSkin', skinId).catch(() => {});
   }
 
-  // Разблокировать скин (добавить в список)
   unlockSkin(skinId) {
     if (!this._data.unlockedSkins.includes(skinId)) {
       this._data.unlockedSkins.push(skinId);
@@ -104,13 +83,12 @@ class UserProfile {
     return this._data.gamesCount;
   }
 
-  // Обновить weeklyProgress в кэше (для ChallengeManager)
   updateWeeklyProgress(weeklyProgress) {
     this._data.weeklyProgress = weeklyProgress;
     this._provider.saveField('weeklyProgress', weeklyProgress).catch(() => {});
   }
 
-  // --- Async операции (делегация провайдеру) ---
+  // --- Async операции ---
 
   async saveChallenge(height, hitCount, gameTime) {
     return this._provider.saveChallenge(height, hitCount, gameTime);
@@ -118,7 +96,6 @@ class UserProfile {
 
   async claimSkin() {
     const result = await this._provider.claimSkin();
-    // Обновляем кэш из ответа сервера
     if (result?.skinId) {
       if (!this._data.unlockedSkins.includes(result.skinId)) {
         this._data.unlockedSkins.push(result.skinId);
@@ -131,31 +108,19 @@ class UserProfile {
     return this._provider.fetchLeaderboard();
   }
 
-  // --- Подписка на обновления (серверная синхронизация) ---
+  // --- Подписка на серверные обновления ---
 
   onUpdated(callback) {
     this._listeners.push(callback);
-    // Вернуть функцию отписки
-    return () => {
-      this._listeners = this._listeners.filter(cb => cb !== callback);
-    };
+    return () => { this._listeners = this._listeners.filter(cb => cb !== callback); };
   }
-
-  // --- Приватные ---
 
   _notify() {
     for (const cb of this._listeners) {
-      try { cb(this._data); } catch { /* callback ошибка не должна ломать приложение */ }
+      try { cb(this._data); } catch {}
     }
-  }
-
-  _hasChanges(newData) {
-    if (!this._data) return true;
-    // Всегда нотифицировать при серверной синхронизации — данные могут отличаться
-    // по weeklyProgress, которые сложно сравнивать поверхностно
-    return true;
   }
 }
 
-// Singleton — один экземпляр на всё приложение
+// Singleton
 export const profile = new UserProfile();

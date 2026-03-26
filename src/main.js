@@ -30,19 +30,6 @@ import './ui.css';
     tg.expand();
   }
 
-  // Сброс stale localStorage перед загрузкой серверных данных
-  // Если DATA_VERSION на сервере/клиенте изменилась — чистим кэш рекорда,
-  // чтобы Math.max(local, server) не выбрал устаревшее локальное значение
-  const DATA_RESET_VERSION = 5;
-  const storedResetVer = parseInt(localStorage.getItem('thehook_reset_ver') || '0', 10);
-  if (storedResetVer < DATA_RESET_VERSION) {
-    try {
-      localStorage.removeItem('thehook_best');
-      localStorage.removeItem('thehook_challenges');
-      localStorage.setItem('thehook_reset_ver', String(DATA_RESET_VERSION));
-    } catch {}
-  }
-
   // Инициализация профиля — ждём серверные данные перед стартом игры
   await profile.init();
 
