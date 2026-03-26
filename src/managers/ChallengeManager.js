@@ -11,7 +11,7 @@ const CHALLENGE_TYPES = [
 ];
 
 // Версия данных — при изменении сбрасывает ВСЁ: рекорды + скины + прогресс (тестовый период)
-const CHALLENGE_DATA_VERSION = 4;
+const CHALLENGE_DATA_VERSION = 5;
 
 export class ChallengeManager {
   constructor() {

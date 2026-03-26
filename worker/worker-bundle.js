@@ -234,13 +234,13 @@ async function handleSaveChallenge(request, env) {
     const typeIdx = currentWeek % types.length;
     const type = types[typeIdx];
 
-    // Генерация целей
+    // Генерация целей (синхронизировано с клиентским ChallengeManager)
     const targets = {
-      reach: 150 + currentWeek * 50,
-      total: 500 + currentWeek * 200,
-      no_hit: 80 + currentWeek * 30,
-      games: 10 + currentWeek * 3,
-      streak: 50 + currentWeek * 25,
+      reach: 100000 + currentWeek * 5000,
+      total: 150000 + currentWeek * 10000,
+      no_hit: 100000 + currentWeek * 5000,
+      games: 500 + currentWeek * 50,
+      streak: 100000 + currentWeek * 5000,
     };
 
     // Скин-награда (циклический 1-10)
