@@ -4,43 +4,62 @@ import { GameScene } from './scenes/GameScene.js';
 import { profile } from './data/index.js';
 import './ui.css';
 
-// Telegram Mini App — раскрываем на весь экран
-if (window.Telegram?.WebApp) {
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
-}
+// Инициализация — ждём Telegram SDK если нужно, потом запускаем игру
+(async () => {
+  // Ожидание Telegram SDK — динамический скрипт может загрузиться позже module
+  // Ждём до 2с только если мы внутри Telegram (по маркерам из index.html)
+  const isTgEnv = window.TelegramWebviewProxy || location.hash.includes('tgWebAppData') || navigator.userAgent.includes('Telegram');
+  if (isTgEnv && !window.Telegram?.WebApp) {
+    await new Promise((resolve) => {
+      const start = Date.now();
+      const check = () => {
+        if (window.Telegram?.WebApp || Date.now() - start > 2000) {
+          resolve();
+        } else {
+          setTimeout(check, 30);
+        }
+      };
+      check();
+    });
+  }
 
-// Инициализация профиля — подтягивает данные с сервера (fire-and-forget)
-profile.init();
+  // Telegram Mini App — раскрываем на весь экран
+  if (window.Telegram?.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+  }
 
-// Safe area: set CSS variable from env() for JS access
-const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');
-if (!sat || sat === '0px') {
-  // Fallback: check if we're on iPhone with notch (screen height >= 812)
-  const isNotched = /iPhone/.test(navigator.userAgent) && screen.height >= 812;
-  document.documentElement.style.setProperty('--sat', isNotched ? '47px' : '0px');
-}
+  // Инициализация профиля — подтягивает данные с сервера (fire-and-forget)
+  profile.init();
 
-// Размеры берём после expand() — используем максимальные из доступных
-const W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-const H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+  // Safe area: set CSS variable from env() for JS access
+  const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');
+  if (!sat || sat === '0px') {
+    const isNotched = /iPhone/.test(navigator.userAgent) && screen.height >= 812;
+    document.documentElement.style.setProperty('--sat', isNotched ? '47px' : '0px');
+  }
 
-// Корневой контейнер для всех UI overlay — единая точка монтирования
-const gameUI = document.createElement('div');
-gameUI.id = 'game-ui';
-document.body.appendChild(gameUI);
+  // Размеры берём после expand() — используем максимальные из доступных
+  const W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+  const H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
-const engine = new Engine({
-  width: W,
-  height: H,
-  backgroundColor: '#141820',
-  parent: document.body,
-  gravity: 550, // arcade gravity (маятник использует GRAVITY=980 из constants)
-  scenes: {
-    MenuScene,
-    GameScene,
-  },
-});
+  // Корневой контейнер для всех UI overlay — единая точка монтирования
+  const gameUI = document.createElement('div');
+  gameUI.id = 'game-ui';
+  document.body.appendChild(gameUI);
 
-engine.start('MenuScene');
+  const engine = new Engine({
+    width: W,
+    height: H,
+    backgroundColor: '#141820',
+    parent: document.body,
+    gravity: 550,
+    scenes: {
+      MenuScene,
+      GameScene,
+    },
+  });
+
+  engine.start('MenuScene');
+})();
