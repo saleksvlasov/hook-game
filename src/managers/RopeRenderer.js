@@ -1,18 +1,36 @@
-import { Z } from '../constants.js';
-
 // Рендер верёвки — Bezier кривая с неоновым cyan свечением
+// Canvas 2D API вместо Phaser Graphics
 export class RopeRenderer {
   constructor(scene) {
     this.scene = scene;
-    this.graphics = null;
+    this._visible = false;
+    this._ax = 0; this._ay = 0;
+    this._px = 0; this._py = 0;
+    this._ropeLength = 0;
   }
 
   create() {
-    this.graphics = this.scene.add.graphics().setDepth(Z.ROPE);
+    // Ничего — всё рисуется в draw()
   }
 
-  draw(ax, ay, px, py, ropeLength) {
-    this.graphics.clear();
+  // Запомнить данные для отрисовки (вызывается из GameScene)
+  setPoints(ax, ay, px, py, ropeLength) {
+    this._visible = true;
+    this._ax = ax; this._ay = ay;
+    this._px = px; this._py = py;
+    this._ropeLength = ropeLength;
+  }
+
+  clear() {
+    this._visible = false;
+  }
+
+  draw(ctx) {
+    if (!this._visible) return;
+
+    const ax = this._ax, ay = this._ay;
+    const px = this._px, py = this._py;
+    const ropeLength = this._ropeLength;
 
     const midX = (ax + px) / 2;
     const midY = (ay + py) / 2;
@@ -22,38 +40,35 @@ export class RopeRenderer {
     const cpY = midY + sagY;
 
     // Тень
-    this.graphics.lineStyle(4, 0x000000, 0.3);
-    this._bezier(this.graphics, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    this._bezier(ctx, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
 
     // Основная верёвка — neon cyan
-    this.graphics.lineStyle(2.5, 0x00F5D4, 0.7);
-    this._bezier(this.graphics, ax, ay, cpX, cpY, px, py);
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = '#00F5D4';
+    ctx.lineWidth = 2.5;
+    this._bezier(ctx, ax, ay, cpX, cpY, px, py);
 
     // Highlight — холодный белый блик
-    this.graphics.lineStyle(1, 0xE0F0FF, 0.25);
-    this._bezier(this.graphics, ax, ay - 1, cpX, cpY - 1, px, py - 1);
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = '#E0F0FF';
+    ctx.lineWidth = 1;
+    this._bezier(ctx, ax, ay - 1, cpX, cpY - 1, px, py - 1);
+
+    ctx.globalAlpha = 1;
   }
 
-  clear() {
-    if (this.graphics) this.graphics.clear();
-  }
-
-  _bezier(gfx, x1, y1, cx, cy, x2, y2) {
-    const steps = 20;
-    gfx.beginPath();
-    gfx.moveTo(x1, y1);
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const it = 1 - t;
-      gfx.lineTo(
-        it * it * x1 + 2 * it * t * cx + t * t * x2,
-        it * it * y1 + 2 * it * t * cy + t * t * y2
-      );
-    }
-    gfx.strokePath();
+  _bezier(ctx, x1, y1, cx, cy, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    // Квадратичная Безье
+    ctx.quadraticCurveTo(cx, cy, x2, y2);
+    ctx.stroke();
   }
 
   destroy() {
-    if (this.graphics) this.graphics.destroy();
+    // Ничего — нет Phaser объектов
   }
 }

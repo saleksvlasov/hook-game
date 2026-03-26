@@ -149,27 +149,4 @@ export const BIOMES = [
   },
 ];
 
-// Z-индексы (слои отрисовки)
-export const Z = {
-  BG:         -10,
-  MOON:       -9,
-  BIOME_FAR:  -8,
-  TREE_FAR:   -7,
-  TREE_NEAR:  -6,
-  ASH:        -5,
-  FOG:        -4,
-  SWAMP:       1,
-  SWAMP_BUBBLES: 2,
-  ANCHORS:     2,
-  OBSTACLES:   3,   // между trail и rope
-  TRAIL:       3,
-  ROPE:        4,
-  PLAYER:      5,
-  HUD:        20,
-  EASTER:     24,
-  EASTER_TEXT: 25,
-  BLOOD:      29,
-  GAME_OVER:  30,
-  TRANSITION: 50,
-  HTML_BUTTONS: 100,
-};
+// Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()

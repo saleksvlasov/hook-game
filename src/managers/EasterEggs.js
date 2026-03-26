@@ -1,149 +1,178 @@
-import { BOUNTY_HEIGHT, MOON_HEIGHT, Z } from '../constants.js';
-
-const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
+import { BOUNTY_HEIGHT, MOON_HEIGHT } from '../constants.js';
 import { playBounty, playMoonwalker } from '../audio.js';
 import { profile } from '../data/index.js';
 import { t } from '../i18n.js';
-import { drawWantedPosterFrame, createEmberBurst } from '../managers/UIFactory.js';
+import { drawSteelFrame } from '../managers/UIFactory.js';
 
-// Пасхалки: Bounty Claimed (100m) и Moonwalker (300m) — Neon Western цвета
+const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
+
+// Пасхалки: Bounty Claimed (1000m) и Moonwalker (3000m) — Neon Western
+// Canvas 2D API — рисуются в экранных координатах
 export class EasterEggs {
   constructor(scene) {
     this.scene = scene;
     this.bountyShown = false;
     this.moonReached = false;
+
+    // Анимация Bounty
+    this._bountyActive = false;
+    this._bountyY = -40;
+    this._bountyAlpha = 1;
+    this._bountyTime = 0;
+    this._bountyPhase = 'enter'; // enter, hold, exit
+
+    // Анимация Moonwalker
+    this._moonActive = false;
+    this._moonAlpha = 0;
+    this._moonGlowAlpha = 0;
+    this._moonTime = 0;
+    this._moonPhase = 'glow_in'; // glow_in, glow_out, text_in, text_out, done
   }
 
   reset() {
     this.bountyShown = false;
     this.moonReached = false;
+    this._bountyActive = false;
+    this._moonActive = false;
   }
 
   // Вызывать каждый кадр из update
   check(currentHeight) {
     if (currentHeight >= BOUNTY_HEIGHT && !this.bountyShown) {
       this.bountyShown = true;
-      this._showBountyBanner();
+      this._startBounty();
     }
     if (currentHeight >= MOON_HEIGHT && !this.moonReached) {
       this.moonReached = true;
-      this._showMoonwalker();
+      this._startMoonwalker();
     }
   }
 
-  _showBountyBanner() {
+  _startBounty() {
     playBounty();
-    const W = this.scene.W;
-
-    // Рамка розыскного плаката как фон
-    const posterFrame = this.scene.add.graphics()
-      .setScrollFactor(0)
-      .setDepth(Z.EASTER_TEXT - 1);
-    drawWantedPosterFrame(posterFrame, W / 2, -40, 240, 60);
-
-    // Текст — neon amber с тёмной обводкой
-    const banner = this.scene.add.text(W / 2, -40, t('bounty'), {
-      fontSize: '26px',
-      fontFamily: NEON_FONT,
-      fontStyle: 'bold',
-      color: '#FFB800',
-      stroke: '#0A0E1A',
-      strokeThickness: 5,
-      padding: { x: 20, y: 10 },
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT);
-
-    // Влетает сверху — рамка
-    this.scene.tweens.add({
-      targets: posterFrame,
-      y: 170,
-      duration: 500,
-      ease: 'Back.easeOut',
-    });
-
-    // Влетает сверху — текст
-    this.scene.tweens.add({
-      targets: banner,
-      y: 130,
-      duration: 500,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        // Искры при появлении
-        createEmberBurst(this.scene, W / 2, 130, 8, Z.EASTER_TEXT);
-
-        this.scene.time.delayedCall(2000, () => {
-          this.scene.tweens.add({
-            targets: [banner, posterFrame],
-            y: '-=190',
-            alpha: 0,
-            duration: 400,
-            ease: 'Cubic.easeIn',
-            onComplete: () => {
-              banner.destroy();
-              posterFrame.destroy();
-            },
-          });
-        });
-      },
-    });
+    this._bountyActive = true;
+    this._bountyY = -40;
+    this._bountyAlpha = 1;
+    this._bountyTime = 0;
+    this._bountyPhase = 'enter';
   }
 
-  _showMoonwalker() {
+  _startMoonwalker() {
     playMoonwalker();
     profile.saveMoon();
+    this._moonActive = true;
+    this._moonAlpha = 0;
+    this._moonGlowAlpha = 0;
+    this._moonTime = 0;
+    this._moonPhase = 'glow_in';
+  }
+
+  // Отрисовка пасхалок — в экранных координатах
+  draw(ctx, delta) {
+    if (this._bountyActive) this._drawBounty(ctx, delta);
+    if (this._moonActive) this._drawMoonwalker(ctx, delta);
+  }
+
+  _drawBounty(ctx, delta) {
     const W = this.scene.W;
+    this._bountyTime += delta;
 
-    // Свечение луны — neon cyan
-    const moonGlow = this.scene.add.graphics().setScrollFactor(0).setDepth(Z.EASTER);
-    moonGlow.fillStyle(0x00F5D4, 0.0);
-    moonGlow.fillCircle(W * 0.72, 80, 50);
+    // Анимация фаз
+    if (this._bountyPhase === 'enter') {
+      // Back.easeOut: 500ms, -40 → 130
+      const t = Math.min(this._bountyTime / 500, 1);
+      const s = 1.70158;
+      const t1 = t - 1;
+      const eased = 1 + (s + 1) * t1 * t1 * t1 + s * t1 * t1;
+      this._bountyY = -40 + 170 * eased;
+      if (t >= 1) {
+        this._bountyPhase = 'hold';
+        this._bountyTime = 0;
+      }
+    } else if (this._bountyPhase === 'hold') {
+      this._bountyY = 130;
+      if (this._bountyTime > 2000) {
+        this._bountyPhase = 'exit';
+        this._bountyTime = 0;
+      }
+    } else if (this._bountyPhase === 'exit') {
+      const t = Math.min(this._bountyTime / 400, 1);
+      this._bountyY = 130 - 190 * t;
+      this._bountyAlpha = 1 - t;
+      if (t >= 1) this._bountyActive = false;
+    }
 
-    this.scene.tweens.addCounter({
-      from: 0,
-      to: 40,
-      duration: 1500,
-      yoyo: true,
-      onUpdate: (tw) => {
-        const glowAlpha = tw.getValue() / 100;
-        moonGlow.clear();
-        // Cyan лунное свечение
-        moonGlow.fillStyle(0x00F5D4, glowAlpha);
-        moonGlow.fillCircle(W * 0.72, 80, 70);
-        moonGlow.fillStyle(0x00F5D4, glowAlpha * 0.5);
-        moonGlow.fillCircle(W * 0.72, 80, 35);
-      },
-      onComplete: () => {
-        this.scene.time.delayedCall(3000, () => {
-          this.scene.tweens.add({
-            targets: moonGlow,
-            alpha: 0,
-            duration: 2000,
-            onComplete: () => moonGlow.destroy(),
-          });
-        });
-      },
-    });
+    if (!this._bountyActive) return;
 
-    // Надпись "MOONWALKER" — neon cyan
-    const txt = this.scene.add.text(W / 2, 180, t('moonwalker'), {
-      fontSize: '22px',
-      fontFamily: NEON_FONT,
-      fontStyle: 'italic',
-      color: '#00F5D4',
-      stroke: '#0A0E1A',
-      strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(Z.EASTER_TEXT).setAlpha(0);
+    ctx.globalAlpha = this._bountyAlpha;
 
-    this.scene.tweens.add({
-      targets: txt,
-      alpha: 0.8,
-      duration: 1000,
-      hold: 2500,
-      yoyo: true,
-      onComplete: () => txt.destroy(),
-    });
+    // Рамка
+    drawSteelFrame(ctx, W / 2, this._bountyY, 240, 60);
+
+    // Текст
+    ctx.font = `bold 26px ${NEON_FONT}`;
+    ctx.fillStyle = '#FFB800';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#0A0E1A';
+    ctx.lineWidth = 5;
+    ctx.strokeText(t('bounty'), W / 2, this._bountyY);
+    ctx.fillText(t('bounty'), W / 2, this._bountyY);
+
+    ctx.globalAlpha = 1;
+  }
+
+  _drawMoonwalker(ctx, delta) {
+    const W = this.scene.W;
+    this._moonTime += delta;
+
+    if (this._moonPhase === 'glow_in') {
+      const t = Math.min(this._moonTime / 1500, 1);
+      this._moonGlowAlpha = t * 0.4;
+      if (t >= 1) { this._moonPhase = 'glow_out'; this._moonTime = 0; }
+    } else if (this._moonPhase === 'glow_out') {
+      const t = Math.min(this._moonTime / 1500, 1);
+      this._moonGlowAlpha = 0.4 * (1 - t);
+      this._moonAlpha = Math.min(t * 1.25, 0.8); // Текст появляется
+      if (t >= 1) { this._moonPhase = 'text_hold'; this._moonTime = 0; }
+    } else if (this._moonPhase === 'text_hold') {
+      this._moonAlpha = 0.8;
+      this._moonGlowAlpha = 0;
+      if (this._moonTime > 2500) { this._moonPhase = 'text_out'; this._moonTime = 0; }
+    } else if (this._moonPhase === 'text_out') {
+      const t = Math.min(this._moonTime / 2000, 1);
+      this._moonAlpha = 0.8 * (1 - t);
+      if (t >= 1) this._moonActive = false;
+    }
+
+    if (!this._moonActive) return;
+
+    // Лунное свечение
+    if (this._moonGlowAlpha > 0.01) {
+      ctx.globalAlpha = this._moonGlowAlpha;
+      ctx.fillStyle = '#00F5D4';
+      ctx.beginPath(); ctx.arc(W * 0.72, 80, 70, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = this._moonGlowAlpha * 0.5;
+      ctx.beginPath(); ctx.arc(W * 0.72, 80, 35, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Надпись "MOONWALKER"
+    if (this._moonAlpha > 0.01) {
+      ctx.globalAlpha = this._moonAlpha;
+      ctx.font = `italic 22px ${NEON_FONT}`;
+      ctx.fillStyle = '#00F5D4';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = '#0A0E1A';
+      ctx.lineWidth = 4;
+      ctx.strokeText(t('moonwalker'), W / 2, 180);
+      ctx.fillText(t('moonwalker'), W / 2, 180);
+    }
+
+    ctx.globalAlpha = 1;
   }
 
   destroy() {
-    // Tweens чистятся при остановке сцены
+    // Ничего — нет Phaser объектов
   }
 }

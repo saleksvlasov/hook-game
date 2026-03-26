@@ -1,16 +1,16 @@
-import Phaser from 'phaser';
 import { SKINS, drawSkinPose } from './SkinRenderer.js';
 import { profile } from '../data/index.js';
+import { clamp } from '../engine/math.js';
 
 // Рендер охотника — скин из SkinRenderer
+// Canvas 2D API вместо Phaser Graphics
 export class HunterRenderer {
   constructor(scene) {
     this.scene = scene;
-    this.graphics = null;
     this.coatTime = 0;
     this.skinIndex = 0;
-    // Порог перерисовки — пропускаем если пальто почти не изменилось
     this._lastCoatAngle = -999;
+    this._rotation = 0;
   }
 
   // Установить скин по id
@@ -24,41 +24,45 @@ export class HunterRenderer {
     this.setSkin(profile.activeSkin);
   }
 
-  create(playerContainer) {
-    this.graphics = this.scene.add.graphics();
+  create() {
     this.loadActiveSkin();
-    this.drawPose(this.graphics, 0);
-    playerContainer.add(this.graphics);
   }
 
   // Обновление анимации: rotation и coat sway
-  updateAnimation(delta, playerContainer, vx, vy, swingSpeed, swingAngle, isHooked) {
+  updateAnimation(delta, playerX, playerY, vx, vy, swingSpeed, swingAngle, isHooked) {
     this.coatTime += delta * 0.005;
 
     // Наклон охотника
     if (!isHooked) {
-      const targetRot = Phaser.Math.Clamp(vx / 600, -0.4, 0.4);
-      playerContainer.rotation += (targetRot - playerContainer.rotation) * 0.1;
+      const targetRot = clamp(vx / 600, -0.4, 0.4);
+      this._rotation += (targetRot - this._rotation) * 0.1;
     } else {
       const targetRot = (swingAngle - Math.PI / 2) * 0.3;
-      playerContainer.rotation += (targetRot - playerContainer.rotation) * 0.15;
+      this._rotation += (targetRot - this._rotation) * 0.15;
     }
 
     // Интенсивность анимации пальто от скорости
     const speed = Math.sqrt(vx * vx + vy * vy);
     const swingContrib = isHooked ? Math.abs(swingSpeed) * 3 : 0;
     const coatIntensity = Math.min(1, (speed + swingContrib * 100) / 400);
-    this.drawPose(this.graphics, this.coatTime * (1 + coatIntensity * 2));
+    this._coatAngle = this.coatTime * (1 + coatIntensity * 2);
   }
 
-  drawPose(g, coatAngle) {
-    // Пропускаем перерисовку если угол пальто изменился незначительно
-    if (Math.abs(coatAngle - this._lastCoatAngle) < 0.03) return;
-    this._lastCoatAngle = coatAngle;
-    drawSkinPose(g, this.skinIndex, coatAngle);
+  // Рисовать охотника в мировых координатах
+  draw(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(this._rotation);
+    drawSkinPose(ctx, this.skinIndex, this._coatAngle || 0);
+    ctx.restore();
+  }
+
+  // Рисовать ghost (клон для wrap-around)
+  drawGhost(ctx, x, y) {
+    this.draw(ctx, x, y);
   }
 
   destroy() {
-    if (this.graphics) this.graphics.destroy();
+    // Ничего — нет Phaser объектов
   }
 }

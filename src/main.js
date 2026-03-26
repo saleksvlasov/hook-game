@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import { Engine } from './engine/index.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { profile } from './data/index.js';
@@ -25,29 +25,21 @@ if (!sat || sat === '0px') {
 const W = document.documentElement.clientWidth;
 const H = document.documentElement.clientHeight;
 
-const config = {
-  type: Phaser.AUTO,
-  width: W,
-  height: H,
-  backgroundColor: '#141820',
-  parent: document.body,
-  scale: {
-    mode: Phaser.Scale.NONE,
-    autoCenter: Phaser.Scale.NO_CENTER,
-  },
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { y: 550 },
-      debug: false,
-    },
-  },
-  scene: [MenuScene, GameScene],
-};
-
 // Корневой контейнер для всех UI overlay — единая точка монтирования
 const gameUI = document.createElement('div');
 gameUI.id = 'game-ui';
 document.body.appendChild(gameUI);
 
-new Phaser.Game(config);
+const engine = new Engine({
+  width: W,
+  height: H,
+  backgroundColor: '#141820',
+  parent: document.body,
+  gravity: 550, // arcade gravity (маятник использует GRAVITY=980 из constants)
+  scenes: {
+    MenuScene,
+    GameScene,
+  },
+});
+
+engine.start('MenuScene');

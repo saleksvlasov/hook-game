@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import { clamp } from '../engine/math.js';
 import {
   GRAVITY, HOOK_RANGE, MAX_ROPE_LENGTH, MIN_ROPE,
   SWING_FRICTION, RELEASE_BOOST, HOOK_COOLDOWN,
@@ -47,7 +47,7 @@ export class SwingPhysics {
     // Промах — нет якорей в радиусе
     if (!nearest) return null;
 
-    const ropeLength = Phaser.Math.Clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
+    const ropeLength = clamp(minDist, MIN_ROPE, MAX_ROPE_LENGTH);
 
     const dx = px - nearest.x;
     const dy = py - nearest.y;
@@ -116,7 +116,7 @@ export class SwingPhysics {
   /** Эффективный радиус зацепа с учётом штрафа за падение. */
   getEffectiveRange(vy) {
     const fallSpeed = Math.max(0, vy);
-    const penalty = Phaser.Math.Clamp(
+    const penalty = clamp(
       (fallSpeed - FALL_SPEED_PENALTY_START) / (FALL_SPEED_PENALTY_MAX - FALL_SPEED_PENALTY_START),
       0, 1
     );

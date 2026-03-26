@@ -1,217 +1,272 @@
-import Phaser from 'phaser';
 import { profile } from '../data/index.js';
 import { SKINS, drawSkinPose } from './SkinRenderer.js';
-import { getLang } from '../i18n.js';
-import { t } from '../i18n.js';
+import { getLang, t } from '../i18n.js';
+import { clamp } from '../engine/math.js';
+import { drawGlassButton } from './UIFactory.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
-const NEON_CYAN = 0x00F5D4;
-const NEON_AMBER_STR = '#FFB800';
 const NEON_CYAN_STR = '#00F5D4';
+const NEON_AMBER_STR = '#FFB800';
 const NEON_PINK_STR = '#FF2E63';
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 
 /**
  * Горизонтальная карусель скинов + тултип-карточка.
- * Вынесено из MenuScene для декомпозиции.
+ * Canvas 2D API — всё рисуется в draw(ctx).
  */
 export class SkinCarousel {
   constructor(scene) {
     this.scene = scene;
     this.skinSelectorOpen = false;
-    this.skinSelectorElements = [];
-    this._skinItems = [];
-    this._tooltipElements = [];
     this._skinScrollX = 0;
-    // Pointer handlers (ссылки для cleanup)
-    this._skinPointerDown = null;
-    this._skinPointerMove = null;
-    this._skinPointerUp = null;
+    this._tooltipSkinIndex = -1;
+    this._tooltipVisible = false;
+
+    // Pointer state
+    this._dragging = false;
+    this._dragStartX = 0;
+    this._totalDragDist = 0;
+
+    // Handlers
+    this._onPointerDown = null;
+    this._onPointerMove = null;
+    this._onPointerUp = null;
   }
 
-  /** Открыть / закрыть карусель */
   toggle() {
     if (this.skinSelectorOpen) {
       this._close();
-      return;
+    } else {
+      this._open();
     }
-    this._open();
   }
 
-  // --- Внутренние методы ---
-
   _close() {
-    for (const el of this.skinSelectorElements) {
-      if (el && el.destroy) el.destroy();
-    }
-    this.skinSelectorElements = [];
-    this._skinItems = [];
     this.skinSelectorOpen = false;
+    this._tooltipVisible = false;
     this._removePointerListeners();
   }
 
   _open() {
     this.skinSelectorOpen = true;
-    const s = this.scene;
-    const W = s.W;
-    const H = s.H;
+    this._tooltipVisible = false;
+
     const cellW = 56;
-    const y = H * 0.88;
     const activeSkin = profile.activeSkin;
     const activeIdx = SKINS.findIndex(sk => sk.id === activeSkin);
     const totalW = SKINS.length * cellW;
+    const W = this.scene.W;
 
-    // Начальный offset — центрируем на активном скине
+    // Начальный offset
     const centerOffset = W / 2 - (activeIdx >= 0 ? activeIdx : 0) * cellW - cellW / 2;
-    this._skinScrollX = Phaser.Math.Clamp(centerOffset, W - totalW, 0);
+    this._skinScrollX = clamp(centerOffset, W - totalW, 0);
 
-    // Состояние свайпа
-    let dragging = false;
-    let dragStartX = 0;
-    let totalDragDist = 0;
+    this._setupPointerListeners();
+  }
 
-    // Фон полоса
-    const bgStrip = s.add.graphics().setDepth(18);
-    bgStrip.fillStyle(0x0A0E1A, 0.92);
-    bgStrip.fillRect(0, y - 35, W, 70);
-    bgStrip.lineStyle(1, 0x00F5D4, 0.15);
-    bgStrip.lineBetween(0, y - 35, W, y - 35);
-    this.skinSelectorElements.push(bgStrip);
-
-    // Скины
-    this._skinItems = [];
-    for (let i = 0; i < SKINS.length; i++) {
-      const skin = SKINS[i];
-      const x = this._skinScrollX + i * cellW + cellW / 2;
-      const unlocked = profile.isSkinUnlocked(skin.id);
-      const isActive = skin.id === activeSkin;
-
-      const container = s.add.container(x, y).setDepth(19);
-      const gfx = s.add.graphics();
-      drawSkinPose(gfx, i, 0);
-      container.add(gfx);
-      container.setScale(0.65);
-      if (!unlocked) container.setAlpha(0.25);
-
-      let frame = null;
-      if (isActive) {
-        frame = s.add.graphics().setDepth(20);
-        frame.lineStyle(2, 0x00F5D4, 0.7);
-        frame.strokeRoundedRect(x - 22, y - 28, 44, 56, 6);
-        this.skinSelectorElements.push(frame);
-      }
-
-      this._skinItems.push({ container, frame, index: i });
-      this.skinSelectorElements.push(container);
-    }
-
-    // Подсказка
-    const hint = s.add.text(W / 2, y + 32, '← swipe · tap to preview →', {
-      fontSize: '10px', fontFamily: "'Inter', sans-serif", color: '#4A5580',
-    }).setOrigin(0.5).setDepth(18);
-    this.skinSelectorElements.push(hint);
-
-    // --- Pointer обработчики ---
+  _setupPointerListeners() {
+    const cellW = 56;
+    const totalW = SKINS.length * cellW;
+    const W = this.scene.W;
+    const y = this.scene.H * 0.88;
     const self = this;
 
-    this._skinPointerDown = function (pointer) {
-      if (pointer.y < y - 40 || pointer.y > y + 40) return;
-      dragging = true;
-      dragStartX = pointer.x;
-      totalDragDist = 0;
+    this._onPointerDown = (e) => {
+      if (e.y < y - 40 || e.y > y + 40) return;
+      self._dragging = true;
+      self._dragStartX = e.x;
+      self._totalDragDist = 0;
     };
 
-    this._skinPointerMove = function (pointer) {
-      if (!dragging) return;
-      const dx = pointer.x - dragStartX;
-      totalDragDist += Math.abs(dx);
-      self._skinScrollX = Phaser.Math.Clamp(self._skinScrollX + dx, W - totalW, 0);
-      dragStartX = pointer.x;
-      self._reposition();
+    this._onPointerMove = (e) => {
+      if (!self._dragging) return;
+      const dx = e.x - self._dragStartX;
+      self._totalDragDist += Math.abs(dx);
+      self._skinScrollX = clamp(self._skinScrollX + dx, W - totalW, 0);
+      self._dragStartX = e.x;
     };
 
-    this._skinPointerUp = function (pointer) {
-      if (!dragging) return;
-      dragging = false;
-      if (totalDragDist < 8 && pointer.y >= y - 40 && pointer.y <= y + 40) {
-        const tapX = pointer.x;
-        for (const item of self._skinItems) {
-          const skinX = self._skinScrollX + item.index * cellW + cellW / 2;
+    this._onPointerUp = (e) => {
+      if (!self._dragging) return;
+      self._dragging = false;
+      if (self._totalDragDist < 8 && e.y >= y - 40 && e.y <= y + 40) {
+        const tapX = e.x;
+        for (let i = 0; i < SKINS.length; i++) {
+          const skinX = self._skinScrollX + i * cellW + cellW / 2;
           if (Math.abs(tapX - skinX) < cellW / 2) {
-            self.showTooltip(item.index, skinX, y);
+            self._tooltipSkinIndex = i;
+            self._tooltipVisible = true;
             break;
           }
         }
       }
     };
 
-    s.input.on('pointerdown', this._skinPointerDown);
-    s.input.on('pointermove', this._skinPointerMove);
-    s.input.on('pointerup', this._skinPointerUp);
+    this.scene.input.on('pointerdown', this._onPointerDown);
+    this.scene.input.on('pointermove', this._onPointerMove);
+    this.scene.input.on('pointerup', this._onPointerUp);
   }
 
-  /** Перепозиционировать скины при свайпе */
-  _reposition() {
-    if (!this._skinItems) return;
-    const cellW = 56;
-    const y = this.scene.H * 0.88;
-    for (const item of this._skinItems) {
-      const x = this._skinScrollX + item.index * cellW + cellW / 2;
-      item.container.setX(x);
-      if (item.frame) {
-        item.frame.clear();
-        item.frame.lineStyle(2, 0x00F5D4, 0.7);
-        item.frame.strokeRoundedRect(x - 22, y - 28, 44, 56, 6);
-      }
-    }
-  }
+  // Обработка тапа на тултипе (equip/close) — вызывается из MenuScene
+  handleTooltipTap(x, y) {
+    if (!this._tooltipVisible) return false;
 
-  /** Показать тултип-карточку скина по центру экрана */
-  showTooltip(skinIndex) {
-    this.hideTooltip();
-
-    const skin = SKINS[skinIndex];
-    if (!skin) return;
-
-    const s = this.scene;
-    const W = s.W;
-    const H = s.H;
-    const lang = getLang();
-    this._tooltipElements = [];
-
-    // Затемнение фона
-    const overlay = s.add.rectangle(W / 2, H / 2, W, H, 0x0A0E1A, 0.7)
-      .setDepth(30).setInteractive();
-    overlay.on('pointerdown', () => this.hideTooltip());
-    this._tooltipElements.push(overlay);
-
-    // Карточка
-    const cardW = 260;
-    const cardH = 220;
+    const W = this.scene.W;
+    const H = this.scene.H;
     const cx = W / 2;
     const cy = H / 2;
+    const cardW = 260;
+    const cardH = 220;
 
-    const card = s.add.graphics().setDepth(31);
-    card.fillStyle(0x0E1225, 0.95);
-    card.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
-    card.lineStyle(1.5, skin.outline, 0.5);
-    card.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
-    this._tooltipElements.push(card);
+    // Внутри карточки?
+    if (x >= cx - cardW / 2 && x <= cx + cardW / 2 && y >= cy - cardH / 2 && y <= cy + cardH / 2) {
+      // Проверяем кнопку EQUIP (cy + 75..cy + 95)
+      const skin = SKINS[this._tooltipSkinIndex];
+      if (skin && profile.isSkinUnlocked(skin.id) && skin.id !== profile.activeSkin) {
+        if (y >= cy + 70 && y <= cy + 100) {
+          profile.setActiveSkin(skin.id);
+          if (this.scene.menuHunterObj) this.scene.menuHunterObj.redraw(this._tooltipSkinIndex);
+          this._tooltipVisible = false;
+          // Пересоздать карусель для обновления рамки
+          if (this.skinSelectorOpen) {
+            this._close();
+            this._open();
+          }
+          return true;
+        }
+      }
+      return true; // Клик внутри карточки — поглощаем
+    }
+
+    // Клик за пределами карточки — закрываем
+    this._tooltipVisible = false;
+    return true;
+  }
+
+  draw(ctx) {
+    if (!this.skinSelectorOpen) return;
+
+    const W = this.scene.W;
+    const cellW = 56;
+    const y = this.scene.H * 0.88;
+    const activeSkin = profile.activeSkin;
+
+    // Фон полоса
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = '#0A0E1A';
+    ctx.fillRect(0, y - 35, W, 70);
+    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = '#00F5D4';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y - 35);
+    ctx.lineTo(W, y - 35);
+    ctx.stroke();
+
+    // Скины
+    for (let i = 0; i < SKINS.length; i++) {
+      const skin = SKINS[i];
+      const x = this._skinScrollX + i * cellW + cellW / 2;
+      const unlocked = profile.isSkinUnlocked(skin.id);
+      const isActive = skin.id === activeSkin;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(0.65, 0.65);
+      ctx.globalAlpha = unlocked ? 1 : 0.25;
+      drawSkinPose(ctx, i, 0);
+      ctx.restore();
+
+      // Рамка для активного скина
+      if (isActive) {
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = '#00F5D4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(x - 22, y - 28, 44, 56, 6);
+        } else {
+          ctx.rect(x - 22, y - 28, 44, 56);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Подсказка
+    ctx.globalAlpha = 1;
+    ctx.font = `10px 'Inter', sans-serif`;
+    ctx.fillStyle = '#4A5580';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('\u2190 swipe \u00B7 tap to preview \u2192', W / 2, y + 32);
+
+    // Тултип-карточка
+    if (this._tooltipVisible) {
+      this._drawTooltip(ctx);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  _drawTooltip(ctx) {
+    const skin = SKINS[this._tooltipSkinIndex];
+    if (!skin) return;
+
+    const W = this.scene.W;
+    const H = this.scene.H;
+    const lang = getLang();
+    const cx = W / 2;
+    const cy = H / 2;
+    const cardW = 260;
+    const cardH = 220;
+
+    // Затемнение фона
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#0A0E1A';
+    ctx.fillRect(0, 0, W, H);
+
+    // Карточка
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#0E1225';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+    } else {
+      ctx.rect(cx - cardW / 2, cy - cardH / 2, cardW, cardH);
+    }
+    ctx.fill();
+
+    // Рамка карточки
+    const outlineHex = typeof skin.outline === 'number'
+      ? '#' + skin.outline.toString(16).padStart(6, '0')
+      : skin.outline;
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = outlineHex;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+    } else {
+      ctx.rect(cx - cardW / 2, cy - cardH / 2, cardW, cardH);
+    }
+    ctx.stroke();
 
     // Скин крупно
-    const skinContainer = s.add.container(cx, cy - 40).setDepth(32).setScale(2);
-    const skinGfx = s.add.graphics();
-    drawSkinPose(skinGfx, skinIndex, 0);
-    skinContainer.add(skinGfx);
-    this._tooltipElements.push(skinContainer);
+    ctx.save();
+    ctx.translate(cx, cy - 40);
+    ctx.scale(2, 2);
+    ctx.globalAlpha = 1;
+    drawSkinPose(ctx, this._tooltipSkinIndex, 0);
+    ctx.restore();
 
-    // Имя скина
+    // Имя
     const name = skin.name[lang] || skin.name.en;
-    const nameText = s.add.text(cx, cy + 30, name, {
-      fontSize: '18px', fontFamily: NEON_FONT, fontStyle: 'bold',
-      color: '#' + skin.outline.toString(16).padStart(6, '0'),
-    }).setOrigin(0.5).setDepth(32);
-    this._tooltipElements.push(nameText);
+    ctx.globalAlpha = 1;
+    ctx.font = `bold 18px ${NEON_FONT}`;
+    ctx.fillStyle = outlineHex;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, cx, cy + 30);
 
     // Условие получения
     const unlocked = profile.isSkinUnlocked(skin.id);
@@ -224,68 +279,42 @@ export class SkinCarousel {
       conditionText = `Week ${skin.week} ${t('challenge_title')}`;
     }
 
-    const condText = s.add.text(cx, cy + 55, conditionText, {
-      fontSize: '12px', fontFamily: NEON_FONT,
-      color: unlocked ? NEON_CYAN_STR : '#4A5580',
-    }).setOrigin(0.5).setDepth(32);
-    this._tooltipElements.push(condText);
+    ctx.font = `12px ${NEON_FONT}`;
+    ctx.fillStyle = unlocked ? NEON_CYAN_STR : '#4A5580';
+    ctx.fillText(conditionText, cx, cy + 55);
 
     // Кнопка EQUIP или LOCKED
     if (unlocked && skin.id !== profile.activeSkin) {
-      const equipText = s.add.text(cx, cy + 85, t('skin_equip'), {
-        fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold',
-        color: NEON_AMBER_STR, backgroundColor: 'rgba(255,184,0,0.1)',
-        padding: { x: 20, y: 8 },
-      }).setOrigin(0.5).setDepth(32).setInteractive({ useHandCursor: true });
-
-      equipText.on('pointerdown', () => {
-        profile.setActiveSkin(skin.id);
-        // Обновить охотника в меню через scene
-        if (s.menuHunterObj) s.menuHunterObj.redraw(skinIndex);
-        this.hideTooltip();
-        // Пересоздать селектор для обновления рамки
-        if (this.skinSelectorOpen) {
-          this._close();
-          this._open();
-        }
-      });
-      this._tooltipElements.push(equipText);
+      ctx.font = `bold 14px ${NEON_FONT}`;
+      ctx.fillStyle = NEON_AMBER_STR;
+      ctx.globalAlpha = 1;
+      // Фон кнопки
+      ctx.fillStyle = 'rgba(255,184,0,0.1)';
+      const btnW = 100;
+      const btnH = 32;
+      ctx.fillRect(cx - btnW / 2, cy + 70, btnW, btnH);
+      ctx.fillStyle = NEON_AMBER_STR;
+      ctx.fillText(t('skin_equip'), cx, cy + 86);
     } else if (!unlocked) {
-      const lockText = s.add.text(cx, cy + 85, `🔒 ${t('skin_locked')}`, {
-        fontSize: '14px', fontFamily: NEON_FONT, color: NEON_PINK_STR,
-      }).setOrigin(0.5).setDepth(32);
-      this._tooltipElements.push(lockText);
+      ctx.font = `14px ${NEON_FONT}`;
+      ctx.fillStyle = NEON_PINK_STR;
+      ctx.fillText(`\uD83D\uDD12 ${t('skin_locked')}`, cx, cy + 85);
     }
   }
 
-  /** Скрыть тултип скина */
-  hideTooltip() {
-    if (this._tooltipElements) {
-      for (const el of this._tooltipElements) {
-        if (el && el.destroy) el.destroy();
-      }
-      this._tooltipElements = [];
-    }
-  }
-
-  /** Cleanup всех элементов + listeners */
   destroy() {
-    this.hideTooltip();
     this._removePointerListeners();
-    for (const el of this.skinSelectorElements || []) {
-      if (el && el.destroy) el.destroy();
-    }
-    this.skinSelectorElements = [];
-    this._skinItems = [];
+    this._tooltipVisible = false;
+    this.skinSelectorOpen = false;
   }
 
   _removePointerListeners() {
     const inp = this.scene.input;
-    if (this._skinPointerDown) inp.off('pointerdown', this._skinPointerDown);
-    if (this._skinPointerMove) inp.off('pointermove', this._skinPointerMove);
-    if (this._skinPointerUp) inp.off('pointerup', this._skinPointerUp);
-    this._skinPointerDown = null;
-    this._skinPointerMove = null;
-    this._skinPointerUp = null;
+    if (this._onPointerDown) inp.off('pointerdown', this._onPointerDown);
+    if (this._onPointerMove) inp.off('pointermove', this._onPointerMove);
+    if (this._onPointerUp) inp.off('pointerup', this._onPointerUp);
+    this._onPointerDown = null;
+    this._onPointerMove = null;
+    this._onPointerUp = null;
   }
 }

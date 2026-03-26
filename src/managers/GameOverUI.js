@@ -1,11 +1,8 @@
-import { Z, FONT_MONO } from '../constants.js';
+import { FONT_MONO } from '../constants.js';
 import { t } from '../i18n.js';
 import { SKINS } from './SkinRenderer.js';
 import { profile } from '../data/index.js';
-import {
-  drawBloodSplatter, drawWantedPosterFrame,
-  drawRopeDecoration, createEmberBurst,
-} from '../managers/UIFactory.js';
+import { drawBloodSplatter, drawSteelFrame, drawChainDecoration } from '../managers/UIFactory.js';
 import { LeaderboardUI } from './LeaderboardUI.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
@@ -17,24 +14,17 @@ const NEON_STEEL = '#4A5580';
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 
 // Менеджер Game Over экрана — neon western glassmorphism
+// Canvas 2D для графики + HTML для кнопок
 export class GameOverUI {
   constructor(scene) {
     this.scene = scene;
-    this.elements = [];
     this.buttonsDiv = null;
-    this.continueBtn = null;
+    this.continueAdBtn = null;
+    this.continueStarBtn = null;
     this.restartBtn = null;
     this.menuBtn = null;
-    this.scoreText = null;
-    this.bestText = null;
-    this.newBestText = null;
 
-    // Доп. графические слои
-    this.bloodGfx = null;
-    this.posterGfx = null;
-    this.overlayRect = null;
-
-    // Лидерборд — создаётся один раз
+    // Лидерборд
     this.leaderboardUI = new LeaderboardUI();
 
     // Callbacks
@@ -42,6 +32,32 @@ export class GameOverUI {
     this.onContinueStars = null;
     this.onRestart = null;
     this.onMenu = null;
+
+    // Состояние отображения
+    this._visible = false;
+    this._score = 0;
+    this._best = 0;
+    this._isNewBest = false;
+    this._scoreStr = '';
+    this._bestStr = '';
+
+    // Анимация
+    this._showTime = 0;
+    this._overlayAlpha = 0;
+    this._titleScale = 2.2;
+    this._titleAlpha = 0;
+    this._scoreAlpha = 0;
+    this._scoreY = 0;
+    this._bestAlpha = 0;
+    this._bestY = 0;
+    this._newBestScale = 0.3;
+    this._newBestAlpha = 0;
+    this._newBestPulseTime = 0;
+    this._posterAlpha = 0;
+    this._bloodAlpha = 0;
+
+    // Предгенерированные данные крови (сохраняем чтобы не менялись каждый кадр)
+    this._bloodSeed = Math.random();
   }
 
   create({ onContinueAd, onContinueStars, onRestart, onMenu, challengeMgr }) {
@@ -51,61 +67,15 @@ export class GameOverUI {
     this.onRestart = onRestart;
     this.onMenu = onMenu;
 
-    const W = this.scene.W;
-    const H = this.scene.H;
-    const makeUI = (obj) => {
-      obj.setScrollFactor(0).setDepth(Z.GAME_OVER).setVisible(false);
-      this.elements.push(obj);
-      return obj;
-    };
-
-    // Затемнение — почти чёрный neon-фон
-    this.overlayRect = makeUI(
-      this.scene.add.rectangle(W / 2, H / 2, W, H, 0x050810, 0.85)
-    );
-
-    // Scanlines поверх overlay — горизонтальные линии через 4px, alpha 0.03
-    this.scanlines = this.scene.add.graphics()
-      .setScrollFactor(0).setDepth(Z.GAME_OVER).setVisible(false);
-    this.scanlines.fillStyle(0x000000, 0.03);
-    for (let y = 0; y < H; y += 4) {
-      this.scanlines.fillRect(0, y, W, 2);
-    }
-    this.elements.push(this.scanlines);
-
-    // Заголовок "YOU FELL" — neon pink, драматичный glow
-    this.titleText = makeUI(this.scene.add.text(W / 2, H * 0.26, t('you_died'), {
-      fontSize: '48px', color: NEON_PINK, fontFamily: NEON_FONT, fontStyle: 'bold',
-      stroke: NEON_BG, strokeThickness: 6,
-    }).setOrigin(0.5).setShadow(0, 0, '#FF2E63', 8, true, true));
-
-    // Высота (score) — neon amber, моноширинный + glow
-    this.scoreText = makeUI(this.scene.add.text(W / 2, H * 0.35, '', {
-      fontSize: '20px', color: NEON_AMBER, fontFamily: FONT_MONO, fontStyle: 'bold',
-      stroke: NEON_BG, strokeThickness: 2,
-    }).setOrigin(0.5).setShadow(0, 0, '#FFB800', 5, true, true));
-
-    // Рекорд (best) — cyan по умолчанию, amber при новом рекорде + glow
-    this.bestText = makeUI(this.scene.add.text(W / 2, H * 0.39, '', {
-      fontSize: '30px', color: NEON_CYAN, fontFamily: FONT_MONO, fontStyle: 'bold',
-      stroke: NEON_BG, strokeThickness: 5,
-    }).setOrigin(0.5).setShadow(0, 0, '#00F5D4', 5, true, true));
-
-    // НОВЫЙ РЕКОРД — neon amber
-    this.newBestText = makeUI(this.scene.add.text(W / 2, H * 0.44, t('new_record'), {
-      fontSize: '22px', color: NEON_AMBER, fontFamily: NEON_FONT, fontStyle: 'bold italic',
-      stroke: NEON_BG, strokeThickness: 4,
-    }).setOrigin(0.5));
-
     // --- HTML кнопки поверх canvas — neon glass, в #game-ui ---
     this.buttonsDiv = document.createElement('div');
     this.buttonsDiv.classList.add('gameover-buttons');
 
-    // CONTINUE AD — бесплатное воскрешение через рекламу (1 раз за игру)
+    // CONTINUE AD
     this.continueAdBtn = this._createButton(t('continue_ad'), 'continue_ad');
     this.buttonsDiv.appendChild(this.continueAdBtn);
 
-    // CONTINUE STARS — платное воскрешение через Stars (только Telegram, без лимита)
+    // CONTINUE STARS
     if (profile.isAuthorized) {
       this.continueStarBtn = this._createButton(t('continue_star'), 'continue_star');
       this.buttonsDiv.appendChild(this.continueStarBtn);
@@ -115,7 +85,7 @@ export class GameOverUI {
     this.restartBtn = this._createButton(t('restart'), 'restart');
     this.buttonsDiv.appendChild(this.restartBtn);
 
-    // LEADERBOARD — всегда показываем
+    // LEADERBOARD
     this.leaderboardBtn = this._createButton(t('leaderboard'), 'leaderboard');
     this.buttonsDiv.appendChild(this.leaderboardBtn);
 
@@ -123,7 +93,6 @@ export class GameOverUI {
     this.menuBtn = this._createButton(t('menu'), 'menu');
     this.buttonsDiv.appendChild(this.menuBtn);
 
-    // Вставляем в корневой UI контейнер
     const root = document.getElementById('game-ui');
     if (root) {
       root.appendChild(this.buttonsDiv);
@@ -132,26 +101,20 @@ export class GameOverUI {
     }
   }
 
-  // Neon glass кнопка — CSS классы вместо inline styles
   _createButton(label, type) {
     const btn = document.createElement('button');
     btn.textContent = label;
-
-    // Базовый класс
     btn.classList.add('btn-neon');
 
-    // Размер
     const isSmall = type === 'menu' || type === 'leaderboard';
     const isContinue = type === 'continue_ad' || type === 'continue_star';
     if (isSmall) btn.classList.add('btn-neon--small');
     else if (isContinue) btn.classList.add('btn-neon--medium');
 
-    // Цвет
     const isMenu = type === 'menu';
     if (isContinue) btn.classList.add('btn-neon--amber');
     else if (isMenu) btn.classList.add('btn-neon--steel');
 
-    // Click handler по типу
     const handlers = {
       restart: () => this.onRestart?.(),
       continue_ad: () => this.onContinueAd?.(),
@@ -165,105 +128,42 @@ export class GameOverUI {
   }
 
   show(score, best, isNewBest) {
-    const W = this.scene.W;
     const H = this.scene.H;
+    this._visible = true;
+    this._score = score;
+    this._best = best;
+    this._isNewBest = isNewBest;
+    this._scoreStr = `${t('depth_label')}: ${score}${t('unit_m')}`;
+    this._bestStr = `${t('record_label')}: ${best}${t('unit_m')}`;
 
-    this.scoreText.setText(`${t('depth_label')}: ${score}${t('unit_m')}`);
-    this.bestText.setText(`${t('record_label')}: ${best}${t('unit_m')}`);
+    // Сброс анимации
+    this._showTime = 0;
+    this._overlayAlpha = 0;
+    this._titleScale = 2.2;
+    this._titleAlpha = 0;
+    this._scoreAlpha = 0;
+    this._scoreY = H * 0.35 + 30;
+    this._bestAlpha = 0;
+    this._bestY = H * 0.39 + 30;
+    this._newBestScale = 0.3;
+    this._newBestAlpha = 0;
+    this._newBestPulseTime = 0;
+    this._posterAlpha = 0;
+    this._bloodAlpha = 0;
 
-    if (isNewBest) {
-      this.bestText.setColor(NEON_AMBER);
-    } else {
-      this.newBestText.setVisible(false);
-      this.bestText.setColor(NEON_CYAN);
-    }
-
-    // === Кровавые брызги на фоне (depth Z.BLOOD) ===
-    this.bloodGfx = this.scene.add.graphics()
-      .setScrollFactor(0).setDepth(Z.BLOOD).setAlpha(0);
-    drawBloodSplatter(this.bloodGfx, W / 2, H * 0.5, 120, 0.8);
-
-    // === Premium рамка за счётом ===
-    this.posterGfx = this.scene.add.graphics()
-      .setScrollFactor(0).setDepth(Z.GAME_OVER).setAlpha(0);
-    drawWantedPosterFrame(this.posterGfx, W / 2, H * 0.37, 220, 90);
-    // Пунктирные линии сверху и снизу рамки
-    drawRopeDecoration(this.posterGfx, W / 2 - 110, H * 0.37 - 50, W / 2 + 110, H * 0.37 - 50);
-    drawRopeDecoration(this.posterGfx, W / 2 - 110, H * 0.37 + 50, W / 2 + 110, H * 0.37 + 50);
-
-    // --- Stagger анимации ---
-
-    // 0ms: кровь alpha 0 -> 0.6
-    this.scene.tweens.add({
-      targets: this.bloodGfx, alpha: 0.6, duration: 300, ease: 'Linear',
-    });
-
-    // 0ms: overlay alpha 0 -> 0.85 (400ms)
-    this.overlayRect.setVisible(true).setAlpha(0);
-    this.scene.tweens.add({
-      targets: this.overlayRect, alpha: 0.85, duration: 400, ease: 'Linear',
-    });
-
-    // 300ms: "YOU FELL" — dramatic scale 2.2 -> 1, alpha 0 -> 1
-    this.titleText.setVisible(true).setScale(2.2).setAlpha(0);
-    this.scene.tweens.add({
-      targets: this.titleText, scale: 1.0, alpha: 1,
-      duration: 500, delay: 300, ease: 'Back.easeOut',
-    });
-
-    // 500ms: poster + score/record fade in (y +30 -> 0, alpha 0 -> 1)
-    this.posterGfx.setAlpha(0);
-    this.scoreText.setVisible(true).setAlpha(0).setY(H * 0.35 + 30);
-    this.bestText.setVisible(true).setAlpha(0).setY(H * 0.39 + 30);
-
-    this.scene.tweens.add({
-      targets: this.posterGfx, alpha: 1, duration: 400, delay: 500, ease: 'Cubic.easeOut',
-    });
-    this.scene.tweens.add({
-      targets: [this.scoreText, this.bestText],
-      alpha: 1,
-      y: (target) => target === this.scoreText ? H * 0.35 : H * 0.39,
-      duration: 400, delay: 500, ease: 'Cubic.easeOut',
-    });
-
-    // 700ms: HTML кнопки — показываем через CSS класс, Phaser delayedCall
-    // AD кнопка — всегда видна (больше просмотров рекламы = больше доход)
+    // AD кнопка — всегда видна
     this.continueAdBtn.style.display = 'block';
-    // Stars кнопка — всегда видна в Telegram (без лимита)
     if (this.continueStarBtn) this.continueStarBtn.style.display = 'block';
 
-    this.scene.time.delayedCall(700, () => {
-      this.buttonsDiv.classList.add('gameover-buttons--visible');
-    });
+    // Кнопки с задержкой 700ms — управляется в draw()
+    this._buttonsShown = false;
 
-    // Новый рекорд: пульсация + искры
-    if (isNewBest) {
-      this.newBestText.setVisible(true).setScale(0.3).setAlpha(0);
-      this.scene.tweens.add({
-        targets: this.newBestText, scale: 1.15, alpha: 1,
-        duration: 500, delay: 500, ease: 'Back.easeOut',
-        onComplete: () => {
-          this.scene.tweens.add({
-            targets: this.newBestText, scale: 1.0,
-            duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-          });
-        },
-      });
-      // 600ms: искры вокруг рекорда
-      this.scene.time.delayedCall(600, () => {
-        createEmberBurst(this.scene, W / 2, H * 0.39, 15);
-      });
-    }
-
-    // === Кнопка CLAIM SKIN — если челлендж выполнен но не claimed ===
+    // === Кнопка CLAIM SKIN ===
     const challengeMgr = this._challengeMgr;
     const ch = challengeMgr ? challengeMgr.getCurrentChallenge() : null;
     if (ch && ch.completed && !ch.claimed) {
       this.claimBtn = this._createButton(t('challenge_claim'), 'claim');
-      // Amber стиль для claim
       this.claimBtn.classList.add('btn-neon--amber');
-
-      // Обработчик claim
       this.claimBtn.addEventListener('click', () => {
         const skinId = challengeMgr.claimReward();
         if (skinId) {
@@ -271,58 +171,202 @@ export class GameOverUI {
           this.claimBtn.classList.add('btn-neon--disabled');
         }
       });
-
-      // Вставляем перед кнопкой MENU (последняя кнопка)
       this.buttonsDiv.insertBefore(this.claimBtn, this.menuBtn);
     }
   }
 
   hide() {
-    // Анимированное скрытие Phaser-элементов
-    const allTargets = this.elements.filter(el => el && el.active);
-    if (allTargets.length > 0) {
-      this.scene.tweens.add({
-        targets: allTargets, alpha: 0, duration: 200, ease: 'Linear',
-      });
-    }
-
-    // Poster и blood — тоже fade out
-    if (this.posterGfx) {
-      this.scene.tweens.add({
-        targets: this.posterGfx, alpha: 0, duration: 200,
-        onComplete: () => { this.posterGfx.destroy(); this.posterGfx = null; },
-      });
-    }
-
-    if (this.bloodGfx) {
-      this.scene.tweens.add({
-        targets: this.bloodGfx, alpha: 0, duration: 200,
-        onComplete: () => { this.bloodGfx.destroy(); this.bloodGfx = null; },
-      });
-    }
-
-    // HTML кнопки — fade out через CSS transition, cleanup по transitionend
+    this._visible = false;
     this.buttonsDiv.classList.remove('gameover-buttons--visible');
 
-    const onTransitionDone = () => {
-      this.buttonsDiv.removeEventListener('transitionend', onTransitionDone);
-      // Удаляем кнопку claim если была
-      if (this.claimBtn) {
-        this.claimBtn.remove();
-        this.claimBtn = null;
-      }
-      // Сбрасываем видимость Phaser-элементов после fade
-      for (const el of this.elements) {
-        if (el && el.active) el.setVisible(false).setAlpha(1);
-      }
-    };
-    this.buttonsDiv.addEventListener('transitionend', onTransitionDone);
+    if (this.claimBtn) {
+      this.claimBtn.remove();
+      this.claimBtn = null;
+    }
+  }
+
+  // Отрисовка Game Over — в экранных координатах
+  draw(ctx, delta) {
+    if (!this._visible) return;
+
+    const W = this.scene.W;
+    const H = this.scene.H;
+    this._showTime += delta;
+
+    // === Анимация по времени ===
+
+    // 0ms: overlay 0→0.85 (400ms)
+    if (this._showTime < 400) {
+      this._overlayAlpha = Math.min(0.85, (this._showTime / 400) * 0.85);
+    } else {
+      this._overlayAlpha = 0.85;
+    }
+
+    // 0ms: кровь 0→0.6 (300ms)
+    if (this._showTime < 300) {
+      this._bloodAlpha = (this._showTime / 300) * 0.6;
+    } else {
+      this._bloodAlpha = 0.6;
+    }
+
+    // 300ms: title scale 2.2→1, alpha 0→1 (500ms, Back.easeOut)
+    if (this._showTime > 300 && this._showTime < 800) {
+      const t = (this._showTime - 300) / 500;
+      const s = 1.70158;
+      const t1 = t - 1;
+      const eased = 1 + (s + 1) * t1 * t1 * t1 + s * t1 * t1;
+      this._titleScale = 2.2 + (1 - 2.2) * eased;
+      this._titleAlpha = eased;
+    } else if (this._showTime >= 800) {
+      this._titleScale = 1;
+      this._titleAlpha = 1;
+    }
+
+    // 500ms: poster+score/record fade in (400ms, Cubic.easeOut)
+    if (this._showTime > 500 && this._showTime < 900) {
+      const t = (this._showTime - 500) / 400;
+      const eased = 1 - Math.pow(1 - t, 3);
+      this._posterAlpha = eased;
+      this._scoreAlpha = eased;
+      this._scoreY = H * 0.35 + 30 * (1 - eased);
+      this._bestAlpha = eased;
+      this._bestY = H * 0.39 + 30 * (1 - eased);
+    } else if (this._showTime >= 900) {
+      this._posterAlpha = 1;
+      this._scoreAlpha = 1;
+      this._scoreY = H * 0.35;
+      this._bestAlpha = 1;
+      this._bestY = H * 0.39;
+    }
+
+    // 500ms: new best scale+alpha (500ms, Back.easeOut)
+    if (this._isNewBest && this._showTime > 500 && this._showTime < 1000) {
+      const t = (this._showTime - 500) / 500;
+      const s = 1.70158;
+      const t1 = t - 1;
+      const eased = 1 + (s + 1) * t1 * t1 * t1 + s * t1 * t1;
+      this._newBestScale = 0.3 + (1.15 - 0.3) * eased;
+      this._newBestAlpha = eased;
+    } else if (this._isNewBest && this._showTime >= 1000) {
+      this._newBestPulseTime += delta;
+      this._newBestScale = 1 + 0.15 * Math.sin(this._newBestPulseTime * 0.009);
+      this._newBestAlpha = 1;
+    }
+
+    // 700ms: показать кнопки
+    if (!this._buttonsShown && this._showTime > 700) {
+      this._buttonsShown = true;
+      this.buttonsDiv.classList.add('gameover-buttons--visible');
+    }
+
+    // === РИСОВАНИЕ ===
+
+    // Затемнение
+    ctx.globalAlpha = this._overlayAlpha;
+    ctx.fillStyle = '#050810';
+    ctx.fillRect(0, 0, W, H);
+
+    // Scanlines
+    ctx.fillStyle = '#000000';
+    ctx.globalAlpha = 0.03;
+    for (let y = 0; y < H; y += 4) {
+      ctx.fillRect(0, y, W, 2);
+    }
+
+    // Кровь
+    if (this._bloodAlpha > 0.01) {
+      ctx.globalAlpha = this._bloodAlpha;
+      // Используем сохранённый seed чтобы рисунок не прыгал
+      const savedRandom = Math.random;
+      let _seed = this._bloodSeed;
+      // eslint-disable-next-line no-global-assign
+      Math.random = () => { _seed = (_seed * 16807) % 2147483647; return (_seed - 1) / 2147483646; };
+      drawBloodSplatter(ctx, W / 2, H * 0.5, 120, 0.8);
+      Math.random = savedRandom;
+    }
+
+    // Poster рамка
+    if (this._posterAlpha > 0.01) {
+      ctx.globalAlpha = this._posterAlpha;
+      drawSteelFrame(ctx, W / 2, H * 0.37, 220, 90);
+      drawChainDecoration(ctx, W / 2 - 110, H * 0.37 - 50, W / 2 + 110, H * 0.37 - 50);
+      drawChainDecoration(ctx, W / 2 - 110, H * 0.37 + 50, W / 2 + 110, H * 0.37 + 50);
+    }
+
+    // "YOU FELL"
+    if (this._titleAlpha > 0.01) {
+      ctx.save();
+      ctx.translate(W / 2, H * 0.26);
+      ctx.scale(this._titleScale, this._titleScale);
+      ctx.globalAlpha = this._titleAlpha;
+      ctx.font = `bold 48px ${NEON_FONT}`;
+      ctx.fillStyle = NEON_PINK;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 6;
+      ctx.shadowColor = '#FF2E63';
+      ctx.shadowBlur = 8;
+      ctx.strokeText(t('you_died'), 0, 0);
+      ctx.fillText(t('you_died'), 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    // Score
+    if (this._scoreAlpha > 0.01) {
+      ctx.globalAlpha = this._scoreAlpha;
+      ctx.font = `bold 20px ${FONT_MONO}`;
+      ctx.fillStyle = NEON_AMBER;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#FFB800';
+      ctx.shadowBlur = 5;
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 2;
+      ctx.strokeText(this._scoreStr, W / 2, this._scoreY);
+      ctx.fillText(this._scoreStr, W / 2, this._scoreY);
+      ctx.shadowBlur = 0;
+    }
+
+    // Best
+    if (this._bestAlpha > 0.01) {
+      ctx.globalAlpha = this._bestAlpha;
+      ctx.font = `bold 30px ${FONT_MONO}`;
+      const bestColor = this._isNewBest ? NEON_AMBER : NEON_CYAN;
+      ctx.fillStyle = bestColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = bestColor;
+      ctx.shadowBlur = 5;
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 5;
+      ctx.strokeText(this._bestStr, W / 2, this._bestY);
+      ctx.fillText(this._bestStr, W / 2, this._bestY);
+      ctx.shadowBlur = 0;
+    }
+
+    // New best
+    if (this._isNewBest && this._newBestAlpha > 0.01) {
+      ctx.save();
+      ctx.translate(W / 2, H * 0.44);
+      ctx.scale(this._newBestScale, this._newBestScale);
+      ctx.globalAlpha = this._newBestAlpha;
+      ctx.font = `bold italic 22px ${NEON_FONT}`;
+      ctx.fillStyle = NEON_AMBER;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 4;
+      ctx.strokeText(t('new_record'), 0, 0);
+      ctx.fillText(t('new_record'), 0, 0);
+      ctx.restore();
+    }
+
+    ctx.globalAlpha = 1;
   }
 
   destroy() {
-    if (this.bloodGfx) { this.bloodGfx.destroy(); this.bloodGfx = null; }
-    if (this.posterGfx) { this.posterGfx.destroy(); this.posterGfx = null; }
-    if (this.scanlines) { this.scanlines.destroy(); this.scanlines = null; }
     if (this.buttonsDiv) { this.buttonsDiv.remove(); this.buttonsDiv = null; }
     this.leaderboardUI.destroy();
   }

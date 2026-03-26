@@ -1,19 +1,25 @@
-import Phaser from 'phaser';
-import { BIOMES, GROUND_Y, WORLD_HEIGHT, Z } from '../constants.js';
+import { BIOMES, GROUND_Y, WORLD_HEIGHT } from '../constants.js';
+
+// Хелпер: Phaser hex → CSS строка
+function hexCSS(hex) {
+  return '#' + hex.toString(16).padStart(6, '0');
+}
 
 /**
- * BiomeManager — градиент + 3 слоя мерцающих искр (ближние, средние, дальние)
- * для эффекта объёма и перспективы. Плавный кроссфейд между биомами.
+ * BiomeManager — градиент + 3 слоя мерцающих искр
+ * Canvas 2D API вместо Phaser Graphics + Image + scrollFactor
  *
- * Оптимизация: 3 Graphics на биом (по одному на слой глубины) вместо 575 отдельных.
- * 575 draw calls → 15 draw calls.
+ * Фон рисуется ДО camera.applyTransform (parallax scrollFactor=0..1).
+ * Искры рисуются с ручным parallax offset.
  */
 export class BiomeManager {
   constructor(scene) {
     this.scene = scene;
-    this.W = scene.scale.width;
+    this.W = scene.W;
     this.layers = [];
     this.currentBiomeIdx = 0;
+    // Кешированный offscreen canvas для фоновых градиентов
+    this._bgCanvases = [];
   }
 
   create() {
@@ -21,18 +27,15 @@ export class BiomeManager {
       const biome = BIOMES[i];
       const layer = {};
 
-      // Фоновый градиент
-      layer.bgImage = this._createBgTexture(biome, i);
+      // Создаём offscreen canvas с градиентом биома
+      layer.bgCanvas = this._createBgCanvas(biome);
 
-      // 3 Graphics объекта — по одному на слой глубины (scrollFactor)
+      // 3 слоя искр с разным parallax
       const scrollFactors = [0.25, 0.5, 0.8];
       layer.sparkLayers = [];
       for (const sf of scrollFactors) {
-        layer.sparkLayers.push({
-          gfx: this.scene.add.graphics().setDepth(Z.ASH).setScrollFactor(sf),
-          sf,
-          sparks: [],
-        });
+        const sparkLayer = { sf, sparks: [] };
+        layer.sparkLayers.push(sparkLayer);
       }
 
       // Заполняем данные искр по слоям
@@ -40,19 +43,17 @@ export class BiomeManager {
       this._fillSparkLayer(layer.sparkLayers[1], biome, 40, 1.0, 2.5, 0.25, 0.55);  // средние
       this._fillSparkLayer(layer.sparkLayers[2], biome, 25, 1.5, 4.0, 0.35, 0.75);  // ближние
 
-      // Цвет частиц биома — кешируем
-      layer.particleColor = biome.particleColor;
+      layer.particleColor = hexCSS(biome.particleColor);
       layer.alpha = 0;
-      layer.bgImage.setAlpha(0);
-      for (const sl of layer.sparkLayers) sl.gfx.setVisible(false);
 
       this.layers.push(layer);
     }
 
-    this._createMoon();
+    // Луна — просто данные для отрисовки
+    this._moonX = this.W * 0.72;
+    this._moonY = 300;
   }
 
-  // Заполнить данные искр для слоя (без создания Phaser объектов)
   _fillSparkLayer(sparkLayer, biome, count, minSize, maxSize, minAlpha, maxAlpha) {
     const sf = sparkLayer.sf;
     const yStart = (GROUND_Y - biome.endHeight * 10) * sf;
@@ -104,28 +105,47 @@ export class BiomeManager {
           alpha = 1 - distToEnd / BLEND;
         }
       }
-      this._setLayerAlpha(this.layers[i], alpha);
-    }
-
-    // Анимация искр — перерисовка на общих Graphics
-    const time = this.scene.time.now;
-    for (let i = 0; i < this.layers.length; i++) {
-      const layer = this.layers[i];
-      if (layer.alpha === 0) continue;
-      for (let j = 0; j < layer.sparkLayers.length; j++) {
-        this._updateAndDrawSparks(layer.sparkLayers[j], layer.particleColor, layer.alpha, time);
-      }
+      this.layers[i].alpha = alpha;
     }
   }
 
-  // Обновить позиции и перерисовать все искры слоя на одном Graphics
-  _updateAndDrawSparks(sparkLayer, color, layerAlpha, time) {
-    const gfx = sparkLayer.gfx;
+  // Отрисовка фона — вызывается ДО camera.applyTransform
+  draw(ctx) {
+    const camera = this.scene.camera;
+    const time = this.scene.time.now;
+    const W = this.W;
+    const H = this.scene.H;
+
+    // Рисуем фоновые градиенты (scrollFactor=1, но рисуем как полноэкранный фон)
+    for (let i = 0; i < this.layers.length; i++) {
+      const layer = this.layers[i];
+      if (layer.alpha === 0) continue;
+
+      ctx.globalAlpha = layer.alpha;
+      // Рисуем offscreen canvas как фон, масштабируя на весь экран
+      ctx.drawImage(layer.bgCanvas, 0, 0, W, H);
+    }
+
+    // Луна (scrollFactor=0 — всегда на экране)
+    this._drawMoon(ctx);
+
+    // Искры с parallax — рисуем с ручным scroll offset
+    for (let i = 0; i < this.layers.length; i++) {
+      const layer = this.layers[i];
+      if (layer.alpha === 0) continue;
+
+      for (let j = 0; j < layer.sparkLayers.length; j++) {
+        this._updateAndDrawSparks(ctx, layer.sparkLayers[j], layer.particleColor, layer.alpha, time, camera);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  _updateAndDrawSparks(ctx, sparkLayer, color, layerAlpha, time, camera) {
     const sparks = sparkLayer.sparks;
     const sf = sparkLayer.sf;
     const spanX = this.W / sf;
-
-    gfx.clear();
 
     for (let i = 0; i < sparks.length; i++) {
       const s = sparks[i];
@@ -144,83 +164,75 @@ export class BiomeManager {
         if (s.baseY > s.yEnd) s.baseY -= spanY;
       }
 
-      // Мерцание — пульсация яркости
+      // Мерцание
       const flicker = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * s.flickerSpeed + s.flickerPhase));
       const scale = 0.6 + flicker * 0.4;
       const sz = s.size * scale;
 
       const alpha = layerAlpha * s.baseAlpha * flicker;
 
+      // Экранные координаты с parallax
+      const screenX = s.baseX - camera.scrollX * sf;
+      const screenY = s.baseY - camera.scrollY * sf;
+
       // Ядро искры
-      gfx.fillStyle(color, alpha);
-      gfx.fillCircle(s.baseX, s.baseY, sz);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, sz, 0, Math.PI * 2);
+      ctx.fill();
       // Мягкий ореол
-      gfx.fillStyle(color, alpha * 0.3);
-      gfx.fillCircle(s.baseX, s.baseY, sz * 2.5);
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, sz * 2.5, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
-  _createBgTexture(biome, index) {
-    const key = `bg-biome-${index}`;
-    if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
-
-    const texH = 2000;
-    const tex = this.scene.textures.createCanvas(key, 1, texH);
-    const ctx = tex.getContext();
-    const grad = ctx.createLinearGradient(0, 0, 0, texH);
+  _createBgCanvas(biome) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 200; // Маленький — будет растянут
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 200);
     grad.addColorStop(0, biome.bgTop);
     grad.addColorStop(0.5, biome.bgMid);
     grad.addColorStop(1, biome.bgBot);
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1, texH);
-    tex.refresh();
-
-    return this.scene.add.image(this.W / 2, WORLD_HEIGHT / 2, key)
-      .setDisplaySize(this.W * 5, WORLD_HEIGHT)
-      .setDepth(Z.BG)
-      .setScrollFactor(1.0);
+    ctx.fillRect(0, 0, 1, 200);
+    return canvas;
   }
 
-  _createMoon() {
-    const moonGfx = this.scene.add.graphics().setDepth(Z.MOON);
-    const moonY = 300;
-    const mx = this.W * 0.72;
+  _drawMoon(ctx) {
+    const mx = this._moonX;
+    const my = this._moonY;
 
     // Внешнее cyan свечение
-    moonGfx.fillStyle(0x00F5D4, 0.05);
-    moonGfx.fillCircle(mx, moonY, 90);
-    // Тело луны — стальной тон
-    moonGfx.fillStyle(0x4A5580, 0.25);
-    moonGfx.fillCircle(mx, moonY, 70);
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#00F5D4';
+    ctx.beginPath(); ctx.arc(mx, my, 90, 0, Math.PI * 2); ctx.fill();
+
+    // Тело луны
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#4A5580';
+    ctx.beginPath(); ctx.arc(mx, my, 70, 0, Math.PI * 2); ctx.fill();
+
     // Подсветка
-    moonGfx.fillStyle(0x6688AA, 0.15);
-    moonGfx.fillCircle(mx - 10, moonY - 5, 62);
-    // Кратеры — тёмная сталь
-    moonGfx.fillStyle(0x2A3050, 0.12);
-    moonGfx.fillCircle(mx + 18, moonY - 15, 14);
-    moonGfx.fillCircle(mx - 22, moonY + 15, 9);
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#6688AA';
+    ctx.beginPath(); ctx.arc(mx - 10, my - 5, 62, 0, Math.PI * 2); ctx.fill();
+
+    // Кратеры
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#2A3050';
+    ctx.beginPath(); ctx.arc(mx + 18, my - 15, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx - 22, my + 15, 9, 0, Math.PI * 2); ctx.fill();
+
+    ctx.globalAlpha = 1;
   }
 
   destroy() {
-    for (let i = 0; i < this.layers.length; i++) {
-      const layer = this.layers[i];
-      if (layer.bgImage) layer.bgImage.destroy();
-      // Уничтожаем 3 Graphics на биом (вместо ~115 на биом)
-      for (const sl of layer.sparkLayers) {
-        if (sl.gfx) sl.gfx.destroy();
-      }
-      const key = `bg-biome-${i}`;
-      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
-    }
     this.layers = [];
-  }
-
-  _setLayerAlpha(layer, alpha) {
-    layer.alpha = alpha;
-    layer.bgImage.setAlpha(alpha);
-    // Видимость Graphics управляется здесь, альфа — через fillStyle в _updateAndDrawSparks
-    for (const sl of layer.sparkLayers) {
-      sl.gfx.setVisible(alpha > 0);
-    }
+    this._bgCanvases = [];
   }
 }

@@ -1,10 +1,11 @@
-import Phaser from 'phaser';
+import { Scene } from '../engine/Scene.js';
+import { clamp, lerp } from '../engine/math.js';
 import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit } from '../audio.js';
 import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
-import { GROUND_Y, SPAWN_Y, Z } from '../constants.js';
+import { GROUND_Y, SPAWN_Y } from '../constants.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
 import { TrailManager } from '../managers/TrailManager.js';
@@ -19,14 +20,13 @@ import { ObstacleManager } from '../managers/ObstacleManager.js';
 import { ChallengeManager } from '../managers/ChallengeManager.js';
 import { SwingPhysics } from '../managers/SwingPhysics.js';
 
-export class GameScene extends Phaser.Scene {
-  constructor() {
-    super('GameScene');
+export class GameScene extends Scene {
+  constructor(engine) {
+    super(engine);
   }
 
-  // Полная очистка при остановке сцены
   shutdown() {
-    this.input.off('pointerdown');
+    this.input.off('pointerdown', this._onPointerDown);
     this.gameOverUI.destroy();
     this.biome.destroy();
     this.obstacles.destroy();
@@ -39,13 +39,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // Динамические размеры экрана
-    const WORLD_WIDTH = this.scale.width;
-    this.W = WORLD_WIDTH;
-    this.H = this.scale.height;
+    // Динамические размеры
+    const WORLD_WIDTH = this.W;
 
-    // Мир бесконечный по горизонтали, ограничен только снизу
-    this.physics.world.setBounds(0, -999999, this.W, 999999 + this.H);
+    // Состояние игрока — ручная физика вместо Phaser arcade
+    this.player = {
+      x: WORLD_WIDTH / 2,
+      y: SPAWN_Y,
+      vx: 0,
+      vy: 0,
+      allowGravity: true,
+      alpha: 1,
+      rotation: 0,
+    };
 
     // Состояние физики маятника
     this.isHooked = false;
@@ -56,8 +62,8 @@ export class GameScene extends Phaser.Scene {
     this.maxHeight = 0;
     this.sessionBest = profile.bestScore;
     this.isDead = false;
-    this.lastReleaseTime = 0;    // Кулдаун хука
-    this.bugHitCooldown = 0;     // Защита от повторных ударов жуков
+    this.lastReleaseTime = 0;
+    this.bugHitCooldown = 0;
 
     // Физика маятника — чистые расчёты
     this.physics_ = new SwingPhysics();
@@ -65,22 +71,14 @@ export class GameScene extends Phaser.Scene {
     this.biome = new BiomeManager(this);
     this.biome.create();
 
-    // --- PLAYER (hunter) ---
-    this.playerContainer = this.add.container(this.W / 2, SPAWN_Y).setDepth(Z.PLAYER);
+    // Hunter renderer
     this.hunter = new HunterRenderer(this);
-    this.hunter.create(this.playerContainer);
-    this.physics.add.existing(this.playerContainer);
-    this.playerContainer.body.setSize(20, 28);
-    this.playerContainer.body.setOffset(-10, -14);
-    // Ограничение горизонтальной скорости чтобы не улетал за экран
-    this.playerContainer.body.setMaxVelocity(900, 1200);
-    this.player = this.playerContainer;
+    this.hunter.create();
 
-    // Ghost — визуальный клон для wrap-around
-    this.ghostContainer = this.add.container(-9999, -9999).setDepth(Z.PLAYER);
-    this.ghostGfx = this.add.graphics();
-    this.ghostContainer.add(this.ghostGfx);
-    this.ghostContainer.setVisible(false);
+    // Ghost — данные для wrap-around клона
+    this._ghostVisible = false;
+    this._ghostX = 0;
+    this._ghostY = 0;
 
     // Менеджеры подсистем
     this.trail = new TrailManager(this);
@@ -98,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.swamp = new SwampManager(this);
     this.swamp.create();
 
-    // Еженедельные испытания — создаём ДО HUD и GameOverUI (единый экземпляр)
+    // Еженедельные испытания
     this.challengeMgr = new ChallengeManager();
     this.hitCount = 0;
     this.gameStartTime = Date.now();
@@ -115,25 +113,31 @@ export class GameScene extends Phaser.Scene {
         trackGameEnd();
         this.gameOverUI.hide();
         this.gameOverUI.destroy();
-        this.scene.stop('GameScene');
-        this.scene.start('MenuScene');
+        this.startScene('MenuScene');
       },
       challengeMgr: this.challengeMgr,
     });
 
     this.eggs = new EasterEggs(this);
 
-    // Камера — X фиксирована, Y следит за игроком
-    this.cameras.main.scrollX = 0;
-    this.cameras.main.scrollY = this.player.y - this.cameras.main.height / 2;
+    // Камера
+    this.camera.scrollX = 0;
+    this.camera.scrollY = this.player.y - this.H / 2;
 
     // Input
-    this.input.on('pointerdown', () => this.handlePointerDown());
+    this._onPointerDown = () => this.handlePointerDown();
+    this.input.on('pointerdown', this._onPointerDown);
 
-    this.cameras.main.fadeIn(400, 13, 15, 18);
+    this.camera.fadeIn(400, 13, 15, 18);
 
-    // Регистрация cleanup при остановке сцены
-    this.events.once('shutdown', () => this.shutdown());
+    // Анимация мигания при ударе жуком
+    this._blinkActive = false;
+    this._blinkTime = 0;
+    this._blinkDuration = 0;
+    this._invulnTime = 0;
+
+    // Delayed calls (замена this.time.delayedCall)
+    this._delayedCalls = [];
   }
 
   // ===================== INPUT =====================
@@ -152,15 +156,14 @@ export class GameScene extends Phaser.Scene {
   shootHook() {
     const px = this.player.x;
     const py = this.player.y;
-    const vx = this.player.body.velocity.x;
-    const vy = this.player.body.velocity.y;
+    const vx = this.player.vx;
+    const vy = this.player.vy;
 
     const result = this.physics_.tryHook(
       px, py, vx, vy,
       this.anchorMgr.anchors, this.time.now, this.lastReleaseTime, this.W
     );
 
-    // Промах — нет якорей в радиусе или кулдаун
     if (!result) return;
 
     this.isHooked = true;
@@ -169,16 +172,15 @@ export class GameScene extends Phaser.Scene {
     this.swingAngle = result.swingAngle;
     this.swingSpeed = result.swingSpeed;
 
-    this.player.body.allowGravity = false;
-    this.player.body.setVelocity(0, 0);
+    this.player.allowGravity = false;
+    this.player.vx = 0;
+    this.player.vy = 0;
 
     this.anchorMgr.highlightAnchor(result.anchor, true);
 
-    // Haptic — короткий тик при зацепе
     navigator.vibrate?.(15);
-
     playHook();
-    this.time.delayedCall(80, () => playAttach());
+    this._delayedCall(80, () => playAttach());
 
     this.hud.setHint('click_release');
   }
@@ -187,12 +189,12 @@ export class GameScene extends Phaser.Scene {
     if (!this.isHooked) return;
 
     this.isHooked = false;
-    this.player.body.allowGravity = true;
-    this.lastReleaseTime = this.time.now; // Старт кулдауна
+    this.player.allowGravity = true;
+    this.lastReleaseTime = this.time.now;
 
-    // Скорость при отпускании — касательная к дуге + boost
     const vel = this.physics_.calcRelease(this.swingAngle, this.swingSpeed, this.ropeLength);
-    this.player.body.setVelocity(vel.vx, vel.vy);
+    this.player.vx = vel.vx;
+    this.player.vy = vel.vy;
 
     if (this.currentAnchor) {
       this.anchorMgr.highlightAnchor(this.currentAnchor, false);
@@ -202,9 +204,7 @@ export class GameScene extends Phaser.Scene {
     this.rope.clear();
     this.hud.setHint('click_hook');
 
-    // Haptic — лёгкий тик при отпускании
     navigator.vibrate?.(10);
-
     playRelease();
   }
 
@@ -213,17 +213,18 @@ export class GameScene extends Phaser.Scene {
   die() {
     this.isDead = true;
     if (this.isHooked) this.releaseHook();
-    this.player.body.setVelocity(0, 0);
-    this.player.body.allowGravity = false;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.player.allowGravity = false;
 
-    // Haptic — тяжёлый паттерн при смерти
     navigator.vibrate?.([50, 30, 80]);
 
-    this.cameras.main.shake(400, 0.02);
-    this.cameras.main.flash(400, 140, 20, 10);
+    this.camera.shake(400, 0.02);
+    this.camera.flash(400, 140, 20, 10);
 
+    // Fade player alpha
     this.tweens.add({
-      targets: this.playerContainer,
+      targets: this.player,
       alpha: 0.2,
       duration: 400,
     });
@@ -231,31 +232,25 @@ export class GameScene extends Phaser.Scene {
     const isNewBest = profile.saveBest(this.maxHeight);
     this.sessionBest = profile.bestScore;
 
-    // Обновляем прогресс еженедельного испытания ПЕРЕД show() —
-    // чтобы кнопка CLAIM SKIN появилась сразу при завершении челленджа
     this.challengeMgr.updateProgress({
       height: this.maxHeight,
       hitCount: this.hitCount,
       gamesPlayed: 1,
     });
 
-    // Серверная верификация (fire-and-forget, не блокирует UI)
     const gameTime = (Date.now() - this.gameStartTime) / 1000;
     profile.saveChallenge(this.maxHeight, this.hitCount, gameTime);
 
     this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0);
 
-    // Аналитика смерти
     trackEvent('death', { height: this.maxHeight, gameTime });
-
     playDeath();
   }
 
-  // Воскрешение через rewarded ad (бесплатно, без лимита)
   async continueWithAd() {
     trackEvent('ad_shown', { height: this.maxHeight });
     const rewarded = await showRewarded();
-    if (!this.isDead || !this.scene.isActive()) return;
+    if (!this.isDead) return;
     if (rewarded) {
       trackEvent('ad_completed', { height: this.maxHeight });
       this._respawnPlayer();
@@ -264,11 +259,10 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // Воскрешение через Stars (платно, без лимита)
   async continueWithStars() {
     trackEvent('stars_attempt', { height: this.maxHeight });
     const paid = await purchaseContinue();
-    if (!this.isDead || !this.scene.isActive()) return;
+    if (!this.isDead) return;
     if (paid) {
       trackEvent('stars_success', { height: this.maxHeight });
       this._respawnPlayer();
@@ -277,7 +271,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // Общий респавн после любого типа воскрешения
   _respawnPlayer() {
     this.gameOverUI.hide();
     this.isDead = false;
@@ -288,13 +281,14 @@ export class GameScene extends Phaser.Scene {
     this.anchorMgr.generateAnchorsUpTo(targetY - 1500);
     this.obstacles.generateUpTo(targetY - 1500, this.anchorMgr.anchors);
 
-    this.player.setPosition(this.W / 2, targetY);
-    this.player.body.reset(this.W / 2, targetY);
-    this.player.body.allowGravity = true;
-    this.player.body.setVelocity(0, -300);
-    this.playerContainer.setAlpha(1);
+    this.player.x = this.W / 2;
+    this.player.y = targetY;
+    this.player.vx = 0;
+    this.player.vy = -300;
+    this.player.allowGravity = true;
+    this.player.alpha = 1;
 
-    this.cameras.main.scrollY = targetY - this.H * 0.55;
+    this.camera.scrollY = targetY - this.H * 0.55;
     this.hud.setHint('click_hook');
   }
 
@@ -304,102 +298,171 @@ export class GameScene extends Phaser.Scene {
     if (!isTelegram() && shouldShowInterstitial()) {
       await showInterstitial();
     }
-    this.scene.stop('GameScene');
-    this.scene.start('GameScene');
+    this.startScene('GameScene');
+  }
+
+  // Утилита: отложенный вызов
+  _delayedCall(ms, fn) {
+    this._delayedCalls.push({ remaining: ms, fn });
+  }
+
+  _updateDelayedCalls(delta) {
+    let w = 0;
+    for (let i = 0; i < this._delayedCalls.length; i++) {
+      const dc = this._delayedCalls[i];
+      dc.remaining -= delta;
+      if (dc.remaining <= 0) {
+        dc.fn();
+      } else {
+        this._delayedCalls[w++] = dc;
+      }
+    }
+    this._delayedCalls.length = w;
   }
 
   // ===================== UPDATE =====================
 
   update(time, delta) {
-    // ===== 1. Wrap-around (только в свободном полёте) =====
+    const ctx = this.ctx;
+    const dt = delta / 1000;
+    const p = this.player;
+
+    // Обновляем delayed calls
+    this._updateDelayedCalls(delta);
+
+    // ===== 1. Физика: гравитация для свободного полёта =====
+    if (!this.isDead && p.allowGravity) {
+      p.vy += this.engine.gravity * dt;
+      p.vy = clamp(p.vy, -1200, 1200);
+      p.vx = clamp(p.vx, -900, 900);
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    }
+
+    // ===== 2. Wrap-around (только в свободном полёте) =====
     if (!this.isDead && !this.isHooked) {
-      const offset = this.physics_.wrapX(this.player.x, this.W);
+      const offset = this.physics_.wrapX(p.x, this.W);
       if (offset !== 0) {
-        const body = this.player.body;
-        this.player.x += offset;
-        body.position.x += offset;
-        body.prev.x += offset;
-        body.prevFrame.x += offset;
+        p.x += offset;
       }
     }
 
-    // ===== 2. Ghost sprite — только в свободном полёте у края =====
+    // ===== 3. Ghost sprite — только в свободном полёте у края =====
     const edgeZone = 50;
-    const showGhost = !this.isDead && !this.isHooked
-      && (this.player.x < edgeZone || this.player.x > this.W - edgeZone);
+    this._ghostVisible = !this.isDead && !this.isHooked
+      && (p.x < edgeZone || p.x > this.W - edgeZone);
 
-    if (showGhost) {
-      const ghostX = this.player.x < this.W / 2
-        ? this.player.x + this.W
-        : this.player.x - this.W;
-      this.ghostContainer.setPosition(ghostX, this.player.y);
-      this.ghostContainer.setRotation(this.playerContainer.rotation);
-      this.ghostContainer.setAlpha(this.playerContainer.alpha);
-      this.ghostContainer.setVisible(true);
-      this.hunter.drawPose(this.ghostGfx, this.hunter.coatTime);
-    } else {
-      this.ghostContainer.setVisible(false);
+    if (this._ghostVisible) {
+      this._ghostX = p.x < this.W / 2 ? p.x + this.W : p.x - this.W;
+      this._ghostY = p.y;
     }
 
-    // ===== 3. Камера — X следит при hooked, Y всегда =====
+    // ===== 4. Камера — X следит при hooked, Y всегда =====
     if (this.isHooked) {
-      // На маятнике камера плавно следит по X чтобы игрок не исчезал за краем
-      const targetX = Phaser.Math.Clamp(
-        this.player.x - this.W / 2,
-        -this.W * 0.3,
-        this.W * 0.3
-      );
-      this.cameras.main.scrollX = Phaser.Math.Linear(
-        this.cameras.main.scrollX, targetX, 0.08
-      );
+      const targetX = clamp(p.x - this.W / 2, -this.W * 0.3, this.W * 0.3);
+      this.camera.scrollX = lerp(this.camera.scrollX, targetX, 0.08);
     } else {
-      // В свободном полёте — плавно возвращаем камеру к центру
-      this.cameras.main.scrollX = Phaser.Math.Linear(
-        this.cameras.main.scrollX, 0, 0.1
-      );
+      this.camera.scrollX = lerp(this.camera.scrollX, 0, 0.1);
     }
-    const targetY = this.player.y - this.H * 0.55;
-    this.cameras.main.scrollY = Phaser.Math.Linear(
-      this.cameras.main.scrollY, targetY, 0.15
+    const targetY = p.y - this.H * 0.55;
+    this.camera.scrollY = lerp(this.camera.scrollY, targetY, 0.15);
+
+    this.biome.update(p.y);
+
+    // ===== 5. Отрисовка — порядок важен! =====
+
+    // 5.1 Фон + параллакс (ДО camera transform)
+    this.biome.draw(ctx);
+
+    // 5.2 Camera transform
+    this.camera.applyTransform(ctx);
+
+    // 5.3 Болото
+    this.swamp.draw(ctx);
+
+    // 5.4 Крюки
+    this.anchorMgr.draw(ctx);
+
+    // 5.5 Trail частицы
+    this.trail.draw(ctx);
+
+    // 5.6 Верёвка
+    this.rope.draw(ctx);
+
+    // 5.7 Физика маятника (обновление позиции)
+    if (!this.isDead) {
+      if (this.isHooked && this.currentAnchor) {
+        const result = this.physics_.updatePendulum(dt, this.currentAnchor, {
+          angle: this.swingAngle,
+          speed: this.swingSpeed,
+          ropeLen: this.ropeLength,
+        });
+
+        this.swingAngle = result.angle;
+        this.swingSpeed = result.speed;
+
+        p.x = result.x;
+        p.y = result.y;
+        p.vx = 0;
+        p.vy = 0;
+
+        this.rope.setPoints(this.currentAnchor.x, this.currentAnchor.y, result.x, result.y, this.ropeLength);
+      } else {
+        this.rope.clear();
+      }
+    }
+
+    // 5.8 Охотник + ghost
+    if (!this.isDead) {
+      // Мигание при неуязвимости
+      if (this._blinkActive) {
+        this._blinkTime += delta;
+        const blinkPhase = Math.floor(this._blinkTime / 100) % 2;
+        p.alpha = blinkPhase === 0 ? 0.3 : 0.6;
+        if (this._blinkTime > this._blinkDuration) {
+          this._blinkActive = false;
+          // Плавно возвращаем яркость
+          this.tweens.add({ targets: p, alpha: 1, duration: 400 });
+        }
+      }
+    }
+
+    this.hunter.updateAnimation(
+      delta, p.x, p.y, p.vx, p.vy,
+      this.swingSpeed, this.swingAngle, this.isHooked
     );
 
-    this.biome.update(this.player.y);
+    ctx.globalAlpha = p.alpha;
+    this.hunter.draw(ctx, p.x, p.y);
 
+    if (this._ghostVisible) {
+      this.hunter.drawGhost(ctx, this._ghostX, this._ghostY);
+    }
+    ctx.globalAlpha = 1;
+
+    // 5.9 Жуки
+    this.obstacles.draw(ctx);
+
+    // 5.10 Camera reset
+    this.camera.resetTransform(ctx);
+
+    // Если мёртв — обновляем болото и Game Over, выходим
     if (this.isDead) {
       this.swamp.update(delta);
+      this.gameOverUI.draw(ctx, delta);
       return;
     }
 
-    // ===== 4. Физика маятника =====
-    if (this.isHooked && this.currentAnchor) {
-      const dt = delta / 1000;
-      const result = this.physics_.updatePendulum(dt, this.currentAnchor, {
-        angle: this.swingAngle,
-        speed: this.swingSpeed,
-        ropeLen: this.ropeLength,
-      });
-
-      this.swingAngle = result.angle;
-      this.swingSpeed = result.speed;
-
-      this.player.setPosition(result.x, result.y);
-      this.player.body.reset(result.x, result.y);
-
-      this.rope.draw(this.currentAnchor.x, this.currentAnchor.y, result.x, result.y, this.ropeLength);
-    } else {
-      this.rope.clear();
-    }
-
-    // Смерть: упал ниже самого нижнего якоря + 1.5 экрана = проиграл
+    // ===== 6. Смерть: упал ниже нижнего якоря + 1.5 экрана =====
     const lowestAnchorY = this.anchorMgr.getLowestY();
     const deathY = Math.min(GROUND_Y - 6, lowestAnchorY + this.H * 1.5);
-    if (this.player.y > deathY) {
+    if (p.y > deathY) {
       this.die();
       return;
     }
 
-    // HUD
-    const currentHeight = Math.max(0, Math.floor((GROUND_Y - this.player.y) / 10));
+    // ===== 7. HUD =====
+    const currentHeight = Math.max(0, Math.floor((GROUND_Y - p.y) / 10));
     if (currentHeight > this.maxHeight) {
       const prevMax = this.maxHeight;
       this.maxHeight = currentHeight;
@@ -409,77 +472,56 @@ export class GameScene extends Phaser.Scene {
     }
     this.hud.updateHeight(currentHeight, this.maxHeight, this.sessionBest);
 
-    // Процедурная генерация и cleanup якорей
-    this.anchorMgr.generateAnchorsUpTo(this.player.y - 2000);
-    this.anchorMgr.cleanup(this.player.y);
+    // ===== 8. Процедурная генерация =====
+    this.anchorMgr.generateAnchorsUpTo(p.y - 2000);
+    this.anchorMgr.cleanup(p.y);
 
-    // Генерация и cleanup жуков
-    this.obstacles.generateUpTo(this.player.y - 2000, this.anchorMgr.anchors);
-    this.obstacles.update(delta, this.player.y);
+    this.obstacles.generateUpTo(p.y - 2000, this.anchorMgr.anchors);
+    this.obstacles.update(delta, p.y);
 
-    // Коллизия с жуками — сброс с крюка + визуальный фидбек
+    // ===== 9. Коллизия с жуками =====
     if (!this.isDead && this.bugHitCooldown <= 0
-        && this.obstacles.checkCollision(this.player.x, this.player.y)) {
+        && this.obstacles.checkCollision(p.x, p.y)) {
       this.hitCount++;
       if (this.isHooked) this.releaseHook();
       // Откидывание вниз и в сторону
       const knockX = (Math.random() - 0.5) * 300;
-      this.player.body.setVelocity(knockX, 400);
-      this.bugHitCooldown = 2000; // 2s неуязвимости (совпадает с визуалом)
+      p.vx = knockX;
+      p.vy = 400;
+      this.bugHitCooldown = 2000;
 
-      // Haptic — паттерн удара при столкновении с жуком
       navigator.vibrate?.([30, 20, 30]);
-
-      // Звук удара
       playBugHit();
 
-      // Визуал: shake + flash
-      this.cameras.main.shake(250, 0.012);
-      this.cameras.main.flash(150, 255, 80, 30, true);
+      this.camera.shake(250, 0.012);
+      this.camera.flash(150, 255, 80, 30);
 
-      // Мигание игрока (alpha pulse) → возврат к нормальному через 2 сек
-      this.playerContainer.setAlpha(0.4);
-      this.tweens.add({
-        targets: this.playerContainer,
-        alpha: { from: 0.3, to: 0.6 },
-        duration: 100,
-        repeat: 5,
-        yoyo: true,
-        onComplete: () => {
-          // Через 2 сек плавно возвращаем полную яркость
-          this.time.delayedCall(1500, () => {
-            if (this.playerContainer && !this.isDead) {
-              this.tweens.add({
-                targets: this.playerContainer,
-                alpha: 1,
-                duration: 400,
-              });
-            }
-          });
-        },
-      });
+      // Мигание
+      p.alpha = 0.4;
+      this._blinkActive = true;
+      this._blinkTime = 0;
+      this._blinkDuration = 600; // 6 blinks * 100ms
+      // После мигания, через 1.5сек плавно возвращаем
+      this._invulnTime = 1500;
     }
-    // Обновление кулдауна
     if (this.bugHitCooldown > 0) this.bugHitCooldown -= delta;
 
-    // Пасхалки
+    // ===== 10. Пасхалки =====
     this.eggs.check(currentHeight);
 
-    // Hunter animation
-    const vx = this.player.body.velocity.x;
-    const vy = this.player.body.velocity.y;
-    this.hunter.updateAnimation(
-      delta, this.playerContainer, vx, vy,
-      this.swingSpeed, this.swingAngle, this.isHooked
-    );
-
-    // Trail
+    // ===== 11. Trail =====
     const effectiveSpeed = this.isHooked
       ? Math.abs(this.swingSpeed) * this.ropeLength
-      : Math.sqrt(vx * vx + vy * vy);
-    this.trail.update(delta, this.player.x, this.player.y, effectiveSpeed);
+      : Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    this.trail.update(delta, p.x, p.y, effectiveSpeed);
 
-    // Swamp bubbles
+    // ===== 12. Swamp bubbles =====
     this.swamp.update(delta);
+
+    // ===== 13. HUD (экранные координаты) =====
+    this.hud.draw(ctx, delta);
+
+    // ===== 14. Easter eggs (экранные координаты) =====
+    this.eggs.draw(ctx, delta);
   }
 }

@@ -1,337 +1,279 @@
-import Phaser from 'phaser';
+import { Scene } from '../engine/Scene.js';
+import { between } from '../engine/math.js';
 import { profile } from '../data/index.js';
 import { playOminous } from '../audio.js';
 import { t, getLang, setLang } from '../i18n.js';
-import {
-  drawGlassButton, drawChip,
-  createTypewriterText, createEmberBurst,
-} from '../managers/UIFactory.js';
+import { drawGlassButton, drawChip } from '../managers/UIFactory.js';
 import { FONT_MONO } from '../constants.js';
 import { SkinCarousel } from '../managers/SkinCarousel.js';
 import { MenuHunter } from '../managers/MenuHunter.js';
 import { LeaderboardUI } from '../managers/LeaderboardUI.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
-const NEON_CYAN = 0x00F5D4;
-const NEON_PINK = 0xFF2E63;
-const NEON_AMBER = 0xFFB800;
 const NEON_CYAN_STR = '#00F5D4';
 const NEON_PINK_STR = '#FF2E63';
 const NEON_AMBER_STR = '#FFB800';
-const BG_DARK_NEON = 0x0A0E1A;
-const BG_DARK_NEON_STR = '#0A0E1A';
-const STEEL_NEON = 0x4A5580;
+const BG_DARK_STR = '#0A0E1A';
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 
-export class MenuScene extends Phaser.Scene {
-  constructor() {
-    super('MenuScene');
+export class MenuScene extends Scene {
+  constructor(engine) {
+    super(engine);
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
-    this.W = W;
-    this.H = H;
-    this._uiElements = [];
+    const W = this.W;
+    const H = this.H;
 
-    // --- Фон: глубокий navy-black градиент ---
-    if (this.textures.exists('menu-bg')) this.textures.remove('menu-bg');
-    const gradTex = this.textures.createCanvas('menu-bg', 1, H);
-    const ctx = gradTex.getContext();
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    // Фоновый градиент — offscreen canvas
+    this._bgCanvas = document.createElement('canvas');
+    this._bgCanvas.width = 1;
+    this._bgCanvas.height = H;
+    const bgCtx = this._bgCanvas.getContext('2d');
+    const grad = bgCtx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, '#050810');
     grad.addColorStop(0.3, '#0A0E1A');
     grad.addColorStop(0.6, '#10152A');
     grad.addColorStop(1, '#0A0E1A');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1, H);
-    gradTex.refresh();
-    this.add.image(W / 2, H / 2, 'menu-bg').setDisplaySize(W, H).setDepth(-10);
+    bgCtx.fillStyle = grad;
+    bgCtx.fillRect(0, 0, 1, H);
 
-    // Луна
-    const moon = this.add.graphics().setDepth(-8);
-    moon.fillStyle(NEON_CYAN, 0.04); moon.fillCircle(W * 0.75, H * 0.12, 80);
-    moon.fillStyle(STEEL_NEON, 0.30); moon.fillCircle(W * 0.75, H * 0.12, 60);
-    moon.fillStyle(STEEL_NEON, 0.20); moon.fillCircle(W * 0.75 - 8, H * 0.12 - 5, 55);
-    moon.fillStyle(0x2A3050, 0.12);
-    moon.fillCircle(W * 0.75 + 15, H * 0.12 - 15, 12);
-    moon.fillCircle(W * 0.75 - 20, H * 0.12 + 10, 8);
+    // Предгенерируем деревья
+    this._trees = [];
+    for (let tx = 20; tx < W; tx += 50 + Math.random() * 30) {
+      const h = 80 + Math.random() * 160;
+      const w = 6 + Math.random() * 8;
+      const branches = [];
+      for (let b = 0; b < 2 + Math.floor(Math.random() * 3); b++) {
+        branches.push({
+          y: (H - 100) - h * (0.3 + Math.random() * 0.5),
+          len: 15 + Math.random() * 30,
+          dir: Math.random() > 0.5 ? 1 : -1,
+        });
+      }
+      this._trees.push({ x: tx, y: H - 100, h, w, branches });
+    }
 
     // Неоновые искры
-    this.ashParticles = [];
+    this._particles = [];
     for (let i = 0; i < 50; i++) {
       const isCyan = Math.random() < 0.5;
-      this.ashParticles.push({
-        x: Phaser.Math.Between(0, W), y: Phaser.Math.Between(0, H),
+      this._particles.push({
+        x: between(0, W), y: between(0, H),
         size: 1 + Math.random() * 2,
         speed: isCyan ? -(8 + Math.random() * 15) : (8 + Math.random() * 15),
         drift: (Math.random() - 0.5) * 10,
         alpha: 0.4 + Math.random() * 0.3,
-        color: isCyan ? NEON_CYAN : NEON_AMBER,
+        color: isCyan ? NEON_CYAN_STR : NEON_AMBER_STR,
       });
     }
-    this.ashGfx = this.add.graphics().setDepth(-4);
 
-    // Деревья + туман
-    const trees = this.add.graphics().setDepth(-6);
-    this._drawTreeSilhouettes(trees, H - 100, 0.4, W);
-    const fog = this.add.graphics().setDepth(-3);
-    fog.fillStyle(BG_DARK_NEON, 0.30); fog.fillRect(0, H - 150, W, 150);
-    fog.fillStyle(0x10152A, 0.18); fog.fillRect(0, H - 250, W, 100);
+    // Scanlines — предгенерируем offscreen
+    this._scanlinesCanvas = document.createElement('canvas');
+    this._scanlinesCanvas.width = W;
+    this._scanlinesCanvas.height = H;
+    const slCtx = this._scanlinesCanvas.getContext('2d');
+    slCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+    slCtx.lineWidth = 1;
+    for (let y = 0; y < H; y += 4) {
+      slCtx.beginPath();
+      slCtx.moveTo(0, y);
+      slCtx.lineTo(W, y);
+      slCtx.stroke();
+    }
 
-    // --- Охотник на крюке (делегация в MenuHunter) ---
+    // --- Охотник ---
     this.menuHunterObj = new MenuHunter(this);
     this.menuHunterObj.create();
 
-    // --- Заголовок ---
-    const titleY = H * 0.19;
-    const glowColors = [NEON_AMBER, NEON_CYAN, NEON_PINK];
-    for (let i = glowColors.length - 1; i >= 0; i--) {
-      const glow = this.add.text(W / 2, titleY, 'THE HOOK', {
-        fontSize: '60px', fontFamily: NEON_FONT, fontStyle: 'bold',
-        color: '#' + glowColors[i].toString(16).padStart(6, '0'),
-        stroke: '#' + glowColors[i].toString(16).padStart(6, '0'),
-        strokeThickness: 16 + i * 8,
-      }).setOrigin(0.5).setAlpha(0).setDepth(10);
-      this.tweens.add({
-        targets: glow, alpha: 0.18 + i * 0.06,
-        duration: 1800 + i * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 400,
-      });
-    }
-    const title = this.add.text(W / 2, titleY + 20, 'THE HOOK', {
-      fontSize: '60px', fontFamily: NEON_FONT, fontStyle: 'bold',
-      color: NEON_AMBER_STR, stroke: BG_DARK_NEON_STR, strokeThickness: 7,
-    }).setOrigin(0.5).setDepth(11).setAlpha(0);
-    // Neon glow через setShadow — cyan свечение
-    title.setShadow(0, 0, '#00F5D4', 6, true, true);
-    this.tweens.add({
-      targets: title, y: titleY - 5, duration: 2500, yoyo: true, repeat: -1,
-      ease: 'Sine.easeInOut', delay: 500,
-    });
-    this._addStaggerEntry(title, titleY, 0);
-
-    // Трещина под заголовком
-    const crackGfx = this.add.graphics().setDepth(11).setAlpha(0);
-    crackGfx.lineStyle(1.5, NEON_CYAN, 0.5);
-    crackGfx.beginPath();
-    const crackY = titleY + 35;
-    const crackLeft = W * 0.25; const crackRight = W * 0.75;
-    crackGfx.moveTo(crackLeft, crackY);
-    for (let i = 1; i <= 20; i++) {
-      crackGfx.lineTo(crackLeft + (crackRight - crackLeft) * (i / 20), crackY + (Math.random() - 0.5) * 4);
-    }
-    crackGfx.strokePath();
-    this._addStaggerFade(crackGfx, 0);
-
-    // Подзаголовок
-    const subtitleY = titleY + 54;
-    const subtitleText = createTypewriterText(this, W / 2, subtitleY, t('title_sub'), {
-      fontSize: '16px', fontFamily: NEON_FONT, fontStyle: 'italic', color: NEON_CYAN_STR,
-    }, 50);
-    subtitleText.setDepth(11).setAlpha(0);
-    this._addStaggerEntry(subtitleText, subtitleY, 200);
-
-    // Stagger: охотник 300ms
-    const hunterC = this.menuHunterObj.getContainer();
-    if (hunterC) {
-      hunterC.setAlpha(0);
-      this._addStaggerEntry(hunterC, hunterC.y, 300);
-    }
-
-    // --- Кнопка CLIMB ---
-    this._createClimbButton(W, H);
-
-    // --- Рекорд ---
-    const best = profile.bestScore;
-    const recordY = H * 0.75;
-    if (best > 0) {
-      const chipGfx = this.add.graphics().setDepth(10).setAlpha(0);
-      drawChip(chipGfx, W / 2, recordY, 200, 36);
-      const recordText = this.add.text(W / 2, recordY, `${t('record')}: ${best}${t('unit_m')}`, {
-        fontSize: '16px', fontFamily: FONT_MONO, fontStyle: 'bold', color: NEON_AMBER_STR,
-      }).setOrigin(0.5).setDepth(11).setAlpha(0);
-      // Cyan glow на числе рекорда
-      recordText.setShadow(0, 0, '#00F5D4', 3, true, true);
-      this._addStaggerFade(chipGfx, 700);
-      this._addStaggerEntry(recordText, recordY, 700);
-    }
-    if (profile.moonReached) {
-      const moonText = this.add.text(W / 2, H * 0.78, t('moon_reached'), {
-        fontSize: '12px', fontFamily: NEON_FONT, fontStyle: 'italic', color: '#4A5580',
-      }).setOrigin(0.5).setDepth(11).setAlpha(0);
-      this._addStaggerEntry(moonText, H * 0.78, 700);
-    }
-
-    // --- Кнопка SKINS (делегация в SkinCarousel) ---
+    // --- Skin Carousel ---
     this._skinCarousel = new SkinCarousel(this);
-    const skinsY = H * 0.82;
-    const skinsGfx = this.add.graphics().setDepth(15);
-    drawGlassButton(skinsGfx, W / 2, skinsY, 120, 32);
-    const skinsText = this.add.text(W / 2, skinsY, t('skins_title'), {
-      fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_CYAN_STR,
-    }).setOrigin(0.5).setDepth(16).setAlpha(0);
-    const skinsZone = this.add.zone(W / 2, skinsY, 160, 44)
-      .setInteractive({ useHandCursor: true }).setDepth(17);
-    skinsZone.on('pointerdown', () => this._skinCarousel.toggle());
-    this._addStaggerFade(skinsGfx, 750);
-    this._addStaggerEntry(skinsText, skinsY, 750);
 
-    // --- Кнопка ТОП (лидерборд) — Phaser zone поверх glass button ---
-    const topY = skinsY + 40;
-    const topGfx = this.add.graphics().setDepth(15);
-    drawGlassButton(topGfx, W / 2, topY, 120, 32);
-    const topText = this.add.text(W / 2, topY, t('top_button'), {
-      fontSize: '14px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_CYAN_STR,
-    }).setOrigin(0.5).setDepth(16).setAlpha(0);
-    const topZone = this.add.zone(W / 2, topY, 160, 44)
-      .setInteractive({ useHandCursor: true }).setDepth(17);
-
-    // Лидерборд — создаём один раз, show/hide через CSS
+    // --- Leaderboard ---
     this._leaderboardUI = new LeaderboardUI();
-    topZone.on('pointerdown', () => {
-      // Сбрасываем pointer state чтобы не прокидывать тап в GameScene
-      this.input.activePointer.isDown = false;
-      this._leaderboardUI.show();
-    });
 
-    this._addStaggerFade(topGfx, 800);
-    this._addStaggerEntry(topText, topY, 800);
+    // --- UI элементы как state ---
+    const titleY = H * 0.19;
+    const btnY = H * 0.66;
+    const recordY = H * 0.75;
+    const skinsY = H * 0.82;
+    const topY = skinsY + 40;
+    const best = profile.bestScore;
 
-    // --- Подсказка ---
-    const hintText = this.add.text(W / 2, H - 24, t('tap_to_hunt'), {
-      fontSize: '15px', fontFamily: NEON_FONT, fontStyle: 'italic', color: NEON_CYAN_STR,
-    }).setOrigin(0.5).setDepth(11).setAlpha(0);
-    // Cyan glow + усиленный пульс 0.5→1.0
-    hintText.setShadow(0, 0, '#00F5D4', 3, true, true);
+    this._ui = {
+      titleY,
+      btnY,
+      recordY,
+      skinsY,
+      topY,
+      best,
+      // Анимации через tweens
+      titleAlpha: 0,
+      titleFloatY: titleY + 20,
+      subtitleAlpha: 0,
+      subtitleY: titleY + 54 + 20,
+      hunterAlpha: 0,
+      btnGlowAlpha: 0,
+      btnGfxAlpha: 0,
+      btnTextAlpha: 0,
+      btnTextY: btnY + 20,
+      recordChipAlpha: 0,
+      recordTextAlpha: 0,
+      recordTextY: recordY + 20,
+      skinsGfxAlpha: 0,
+      skinsTextAlpha: 0,
+      skinsTextY: skinsY + 20,
+      topGfxAlpha: 0,
+      topTextAlpha: 0,
+      topTextY: topY + 20,
+      hintAlpha: 0,
+      hintY: H - 24 + 20,
+      moonTextAlpha: 0,
+      moonTextY: H * 0.78 + 20,
+      // Пульсация
+      btnGlowPulse: { alpha: 0.12, scaleX: 1, scaleY: 1 },
+      hintPulse: { alpha: 0.5 },
+    };
+
+    // --- Stagger tweens ---
+    // Заголовок
+    this.tweens.add({ targets: this._ui, titleAlpha: 1, titleFloatY: titleY, duration: 250, delay: 0, ease: 'Cubic.easeOut' });
+    // Подзаголовок
+    this.tweens.add({ targets: this._ui, subtitleAlpha: 1, subtitleY: titleY + 54, duration: 250, delay: 200, ease: 'Cubic.easeOut' });
+    // Охотник
+    this.tweens.add({ targets: this._ui, hunterAlpha: 1, duration: 250, delay: 300, ease: 'Cubic.easeOut' });
+    // Кнопка CLIMB
+    this.tweens.add({ targets: this._ui, btnGlowAlpha: 1, btnGfxAlpha: 1, duration: 250, delay: 500, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: this._ui, btnTextAlpha: 1, btnTextY: btnY, duration: 250, delay: 500, ease: 'Cubic.easeOut' });
+    // Рекорд
+    if (best > 0) {
+      this.tweens.add({ targets: this._ui, recordChipAlpha: 1, duration: 250, delay: 700, ease: 'Cubic.easeOut' });
+      this.tweens.add({ targets: this._ui, recordTextAlpha: 1, recordTextY: recordY, duration: 250, delay: 700, ease: 'Cubic.easeOut' });
+    }
+    // Moon
+    if (profile.moonReached) {
+      this.tweens.add({ targets: this._ui, moonTextAlpha: 1, moonTextY: H * 0.78, duration: 250, delay: 700, ease: 'Cubic.easeOut' });
+    }
+    // Skins
+    this.tweens.add({ targets: this._ui, skinsGfxAlpha: 1, duration: 250, delay: 750, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: this._ui, skinsTextAlpha: 1, skinsTextY: skinsY, duration: 250, delay: 750, ease: 'Cubic.easeOut' });
+    // Top
+    this.tweens.add({ targets: this._ui, topGfxAlpha: 1, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: this._ui, topTextAlpha: 1, topTextY: topY, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
+    // Hint
+    this.tweens.add({ targets: this._ui, hintAlpha: 1, hintY: H - 24, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
+
+    // Пульсация кнопки CLIMB
     this.tweens.add({
-      targets: hintText, alpha: { from: 0.5, to: 1.0 },
-      duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 800,
+      targets: this._ui.btnGlowPulse, alpha: 0.24, scaleX: 1.05, scaleY: 1.05,
+      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
-    this._addStaggerEntry(hintText, H - 20, 800);
+    // Пульсация hint
+    this.tweens.add({
+      targets: this._ui.hintPulse, alpha: { from: 0.5, to: 1.0 },
+      duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
 
-    // --- Переключатель языка ---
-    this._createLangToggle(W);
+    // Title float tween
+    this._titleFloat = { y: titleY };
+    this.tweens.add({
+      targets: this._titleFloat, y: titleY - 5,
+      duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
 
-    // Konami Code
+    // Typewriter подзаголовок
+    this._subtitleText = t('title_sub');
+    this._subtitleChars = 0;
+    this._subtitleDelay = 0;
+
+    // Konami
     this.konamiSequence = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right'];
     this.konamiIndex = 0;
     this.konamiTriggered = false;
     this._konamiHandler = (event) => this._checkKonami(event);
-    this.input.keyboard.on('keydown', this._konamiHandler);
+    document.addEventListener('keydown', this._konamiHandler);
 
-    // Scanline overlay — тонкие горизонтальные линии для cyberpunk feel
-    const scanlines = this.add.graphics().setScrollFactor(0).setDepth(18);
-    const scanH = this.scale.height;
-    scanlines.lineStyle(1, 0xffffff, 0.03);
-    for (let y = 0; y < scanH; y += 4) {
-      scanlines.moveTo(0, y);
-      scanlines.lineTo(this.scale.width, y);
+    // Transition state
+    this._transitioning = false;
+    this._transitionAlpha = 0;
+
+    // Glow colors для заголовка
+    this._glowPhases = [
+      { color: NEON_AMBER_STR, alpha: 0, phase: 0 },
+      { color: NEON_CYAN_STR, alpha: 0, phase: 0 },
+      { color: NEON_PINK_STR, alpha: 0, phase: 0 },
+    ];
+
+    // Konami визуал
+    this._konamiText = null;
+    this._konamiTextAlpha = 0;
+
+    // Input
+    this._onPointerDown = (e) => this._handlePointerDown(e);
+    this.input.on('pointerdown', this._onPointerDown);
+
+    this.camera.fadeIn(400);
+  }
+
+  _handlePointerDown(e) {
+    if (this._transitioning) return;
+
+    const x = e.x;
+    const y = e.y;
+    const W = this.W;
+    const ui = this._ui;
+
+    // Tooltip check first
+    if (this._skinCarousel._tooltipVisible) {
+      this._skinCarousel.handleTooltipTap(x, y);
+      return;
     }
-    scanlines.strokePath();
 
-    // Stagger entry анимация
-    this._playStaggerEntries();
+    // Кнопка CLIMB
+    const btnW = 250, btnH = 64;
+    if (x >= W / 2 - btnW / 2 && x <= W / 2 + btnW / 2 &&
+        y >= ui.btnY - btnH / 2 && y <= ui.btnY + btnH / 2) {
+      this._startTransition();
+      return;
+    }
 
-    // Регистрация cleanup при остановке сцены
-    this.events.once('shutdown', () => this.shutdown());
-  }
+    // Кнопка SKINS
+    if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.skinsY - 22 && y <= ui.skinsY + 22) {
+      this._skinCarousel.toggle();
+      return;
+    }
 
-  // --- Вспомогательные create-методы ---
+    // Кнопка TOP
+    if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.topY - 22 && y <= ui.topY + 22) {
+      this._leaderboardUI.show();
+      return;
+    }
 
-  _createClimbButton(W, H) {
-    const btnY = H * 0.66;
-    const btnW = 250; const btnH = 64;
-    const btnGlow = this.add.rectangle(W / 2, btnY, btnW + 20, btnH + 20, NEON_CYAN, 0.12).setDepth(12);
-    this.tweens.add({
-      targets: btnGlow, alpha: 0.24, scaleX: 1.05, scaleY: 1.05,
-      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
-    const btnGfx = this.add.graphics().setDepth(13);
-    drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH);
-    const btnText = this.add.text(W / 2, btnY, t('play'), {
-      fontSize: '32px', fontFamily: NEON_FONT, fontStyle: 'bold',
-      color: NEON_AMBER_STR, stroke: BG_DARK_NEON_STR, strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(14).setAlpha(0);
-    // Neon amber glow на тексте кнопки
-    btnText.setShadow(0, 0, '#FFB800', 4);
-    const btnZone = this.add.zone(W / 2, btnY, btnW, btnH).setInteractive({ useHandCursor: true }).setDepth(15);
-    btnZone.on('pointerover', () => { drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH, { hover: true }); btnText.setScale(1.05); });
-    btnZone.on('pointerout', () => { drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH); btnText.setScale(1); });
-    btnZone.on('pointerdown', () => { drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH, { pressed: true }); btnText.setY(btnY + 1); createEmberBurst(this, W / 2, btnY, 6); });
-    btnZone.on('pointerup', () => {
-      drawGlassButton(btnGfx, W / 2, btnY, btnW, btnH); btnText.setY(btnY);
-      createEmberBurst(this, W / 2, btnY, 20);
-      this.cameras.main.fadeOut(400, 10, 14, 26);
-      this.time.delayedCall(400, () => this.scene.start('GameScene'));
-    });
-    btnGlow.setAlpha(0); btnGfx.setAlpha(0);
-    this._addStaggerFade(btnGlow, 500);
-    this._addStaggerFade(btnGfx, 500);
-    this._addStaggerEntry(btnText, btnY, 500);
-  }
-
-  _createLangToggle(W) {
+    // Кнопка языка
     const langX = W - 44;
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
     const langY = Math.max(envTop, 10) + 16;
-    const langGfx = this.add.graphics().setDepth(15);
-    drawGlassButton(langGfx, langX, langY, 46, 26);
-    const langText = this.add.text(langX, langY, getLang() === 'ru' ? 'EN' : 'RU', {
-      fontSize: '16px', fontFamily: NEON_FONT, fontStyle: 'bold', color: NEON_AMBER_STR,
-    }).setOrigin(0.5).setDepth(16);
-    const langZone = this.add.zone(langX, langY, 46, 26).setInteractive({ useHandCursor: true }).setDepth(17);
-    langZone.on('pointerover', () => drawGlassButton(langGfx, langX, langY, 46, 26, { hover: true }));
-    langZone.on('pointerout', () => drawGlassButton(langGfx, langX, langY, 46, 26));
-    langZone.on('pointerdown', () => {
-      createEmberBurst(this, langX, langY, 4);
+    if (x >= langX - 23 && x <= langX + 23 && y >= langY - 13 && y <= langY + 13) {
       const newLang = getLang() === 'ru' ? 'en' : 'ru';
-      setLang(newLang);          // i18n — обновляет currentLang + localStorage
-      profile.setLang(newLang);  // profile — синхронизирует с сервером
-      this.scene.restart();
+      setLang(newLang);
+      profile.setLang(newLang);
+      this.startScene('MenuScene');
+      return;
+    }
+  }
+
+  _startTransition() {
+    this._transitioning = true;
+    this._transitionAlpha = 0;
+    // Fade to black, then switch scene
+    this.tweens.add({
+      targets: this,
+      _transitionAlpha: 1,
+      duration: 400,
+      ease: 'Linear',
+      onComplete: () => this.startScene('GameScene'),
     });
   }
-
-  // --- Stagger-анимация ---
-
-  _addStaggerEntry(target, finalY, delay) {
-    this._uiElements.push({ target, finalY, delay, fadeOnly: false });
-  }
-
-  _addStaggerFade(target, delay) {
-    this._uiElements.push({ target, finalY: null, delay, fadeOnly: true });
-  }
-
-  _playStaggerEntries() {
-    for (const { target, finalY, delay, fadeOnly } of this._uiElements) {
-      if (target.setAlpha) target.setAlpha(0);
-      if (fadeOnly) {
-        this.tweens.add({ targets: target, alpha: 1, duration: 250, delay, ease: 'Cubic.easeOut' });
-      } else {
-        if (target.setY) target.setY(finalY + 20);
-        this.tweens.add({ targets: target, alpha: 1, y: finalY, duration: 250, delay, ease: 'Cubic.easeOut' });
-      }
-    }
-  }
-
-  // --- Деревья ---
-
-  _drawTreeSilhouettes(gfx, baseY, alpha, width) {
-    gfx.fillStyle(0x0E1225, alpha);
-    for (let tx = 20; tx < width; tx += 50 + Math.random() * 30) {
-      const h = 80 + Math.random() * 160;
-      const w = 6 + Math.random() * 8;
-      gfx.fillRect(tx - w / 2, baseY - h, w, h);
-      for (let b = 0; b < 2 + Math.floor(Math.random() * 3); b++) {
-        const by = baseY - h * (0.3 + Math.random() * 0.5);
-        const bLen = 15 + Math.random() * 30;
-        const dir = Math.random() > 0.5 ? 1 : -1;
-        gfx.fillRect(tx, by, bLen * dir, 2);
-      }
-    }
-  }
-
-  // --- Konami ---
 
   _checkKonami(event) {
     if (this.konamiTriggered) return;
@@ -351,53 +293,280 @@ export class MenuScene extends Phaser.Scene {
 
   _triggerKonami() {
     playOminous();
-    const txt = this.add.text(this.W / 2, this.H / 2, t('butcher'), {
-      fontSize: '28px', fontFamily: NEON_FONT, fontStyle: 'bold',
-      color: NEON_PINK_STR, stroke: BG_DARK_NEON_STR, strokeThickness: 5, align: 'center',
-    }).setOrigin(0.5).setDepth(50).setAlpha(0);
+    this._konamiText = t('butcher');
+    this._konamiTextAlpha = 0;
     this.tweens.add({
-      targets: txt, alpha: 1, scale: { from: 0.5, to: 1.1 }, duration: 600, ease: 'Back.easeOut',
-      onComplete: () => { this.time.delayedCall(2000, () => { this.tweens.add({ targets: txt, alpha: 0, duration: 500 }); }); },
+      targets: this, _konamiTextAlpha: 1,
+      duration: 600, ease: 'Back.easeOut',
     });
-    const hunterC = this.menuHunterObj ? this.menuHunterObj.getContainer() : null;
-    if (hunterC) {
-      let flashes = 0;
-      this.time.addEvent({
-        delay: 300, repeat: 5,
-        callback: () => { flashes++; hunterC.setAlpha(flashes % 2 === 0 ? 1 : 0.3); },
-      });
-    }
-    this.cameras.main.shake(200, 0.01);
+    this.camera.shake(200, 0.01);
   }
-
-  // --- Update ---
 
   update(time, delta) {
-    // Делегация маятника в MenuHunter
-    if (this.menuHunterObj) this.menuHunterObj.update(time, delta);
-
-    // Неоновые искры
+    const ctx = this.ctx;
     const W = this.W;
     const H = this.H;
-    this.ashGfx.clear();
-    for (const p of this.ashParticles) {
+    const ui = this._ui;
+
+    // === Фон ===
+    ctx.drawImage(this._bgCanvas, 0, 0, W, H);
+
+    // === Луна ===
+    ctx.fillStyle = '#00F5D4';
+    ctx.globalAlpha = 0.04;
+    ctx.beginPath(); ctx.arc(W * 0.75, H * 0.12, 80, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4A5580';
+    ctx.globalAlpha = 0.30;
+    ctx.beginPath(); ctx.arc(W * 0.75, H * 0.12, 60, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.20;
+    ctx.beginPath(); ctx.arc(W * 0.75 - 8, H * 0.12 - 5, 55, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2A3050';
+    ctx.globalAlpha = 0.12;
+    ctx.beginPath(); ctx.arc(W * 0.75 + 15, H * 0.12 - 15, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W * 0.75 - 20, H * 0.12 + 10, 8, 0, Math.PI * 2); ctx.fill();
+
+    // === Деревья ===
+    ctx.fillStyle = '#0E1225';
+    ctx.globalAlpha = 0.4;
+    for (const tree of this._trees) {
+      ctx.fillRect(tree.x - tree.w / 2, tree.y - tree.h, tree.w, tree.h);
+      for (const b of tree.branches) {
+        ctx.fillRect(tree.x, b.y, b.len * b.dir, 2);
+      }
+    }
+
+    // === Туман ===
+    ctx.fillStyle = BG_DARK_STR;
+    ctx.globalAlpha = 0.30;
+    ctx.fillRect(0, H - 150, W, 150);
+    ctx.fillStyle = '#10152A';
+    ctx.globalAlpha = 0.18;
+    ctx.fillRect(0, H - 250, W, 100);
+
+    // === Неоновые искры ===
+    for (const p of this._particles) {
       p.y += p.speed * (delta / 1000);
       p.x += p.drift * (delta / 1000);
-      if (p.speed > 0 && p.y > H + 5) { p.y = -5; p.x = Phaser.Math.Between(0, W); }
-      if (p.speed < 0 && p.y < -5) { p.y = H + 5; p.x = Phaser.Math.Between(0, W); }
+      if (p.speed > 0 && p.y > H + 5) { p.y = -5; p.x = between(0, W); }
+      if (p.speed < 0 && p.y < -5) { p.y = H + 5; p.x = between(0, W); }
       if (p.x < -5) p.x = W + 5;
       if (p.x > W + 5) p.x = -5;
-      this.ashGfx.fillStyle(p.color, p.alpha);
-      this.ashGfx.fillCircle(p.x, p.y, p.size);
+      ctx.globalAlpha = p.alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
     }
+
+    // === Охотник ===
+    if (this.menuHunterObj) {
+      this.menuHunterObj.setAlpha(ui.hunterAlpha);
+      this.menuHunterObj.update(time, delta);
+      this.menuHunterObj.draw(ctx);
+    }
+
+    // === Glow titles ===
+    const titleY = this._titleFloat.y;
+
+    // Glow layers (пульсирующие)
+    for (let i = 0; i < this._glowPhases.length; i++) {
+      const g = this._glowPhases[i];
+      g.phase += delta * 0.001;
+      const a = (0.18 + i * 0.06) * (0.5 + 0.5 * Math.sin(g.phase * (0.5 + i * 0.2)));
+      ctx.globalAlpha = a * ui.titleAlpha;
+      ctx.font = `bold 60px ${NEON_FONT}`;
+      ctx.fillStyle = g.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('THE HOOK', W / 2, titleY);
+    }
+
+    // Основной заголовок
+    ctx.globalAlpha = ui.titleAlpha;
+    ctx.font = `bold 60px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_AMBER_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = BG_DARK_STR;
+    ctx.lineWidth = 7;
+    ctx.shadowColor = '#00F5D4';
+    ctx.shadowBlur = 6;
+    ctx.strokeText('THE HOOK', W / 2, titleY);
+    ctx.fillText('THE HOOK', W / 2, titleY);
+    ctx.shadowBlur = 0;
+
+    // Трещина под заголовком
+    ctx.globalAlpha = ui.titleAlpha * 0.5;
+    ctx.strokeStyle = NEON_CYAN_STR;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const crackY = titleY + 35;
+    const crackLeft = W * 0.25;
+    const crackRight = W * 0.75;
+    ctx.moveTo(crackLeft, crackY);
+    // Используем стабильные значения (не рандомные каждый кадр)
+    if (!this._crackPoints) {
+      this._crackPoints = [];
+      for (let i = 1; i <= 20; i++) {
+        this._crackPoints.push({ x: crackLeft + (crackRight - crackLeft) * (i / 20), y: crackY + (Math.random() - 0.5) * 4 });
+      }
+    }
+    for (const p of this._crackPoints) {
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
+    // Подзаголовок (typewriter)
+    this._subtitleDelay += delta;
+    if (this._subtitleChars < this._subtitleText.length && this._subtitleDelay > 50) {
+      this._subtitleDelay = 0;
+      this._subtitleChars++;
+    }
+    ctx.globalAlpha = ui.subtitleAlpha;
+    ctx.font = `italic 16px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_CYAN_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this._subtitleText.substring(0, this._subtitleChars), W / 2, ui.subtitleY);
+
+    // === Кнопка CLIMB ===
+    const btnW = 250, btnH = 64;
+    // Glow
+    if (ui.btnGlowAlpha > 0.01) {
+      ctx.globalAlpha = ui.btnGlowAlpha * ui.btnGlowPulse.alpha;
+      ctx.fillStyle = NEON_CYAN_STR;
+      ctx.save();
+      ctx.translate(W / 2, ui.btnY);
+      ctx.scale(ui.btnGlowPulse.scaleX, ui.btnGlowPulse.scaleY);
+      ctx.beginPath();
+      ctx.rect(-(btnW + 20) / 2, -(btnH + 20) / 2, btnW + 20, btnH + 20);
+      ctx.fill();
+      ctx.restore();
+    }
+    // Button
+    if (ui.btnGfxAlpha > 0.01) {
+      ctx.globalAlpha = ui.btnGfxAlpha;
+      drawGlassButton(ctx, W / 2, ui.btnY, btnW, btnH);
+    }
+    // Text
+    ctx.globalAlpha = ui.btnTextAlpha;
+    ctx.font = `bold 32px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_AMBER_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = BG_DARK_STR;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#FFB800';
+    ctx.shadowBlur = 4;
+    ctx.strokeText(t('play'), W / 2, ui.btnTextY);
+    ctx.fillText(t('play'), W / 2, ui.btnTextY);
+    ctx.shadowBlur = 0;
+
+    // === Рекорд ===
+    if (ui.best > 0) {
+      if (ui.recordChipAlpha > 0.01) {
+        ctx.globalAlpha = ui.recordChipAlpha;
+        drawChip(ctx, W / 2, ui.recordY, 200, 36);
+      }
+      ctx.globalAlpha = ui.recordTextAlpha;
+      ctx.font = `bold 16px ${FONT_MONO}`;
+      ctx.fillStyle = NEON_AMBER_STR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#00F5D4';
+      ctx.shadowBlur = 3;
+      ctx.fillText(`${t('record')}: ${ui.best}${t('unit_m')}`, W / 2, ui.recordTextY);
+      ctx.shadowBlur = 0;
+    }
+
+    // Moon
+    if (profile.moonReached && ui.moonTextAlpha > 0.01) {
+      ctx.globalAlpha = ui.moonTextAlpha;
+      ctx.font = `italic 12px ${NEON_FONT}`;
+      ctx.fillStyle = '#4A5580';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t('moon_reached'), W / 2, ui.moonTextY);
+    }
+
+    // === Кнопка SKINS ===
+    if (ui.skinsGfxAlpha > 0.01) {
+      ctx.globalAlpha = ui.skinsGfxAlpha;
+      drawGlassButton(ctx, W / 2, ui.skinsY, 120, 32);
+    }
+    ctx.globalAlpha = ui.skinsTextAlpha;
+    ctx.font = `bold 14px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_CYAN_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(t('skins_title'), W / 2, ui.skinsTextY);
+
+    // === Кнопка TOP ===
+    if (ui.topGfxAlpha > 0.01) {
+      ctx.globalAlpha = ui.topGfxAlpha;
+      drawGlassButton(ctx, W / 2, ui.topY, 120, 32);
+    }
+    ctx.globalAlpha = ui.topTextAlpha;
+    ctx.font = `bold 14px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_CYAN_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(t('top_button'), W / 2, ui.topTextY);
+
+    // === Skin Carousel ===
+    this._skinCarousel.draw(ctx);
+
+    // === Подсказка ===
+    ctx.globalAlpha = ui.hintAlpha * ui.hintPulse.alpha;
+    ctx.font = `italic 15px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_CYAN_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#00F5D4';
+    ctx.shadowBlur = 3;
+    ctx.fillText(t('tap_to_hunt'), W / 2, ui.hintY);
+    ctx.shadowBlur = 0;
+
+    // === Языковая кнопка ===
+    const langX = W - 44;
+    const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
+    const langY = Math.max(envTop, 10) + 16;
+    ctx.globalAlpha = 1;
+    drawGlassButton(ctx, langX, langY, 46, 26);
+    ctx.font = `bold 16px ${NEON_FONT}`;
+    ctx.fillStyle = NEON_AMBER_STR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(getLang() === 'ru' ? 'EN' : 'RU', langX, langY);
+
+    // === Scanlines ===
+    ctx.globalAlpha = 1;
+    ctx.drawImage(this._scanlinesCanvas, 0, 0);
+
+    // === Konami ===
+    if (this._konamiText && this._konamiTextAlpha > 0.01) {
+      ctx.globalAlpha = this._konamiTextAlpha;
+      ctx.font = `bold 28px ${NEON_FONT}`;
+      ctx.fillStyle = NEON_PINK_STR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = BG_DARK_STR;
+      ctx.lineWidth = 5;
+      ctx.strokeText(this._konamiText, W / 2, H / 2);
+      ctx.fillText(this._konamiText, W / 2, H / 2);
+    }
+
+    // === Transition overlay ===
+    if (this._transitioning) {
+      ctx.globalAlpha = this._transitionAlpha;
+      ctx.fillStyle = '#0A0E1A';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.globalAlpha = 1;
   }
 
-  // --- Shutdown ---
-
   shutdown() {
-    if (this._konamiHandler) this.input.keyboard.off('keydown', this._konamiHandler);
+    if (this._konamiHandler) document.removeEventListener('keydown', this._konamiHandler);
     if (this._skinCarousel) this._skinCarousel.destroy();
-    // Лидерборд — destroy DOM-элемент
     if (this._leaderboardUI) { this._leaderboardUI.destroy(); this._leaderboardUI = null; }
     if (this.menuHunterObj) this.menuHunterObj.destroy();
   }

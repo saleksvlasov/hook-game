@@ -1,13 +1,12 @@
-import Phaser from 'phaser';
-import { TRAIL_SPEED_THRESHOLD, Z } from '../constants.js';
+import { TRAIL_SPEED_THRESHOLD } from '../constants.js';
 import { ObjectPool } from './ObjectPool.js';
 
 // Менеджер trail-частиц — неоновый cyan→pink градиент
+// Canvas 2D API вместо Phaser Graphics
 export class TrailManager {
   constructor(scene) {
     this.scene = scene;
-    this.active = [];      // Активные частицы
-    this.graphics = null;
+    this.active = [];
     this.pool = new ObjectPool(
       () => ({ x: 0, y: 0, life: 0, maxLife: 0, size: 0 }),
       (p) => { p.life = 0; }
@@ -15,7 +14,7 @@ export class TrailManager {
   }
 
   create() {
-    this.graphics = this.scene.add.graphics().setDepth(Z.TRAIL);
+    // Ничего — всё рисуется в draw()
   }
 
   update(delta, playerX, playerY, effectiveSpeed) {
@@ -30,8 +29,6 @@ export class TrailManager {
       this.active.push(p);
     }
 
-    this.graphics.clear();
-
     // Обновляем живые частицы, мёртвые возвращаем в пул
     let writeIdx = 0;
     for (let i = 0; i < this.active.length; i++) {
@@ -42,21 +39,11 @@ export class TrailManager {
         this.pool.release(p);
         continue;
       }
-      const frac = p.life / p.maxLife;
-      const alpha = frac * 0.8; // Ярче чем было (0.7→0.8)
-      const size = p.size * frac;
-      // Neon: cyan → pink градиент при затухании
-      const r = Math.floor(0 + 255 * (1 - frac));    // 0 → 255 (pink)
-      const g = Math.floor(245 * frac);                // 245 → 0 (cyan green)
-      const b = Math.floor(212 * frac + 100 * (1 - frac)); // 212 → 100
-      const hex = Phaser.Display.Color.GetColor(r, g, b);
-      this.graphics.fillStyle(hex, alpha);
-      this.graphics.fillCircle(p.x, p.y, size);
       this.active[writeIdx++] = p;
     }
     this.active.length = writeIdx;
 
-    // Жёсткий лимит на случай всплеска
+    // Жёсткий лимит
     if (this.active.length > 80) {
       for (let i = 0; i < this.active.length - 80; i++) {
         this.pool.release(this.active[i]);
@@ -65,15 +52,34 @@ export class TrailManager {
     }
   }
 
+  // Отрисовка trail-частиц
+  draw(ctx) {
+    for (let i = 0; i < this.active.length; i++) {
+      const p = this.active[i];
+      const frac = p.life / p.maxLife;
+      const alpha = frac * 0.8;
+      const size = p.size * frac;
+      // Neon: cyan → pink градиент при затухании
+      const r = Math.floor(0 + 255 * (1 - frac));
+      const g = Math.floor(245 * frac);
+      const b = Math.floor(212 * frac + 100 * (1 - frac));
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   reset() {
     for (const p of this.active) this.pool.release(p);
     this.active.length = 0;
-    if (this.graphics) this.graphics.clear();
   }
 
   destroy() {
     this.reset();
     this.pool.clear();
-    if (this.graphics) this.graphics.destroy();
   }
 }
