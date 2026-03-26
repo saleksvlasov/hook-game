@@ -71,9 +71,16 @@ export class GameOverUI {
     this.buttonsDiv = document.createElement('div');
     this.buttonsDiv.classList.add('gameover-buttons');
 
-    // CONTINUE AD
-    this.continueAdBtn = this._createButton(t('continue_ad'), 'continue_ad');
-    this.buttonsDiv.appendChild(this.continueAdBtn);
+    // Десктоп: реклама недоступна — показываем только Stars
+    const platform = window.Telegram?.WebApp?.platform || '';
+    const isDesktop = platform === 'tdesktop' || platform === 'web' || platform === 'macos';
+    this._isDesktop = isDesktop;
+
+    // CONTINUE AD (только мобайл — на десктопе рекламы нет)
+    if (!isDesktop) {
+      this.continueAdBtn = this._createButton(t('continue_ad'), 'continue_ad');
+      this.buttonsDiv.appendChild(this.continueAdBtn);
+    }
 
     // CONTINUE STARS
     if (profile.isAuthorized) {
@@ -151,8 +158,8 @@ export class GameOverUI {
     this._posterAlpha = 0;
     this._bloodAlpha = 0;
 
-    // AD кнопка — всегда видна
-    this.continueAdBtn.style.display = 'block';
+    // Continue кнопки
+    if (this.continueAdBtn) this.continueAdBtn.style.display = 'block';
     if (this.continueStarBtn) this.continueStarBtn.style.display = 'block';
 
     // Кнопки с задержкой 700ms — управляется в draw()
