@@ -186,6 +186,18 @@ export class MenuScene extends Scene {
     this._subtitleChars = 0;
     this._subtitleDelay = 0;
 
+    // Подписка на серверную синхронизацию — обновить рекорд если сервер вернул больше
+    this._profileUnsub = profile.onUpdated((data) => {
+      if (data.bestScore > this._ui.best) {
+        this._ui.best = data.bestScore;
+        // Показать chip рекорда если он был скрыт (рекорд был 0 локально)
+        if (this._ui.recordChipAlpha < 0.01) {
+          this.tweens.add({ targets: this._ui, recordChipAlpha: 1, duration: 250, ease: 'Cubic.easeOut' });
+          this.tweens.add({ targets: this._ui, recordTextAlpha: 1, recordTextY: this._ui.recordY, duration: 250, ease: 'Cubic.easeOut' });
+        }
+      }
+    });
+
     // Konami
     this.konamiSequence = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right'];
     this.konamiIndex = 0;
@@ -585,6 +597,7 @@ export class MenuScene extends Scene {
   shutdown() {
     if (this._onPointerDown) this.input.off('pointerdown', this._onPointerDown);
     if (this._konamiHandler) document.removeEventListener('keydown', this._konamiHandler);
+    if (this._profileUnsub) this._profileUnsub();
     if (this._skinCarousel) this._skinCarousel.destroy();
     if (this._leaderboardUI) { this._leaderboardUI.destroy(); this._leaderboardUI = null; }
     if (this.menuHunterObj) this.menuHunterObj.destroy();

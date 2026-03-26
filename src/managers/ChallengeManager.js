@@ -19,27 +19,67 @@ export class ChallengeManager {
     this._migrateIfNeeded();
     this.data = { unlockedSkins: profile.unlockedSkins, weeklyProgress: { ...profile.weeklyProgress } };
     this._ensureWeekChallenge();
-    this.cleanupOldWeeks(); // Чистим старые недели при каждом запуске
+    this.cleanupOldWeeks();
+
+    // Подписка: когда серверные данные придут — обновить локальное состояние
+    profile.onUpdated((serverData) => {
+      this._syncFromServer(serverData);
+    });
+  }
+
+  // Обновить состояние из серверных данных (merge: берём максимум прогресса)
+  _syncFromServer(serverData) {
+    if (!serverData?.weeklyProgress) return;
+
+    const weekKey = `week${this.week}`;
+    const serverChallenge = serverData.weeklyProgress[weekKey];
+    const localChallenge = this.data.weeklyProgress[weekKey];
+
+    if (serverChallenge) {
+      if (!localChallenge) {
+        // Локально нет — берём серверное целиком
+        this.data.weeklyProgress[weekKey] = serverChallenge;
+      } else {
+        // Merge: берём максимальный прогресс
+        localChallenge.progress = Math.max(localChallenge.progress || 0, serverChallenge.progress || 0);
+        localChallenge.streakCount = Math.max(localChallenge.streakCount || 0, serverChallenge.streakCount || 0);
+        localChallenge.completed = localChallenge.completed || serverChallenge.completed;
+        localChallenge.claimed = localChallenge.claimed || serverChallenge.claimed;
+      }
+    }
+
+    // Скины — объединяем
+    if (serverData.unlockedSkins) {
+      this.data.unlockedSkins = [...new Set([
+        ...this.data.unlockedSkins,
+        ...serverData.unlockedSkins,
+      ])];
+    }
   }
 
   // Полный сброс при изменении версии данных
   _migrateIfNeeded() {
     const stored = parseInt(localStorage.getItem('thehook_challenge_ver') || '0', 10);
     if (stored < CHALLENGE_DATA_VERSION) {
-      // Сбрасываем скины и прогресс испытаний
-      profile.updateWeeklyProgress({});
-      profile._data.unlockedSkins = ['default'];
-      profile._data.activeSkin = 'default';
-      profile._provider.saveField('unlockedSkins', ['default']).catch(() => {});
-      profile._provider.saveField('activeSkin', 'default').catch(() => {});
-      // Сбрасываем рекорд (напрямую в localStorage, т.к. saveScore проверяет > current)
-      profile._data.bestScore = 0;
-      try { localStorage.setItem('thehook_best', '0'); } catch {}
-      // Сбрасываем счётчик игр и луну
-      profile._data.gamesCount = 0;
-      profile._data.moonReached = false;
-      profile._provider.saveField('gamesCount', 0).catch(() => {});
-      profile._provider.saveField('moonReached', false).catch(() => {});
+      // Если на устройстве УЖЕ были данные — сбрасываем (реальная миграция)
+      // Если устройство новое (нет thehook_challenges) — просто ставим версию
+      const hasExistingData = !!localStorage.getItem('thehook_challenges') || !!localStorage.getItem('thehook_best');
+      if (hasExistingData) {
+        // Сбрасываем скины и прогресс испытаний
+        profile.updateWeeklyProgress({});
+        profile._data.unlockedSkins = ['default'];
+        profile._data.activeSkin = 'default';
+        profile._provider.saveField('unlockedSkins', ['default']).catch(() => {});
+        profile._provider.saveField('activeSkin', 'default').catch(() => {});
+        // Сбрасываем рекорд (напрямую в localStorage, т.к. saveScore проверяет > current)
+        profile._data.bestScore = 0;
+        try { localStorage.setItem('thehook_best', '0'); } catch {}
+        // Сбрасываем счётчик игр и луну
+        profile._data.gamesCount = 0;
+        profile._data.moonReached = false;
+        profile._provider.saveField('gamesCount', 0).catch(() => {});
+        profile._provider.saveField('moonReached', false).catch(() => {});
+      }
       try { localStorage.setItem('thehook_challenge_ver', String(CHALLENGE_DATA_VERSION)); } catch {}
     }
   }
