@@ -205,7 +205,7 @@ export class SkinCarousel {
 
     // Подсказка
     ctx.globalAlpha = 1;
-    ctx.font = `10px 'Inter', sans-serif`;
+    ctx.font = `12px 'Inter', sans-serif`;
     ctx.fillStyle = '#4A5580';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

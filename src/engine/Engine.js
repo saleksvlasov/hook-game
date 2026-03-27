@@ -4,6 +4,7 @@
 import { Camera } from './Camera.js';
 import { Input } from './Input.js';
 import { TweenManager } from './Tween.js';
+import { FPSCounter } from './FPSCounter.js';
 
 export class Engine {
   // Приватные поля
@@ -13,6 +14,7 @@ export class Engine {
   #running;
   #lastTime;
   #raf;
+  #fps;
 
   constructor(config) {
     // Canvas
@@ -57,6 +59,9 @@ export class Engine {
     this.#lastTime = 0;
     this.#raf = null;
 
+    // FPS-счётчик (только dev)
+    this.#fps = new FPSCounter();
+
     // Фоновый цвет
     this.bgColor = config.backgroundColor || '#141820';
   }
@@ -98,6 +103,9 @@ export class Engine {
   #loop(timestamp) {
     if (!this.#running) return;
 
+    // FPS tick — до delta чтобы захватить реальный интервал между кадрами
+    this.#fps.tick(timestamp);
+
     const delta = Math.min(timestamp - this.#lastTime, 33.33); // Cap ~30fps min
     this.#lastTime = timestamp;
     this.time.now = timestamp;
@@ -121,6 +129,9 @@ export class Engine {
 
       // Camera эффекты поверх всего (flash, fadeIn)
       this.camera.drawEffects(this.ctx);
+
+      // FPS overlay — самый последний слой, поверх всего
+      this.#fps.draw(this.ctx, this.width);
     } catch (err) {
       console.error('Engine loop error:', err);
     }

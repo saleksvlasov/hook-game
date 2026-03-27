@@ -173,7 +173,7 @@ export function drawFirefly(ctx) {
   fillEllipse(ctx, 0, 0, 8, 6);
   // Крылья
   ctx.globalAlpha = 0.3;
-  ctx.fillStyle = '#4A4040';
+  ctx.fillStyle = '#4A5580';
   fillEllipse(ctx, -5, -2, 8, 4);
   fillEllipse(ctx, 5, -2, 8, 4);
   // Светящийся хвост — neon cyan

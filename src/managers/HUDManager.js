@@ -167,7 +167,7 @@ export class HUDManager {
 
     // === Label "ГЛУБИНА" ===
     ctx.globalAlpha = 1;
-    ctx.font = `11px ${FONT_MONO}`;
+    ctx.font = `12px ${FONT_MONO}`;
     ctx.fillStyle = NEON_STEEL;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -253,7 +253,7 @@ export class HUDManager {
         const secs = Math.ceil(this.#bonusTimer / 1000);
         const timerX = W - 20 - 3 * (heartSize * 2 + heartGap); // Под 4-м сердцем
         const timerY = safeTop + 36;
-        ctx.font = `bold 11px ${NEON_FONT}`;
+        ctx.font = `bold 12px ${NEON_FONT}`;
         ctx.fillStyle = '#FF2E63';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';

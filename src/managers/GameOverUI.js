@@ -290,8 +290,11 @@ export class GameOverUI {
       let _seed = this.#bloodSeed;
       // eslint-disable-next-line no-global-assign
       Math.random = () => { _seed = (_seed * 16807) % 2147483647; return (_seed - 1) / 2147483646; };
-      drawBloodSplatter(ctx, W / 2, H * 0.5, 120, 0.8);
-      Math.random = savedRandom;
+      try {
+        drawBloodSplatter(ctx, W / 2, H * 0.5, 120, 0.8);
+      } finally {
+        Math.random = savedRandom;
+      }
     }
 
     // Poster рамка
