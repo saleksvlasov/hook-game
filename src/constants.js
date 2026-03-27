@@ -218,7 +218,7 @@ export const POWER_ARC_TIERS = [
 ];
 
 // ===== EMBER ECONOMY =====
-export const EMBER_RATE = 1;  // 1 ember за 1м высоты
+export const EMBER_RATE = 0.1;  // 1 ember за 10м высоты
 export const EMBER_MILESTONES = [
   { height: 100, bonus: 50 },
   { height: 500, bonus: 100 },

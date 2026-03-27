@@ -118,11 +118,12 @@ export class MenuScene extends Scene {
 
     // --- UI элементы как state ---
     const titleY = H * 0.19;
-    const btnY = H * 0.66;
-    const recordY = H * 0.75;
-    const skinsY = H * 0.78;
-    const forgeY = skinsY + 38;
-    const topY = forgeY + 38;
+    const btnY = H * 0.62;
+    const recordY = H * 0.71;
+    const moonY = recordY + 20;        // мелкий текст сразу под рекордом
+    const skinsY = H * 0.80;
+    const forgeY = skinsY + 36;
+    const topY = forgeY + 36;
     const best = profile.bestScore;
 
     this._ui = {
@@ -158,7 +159,7 @@ export class MenuScene extends Scene {
       hintAlpha: 0,
       hintY: H - 24 + 20,
       moonTextAlpha: 0,
-      moonTextY: H * 0.78 + 20,
+      moonTextY: moonY + 20,
       // Пульсация
       btnGlowPulse: { alpha: 0.12, scaleX: 1, scaleY: 1 },
       hintPulse: { alpha: 0.5 },
@@ -181,7 +182,7 @@ export class MenuScene extends Scene {
     }
     // Moon
     if (profile.moonReached) {
-      this.tweens.add({ targets: this._ui, moonTextAlpha: 1, moonTextY: H * 0.78, duration: 250, delay: 700, ease: 'Cubic.easeOut' });
+      this.tweens.add({ targets: this._ui, moonTextAlpha: 1, moonTextY: moonY, duration: 250, delay: 700, ease: 'Cubic.easeOut' });
     }
     // Skins
     this.tweens.add({ targets: this._ui, skinsGfxAlpha: 1, duration: 250, delay: 750, ease: 'Cubic.easeOut' });

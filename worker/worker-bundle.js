@@ -515,7 +515,7 @@ const EMBER_MILESTONES_SERVER = [
 
 function calcEmbers(height, magnetLevel) {
   const multiplier = 1 + (magnetLevel || 0) * 0.15;
-  let embers = Math.floor(height * multiplier);
+  let embers = Math.floor(height * 0.1 * multiplier); // 1 ember за 10м
   for (const ms of EMBER_MILESTONES_SERVER) {
     if (height >= ms.height) {
       embers += Math.floor(ms.bonus * multiplier);

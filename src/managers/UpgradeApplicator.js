@@ -1,7 +1,7 @@
 import { profile } from '../data/index.js';
 import {
   HOOK_RANGE, RELEASE_BOOST, HEARTS_MAX, HOOK_COOLDOWN,
-  OBSTACLE_HIT_RADIUS, EMBER_RATE, UPGRADES,
+  OBSTACLE_HIT_RADIUS, UPGRADES,
 } from '../constants.js';
 
 // Вычисляет эффективные игровые константы с учётом апгрейдов
@@ -15,7 +15,6 @@ export function getEffectiveConstants() {
     hookCooldown: HOOK_COOLDOWN * (1 - lvl('quick_hook') * UPGRADES.quick_hook.effect),
     obstacleHitRadius: OBSTACLE_HIT_RADIUS * (1 - lvl('bug_armor') * UPGRADES.bug_armor.effect),
     emberMultiplier: 1 + lvl('ember_magnet') * UPGRADES.ember_magnet.effect,
-    emberRate: EMBER_RATE,
   };
 }
 

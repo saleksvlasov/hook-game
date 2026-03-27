@@ -5,7 +5,7 @@ import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
-import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES } from '../constants.js';
+import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES, EMBER_RATE } from '../constants.js';
 import { getEffectiveConstants } from '../managers/UpgradeApplicator.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -785,7 +785,7 @@ export class GameScene extends Scene {
     // ===== 7.6. Ember tracking (дробный аккумулятор для ember_magnet) =====
     if (currentHeight > this.#lastEmberHeight) {
       const delta_ = currentHeight - this.#lastEmberHeight;
-      this.#emberFrac += delta_ * this.#effectiveConsts.emberMultiplier;
+      this.#emberFrac += delta_ * EMBER_RATE * this.#effectiveConsts.emberMultiplier;
       const whole = Math.floor(this.#emberFrac);
       this.#embersEarned += whole;
       this.#emberFrac -= whole;
