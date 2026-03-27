@@ -48,6 +48,9 @@ export const LANGS = {
     heart_bonus: '+HEART!',
     hearts_restored: 'HEARTS RESTORED!',
     loading: 'Loading...',
+    sdk_error_title: 'SOMETHING WENT WRONG',
+    sdk_error_msg: 'Failed to load required components.\nPlease restart the app.',
+    sdk_error_retry: 'RETRY',
   },
   ru: {
     title_sub: 'Как высоко заберёшься?',
@@ -96,6 +99,9 @@ export const LANGS = {
     heart_bonus: '+СЕРДЦЕ!',
     hearts_restored: 'СЕРДЦА ВОССТАНОВЛЕНЫ!',
     loading: 'Загрузка...',
+    sdk_error_title: 'ЧТО-ТО ПОШЛО НЕ ТАК',
+    sdk_error_msg: 'Не удалось загрузить необходимые компоненты.\nПерезапустите приложение.',
+    sdk_error_retry: 'ПОВТОРИТЬ',
   },
 };
 
