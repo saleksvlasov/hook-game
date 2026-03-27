@@ -1,8 +1,10 @@
 import { TelegramProvider, getCurrentWeek } from './TelegramProvider.js';
+import { DevProvider } from './DevProvider.js';
 import { setLang } from '../i18n.js';
 
 // Единая точка входа к данным пользователя
-// Архитектура: СЕРВЕР = единственный источник правды, localStorage убран полностью
+// Telegram → сервер (единственный источник правды)
+// Без Telegram → DevProvider (мок в памяти, для локальной разработки)
 class UserProfile {
   constructor() {
     this._provider = null;
@@ -11,22 +13,31 @@ class UserProfile {
     this._initialized = false;
   }
 
-  // Инициализация — загружает данные с сервера
-  // Бросает ошибку если сервер недоступен
+  // Инициализация — загружает данные с сервера или мока
+  // Бросает ошибку если сервер недоступен (только в Telegram)
   async init() {
-    this._provider = new TelegramProvider();
+    const hasTelegram = !!(window.Telegram?.WebApp?.initData);
 
-    const serverData = await this._provider.loadProfile();
-    if (!serverData) {
-      throw new Error('Server unavailable');
+    if (hasTelegram) {
+      // Продакшн: Telegram Mini App → серверные данные
+      this._provider = new TelegramProvider();
+      const serverData = await this._provider.loadProfile();
+      if (!serverData) {
+        throw new Error('Server unavailable');
+      }
+      this._data = serverData;
+    } else {
+      // Разработка: без Telegram → мок в памяти
+      console.log('[DEV] Telegram не обнаружен — используется DevProvider');
+      this._provider = new DevProvider();
+      this._data = await this._provider.loadProfile();
     }
 
-    this._data = serverData;
     this._initialized = true;
 
-    // Установить язык из серверного профиля
-    if (serverData.lang) {
-      setLang(serverData.lang);
+    // Установить язык из профиля
+    if (this._data.lang) {
+      setLang(this._data.lang);
     }
   }
 
