@@ -8,7 +8,7 @@
 - **SOLID** — Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
 - После кода — всегда тест, проверка на утечки памяти, оптимизация, скорость алгоритмов
 - Никаких костылей: setTimeout для UI, кнопки вне DOM-дерева, дублирование состояния
-- Серверный источник правды: данные пользователя хранятся на сервере (Cloudflare KV), localStorage только как кэш
+- Серверный источник правды: данные пользователя хранятся на сервере (Cloudflare KV), localStorage НЕ используется
 - Деплой только с согласия владельца
 
 ---
@@ -87,7 +87,7 @@ Neon Amber: #FFB800 (охотник UI, счёт, кнопки)
 - [ ] Игрок не уходит за край видимой области
 - [ ] Смерть в любом состоянии (hooked/free)
 - [ ] RU/EN локализация
-- [ ] localStorage рекорд сохраняется
+- [ ] Серверные данные загружаются корректно
 - [ ] npm run build без ошибок
 - [ ] Мобильный экран без полей
 
@@ -229,11 +229,10 @@ Neon Amber: #FFB800 (охотник UI, счёт, кнопки)
 ## СТРУКТУРА
 ```
 src/
-  main.js          — Phaser конфиг (динамический размер, Scale.NONE, DOM, Telegram init)
-  i18n.js          — EN/RU локализация, автодетект, localStorage
-  storage.js       — localStorage: рекорд, луна (try-catch обёрнут)
+  main.js          — Загрузочный экран, ожидание SDK + сервера, экран ошибки, запуск Engine
+  i18n.js          — EN/RU локализация, автодетект через navigator.language / сервер
   audio.js         — 9 процедурных звуков через Web Audio API (+ playBugHit, destroyAudio)
-  ads.js           — Заглушки рекламы (interstitial каждые 5 игр, rewarded)
+  ads.js           — Adsgram реклама (interstitial каждые 8 смертей, rewarded)
   telegram.js      — Telegram Mini App SDK, Stars оплата, leaderboard API
   scenes/
     MenuScene.js   — Меню: заголовок, охотник на маятнике, кнопка CLIMB, Konami code
@@ -242,7 +241,7 @@ src/
     AnchorManager.js   — Процедурная генерация крюков, cleanup
     ObstacleManager.js — 4 типа жуков-препятствий (beetle, spider, scorpion, firefly)
     BiomeManager.js    — 5 биомов с градиентами + 3 слоя мерцающих искр-костра
-    HUDManager.js      — Счёт высоты, рекорд, подсказки (MUI Chip стиль)
+    HUDManager.js      — Счёт высоты, рекорд, сердца + бонусный таймер, подсказки
     GameOverUI.js      — HTML кнопки (flat minimal), кровь, анимации
     UIFactory.js       — drawGlassButton, drawChip, drawSteelFrame, createEmberBurst
     HunterRenderer.js  — Процедурный охотник + анимация пальто
@@ -251,8 +250,12 @@ src/
     SwampManager.js    — Болото + пузыри (ObjectPool)
     EasterEggs.js      — Bounty (1000м), Moonwalker (3000м)
     ObjectPool.js      — Переиспользуемый пул объектов
+  data/
+    UserProfile.js     — Singleton профиля, геттеры/сеттеры, серверная синхронизация
+    TelegramProvider.js — Сервер = единственный источник правды, без localStorage
+    index.js           — Экспорт profile + getCurrentWeek
 worker/
-  worker-bundle.js — Cloudflare Worker: invoice (Stars) + leaderboard (KV)
+  worker-bundle.js — Cloudflare Worker: invoice, leaderboard, profile, challenges, lang (KV)
 ```
 
 ## КОНСТАНТЫ
@@ -263,14 +266,19 @@ SWING_FRICTION = 0.9992, RELEASE_BOOST = 1.25, MIN_SWING_SPEED = 1.5
 HOOK_COOLDOWN = 180ms, FALL_SPEED_PENALTY_START/MAX = 200/1000
 ANCHOR_SPACING_Y = 240, GROUND_Y = WORLD_HEIGHT-10, SPAWN_Y = WORLD_HEIGHT-400
 OBSTACLE_START_HEIGHT = 50м, OBSTACLE_CHANCE = 0.4, OBSTACLE_HIT_RADIUS = 22
+HEARTS_MAX = 6 (3 полных), HEARTS_MAX_BONUS = 8 (4-е бонусное на 40с)
+HEART_BONUS_DURATION = 40000ms, HEART_PICKUP_CHANCE = 0.08
 WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
 5 биомов: foundry(0-1500) → ironworks(1500-3000) → furnace(3000-5000) → storm(5000-7000) → cosmos(7000+)
 ```
 
-## localStorage
-```
-thehook_best, thehook_moon, thehook_games, thehook_lang
-```
+## ХРАНЕНИЕ ДАННЫХ
+- **localStorage НЕ ИСПОЛЬЗУЕТСЯ** — полностью убран
+- Сервер (Cloudflare KV) = единственный источник правды
+- Загрузочный экран ждёт ответ сервера перед стартом
+- Сервер недоступен → экран ошибки + Retry
+- `lang` хранится на сервере (`/save-lang` эндпоинт)
+- `gamesCount` — per-session (в памяти, для частоты рекламы)
 
 ## ПРАВИЛА — НЕ МЕНЯТЬ
 - Две сцены: MenuScene → GameScene
@@ -297,6 +305,10 @@ thehook_best, thehook_moon, thehook_games, thehook_lang
 - [x] Flat minimal UI + MUI Chip дизайн
 - [x] Физика v3: fall penalty, hook cooldown, balanced constants
 - [x] Удалить counter.js, style.css
+- [x] Убран localStorage полностью — сервер единственный источник
+- [x] Загрузочный экран + экран ошибки сервера
+- [x] 4-е бонусное сердце на 40с с таймером
+- [x] Уменьшено свечение текста (shadowBlur) для читаемости
 - [ ] Деплой Yandex Games + SDK
 - [ ] Тест на мобиле (375/390/414px)
 - [ ] Туториал первой игры
