@@ -54,7 +54,7 @@ export const NEON_AMBER_HEX = 0xFFB800;
 
 export const GOLD = '#FFB800';           // Neon Amber (замена янтаря)
 export const GOLD_HEX = 0xFFB800;
-export const EMBER = '#FF6B35';          // Тлеющий неон (тёплый trail)
+export const EMBER = '#FF6B35';          // Ember Orange — валюта, кузница, trail
 export const EMBER_HEX = 0xFF6B35;
 export const DARK_RED = '#FF2E63';       // Neon Pink — опасность, смерть
 export const DARK_RED_HEX = 0xFF2E63;
@@ -220,18 +220,20 @@ export const POWER_ARC_TIERS = [
 // ===== EMBER ECONOMY =====
 export const EMBER_RATE = 0.1;  // 1 ember за 10м высоты
 export const EMBER_MILESTONES = [
-  { height: 100, bonus: 50 },
-  { height: 500, bonus: 100 },
-  { height: 1000, bonus: 200 },
+  { height: 100, bonus: 30 },
+  { height: 500, bonus: 75 },
+  { height: 1000, bonus: 150 },
+  { height: 2000, bonus: 300 },
+  { height: 3000, bonus: 600 },
 ];
 
 export const UPGRADES = {
-  hook_range:   { maxLevel: 10, effect: 0.05, baseCost: 50,  costScale: 1.38 },
-  swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 50,  costScale: 1.38 },
+  hook_range:   { maxLevel: 6,  effect: 0.05, baseCost: 50,  costScale: 1.50 },  // +30% max
+  swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 50,  costScale: 1.50 },
   iron_heart:   { maxLevel: 3,  effect: 1,    costs: [200, 500, 1000] },
-  quick_hook:   { maxLevel: 5,  effect: 0.10, baseCost: 100, costScale: 1.41 },
-  bug_armor:    { maxLevel: 5,  effect: 0.10, baseCost: 100, costScale: 1.41 },
-  ember_magnet: { maxLevel: 5,  effect: 0.15, baseCost: 150, costScale: 1.41 },
+  quick_hook:   { maxLevel: 3,  effect: 0.10, baseCost: 100, costScale: 1.55 },  // -30% max
+  bug_armor:    { maxLevel: 5,  effect: 0.10, baseCost: 100, costScale: 1.55 },
+  ember_magnet: { maxLevel: 5,  effect: 0.15, baseCost: 200, costScale: 1.55 },  // base 200
 };
 
 // Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()

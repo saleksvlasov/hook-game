@@ -179,6 +179,100 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* === Forge (Кузница) === */
+
+.forge-shop {
+  padding: 40px 16px 20px;
+  z-index: 110;
+}
+
+.forge-shop__title {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  font-size: 26px;
+  font-weight: bold;
+  color: #FFB800;
+  margin-bottom: 8px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.forge-shop__balance {
+  color: #FF6B35;
+  font-size: 16px;
+  text-align: center;
+  margin-bottom: 12px;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.forge-shop__cards {
+  overflow-y: auto;
+  max-height: calc(100vh - 140px);
+  padding: 0 8px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.forge-card {
+  background: rgba(42, 48, 80, 0.5);
+  border: 1px solid rgba(0, 245, 212, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+}
+
+.forge-card__name {
+  color: #E0F0FF;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.forge-card__desc {
+  color: #8090B0;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.forge-card__level {
+  color: #00F5D4;
+  font-size: 11px;
+  margin-top: 2px;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.forge-card__btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Share Tech Mono', monospace;
+  min-width: 70px;
+  text-align: center;
+  transition: opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.forge-card__btn--buy {
+  background: linear-gradient(135deg, #FF6B35, #FFB800);
+  color: #0A0E1A;
+}
+
+.forge-card__btn--locked {
+  background: #2A3050;
+  color: #FF6B35;
+  opacity: 0.5;
+}
+
+.forge-card__btn--max {
+  background: #2A3050;
+  color: #6070A0;
+}
+
 /* === Ad overlay заглушки === */
 
 .ad-overlay {

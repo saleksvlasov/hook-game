@@ -58,22 +58,28 @@ export class HunterRenderer {
 
   // Рисовать охотника в мировых координатах
   draw(ctx, x, y) {
-    // Power Arc glow — аура ЗА персонажем
+    // Power Arc glow — мягкая аура ЗА персонажем (radialGradient)
     if (this.#hunterGlow > 0) {
       ctx.save();
       const radius = 25 + this.#hunterGlow * 15;
-      const alpha = this.#hunterGlow * 0.3;
+      const alpha = this.#hunterGlow * 0.35;
 
-      // Legend: amber-cyan shift
+      let r, g, b;
       if (this.#hunterGlow >= 0.7) {
+        // Legend: amber-cyan shift
         const shift = Math.sin(performance.now() * 0.003) * 0.5 + 0.5;
-        const r = Math.floor(0 + 255 * shift);
-        const g = Math.floor(245 * (1 - shift) + 184 * shift);
-        const b = Math.floor(212 * (1 - shift));
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        r = Math.floor(0 + 255 * shift);
+        g = Math.floor(245 * (1 - shift) + 184 * shift);
+        b = Math.floor(212 * (1 - shift));
       } else {
-        ctx.fillStyle = `rgba(0,245,212,${alpha})`;
+        r = 0; g = 245; b = 212; // Neon Cyan
       }
+
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},${alpha * 0.4})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();

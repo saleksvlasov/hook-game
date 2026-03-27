@@ -4,7 +4,7 @@ import { UPGRADES } from '../constants.js';
 import { getUpgradeCost } from './UpgradeApplicator.js';
 
 // Магазин апгрейдов "КУЗНИЦА" — HTML overlay в #game-ui
-// Паттерн как LeaderboardUI: один раз строим DOM, show/hide через CSS класс
+// CSS классы в ui.css (.forge-shop, .forge-card, .forge-card__btn)
 export class UpgradeShopUI {
   #panel = null;
   #balanceEl = null;
@@ -34,19 +34,18 @@ export class UpgradeShopUI {
 
     // Заголовок
     const title = document.createElement('div');
-    title.classList.add('leaderboard__title');
-    title.style.cssText = 'color:#FFB800;font-size:22px;margin-bottom:4px';
+    title.classList.add('forge-shop__title');
     title.textContent = t('forge');
     panel.appendChild(title);
 
     // Баланс эмберов
     this.#balanceEl = document.createElement('div');
-    this.#balanceEl.style.cssText = 'color:#FF6B35;font-size:16px;text-align:center;margin-bottom:12px;font-family:"Share Tech Mono",monospace';
+    this.#balanceEl.classList.add('forge-shop__balance');
     panel.appendChild(this.#balanceEl);
 
     // Контейнер карточек
     this.#cardsContainer = document.createElement('div');
-    this.#cardsContainer.style.cssText = 'overflow-y:auto;max-height:calc(100vh - 140px);padding:0 8px';
+    this.#cardsContainer.classList.add('forge-shop__cards');
     panel.appendChild(this.#cardsContainer);
 
     const root = document.getElementById('game-ui');
@@ -83,29 +82,24 @@ export class UpgradeShopUI {
     const canAfford = profile.embers >= cost;
 
     const card = document.createElement('div');
-    card.style.cssText = `
-      background:rgba(42,48,80,0.5);border:1px solid rgba(0,245,212,0.2);
-      border-radius:8px;padding:10px 12px;margin-bottom:8px;
-      display:flex;align-items:center;justify-content:space-between;
-      font-family:'Inter','Helvetica Neue',sans-serif;
-    `;
+    card.classList.add('forge-card');
 
     // Левая часть: название + эффект
     const info = document.createElement('div');
     info.style.cssText = 'flex:1;min-width:0';
 
     const name = document.createElement('div');
-    name.style.cssText = 'color:#E0F0FF;font-size:13px;font-weight:600';
+    name.classList.add('forge-card__name');
     name.textContent = t(`upgrade_${upgradeId}`);
     info.appendChild(name);
 
     const desc = document.createElement('div');
-    desc.style.cssText = 'color:#4A5580;font-size:11px;margin-top:2px';
+    desc.classList.add('forge-card__desc');
     desc.textContent = t(`upgrade_${upgradeId}_desc`);
     info.appendChild(desc);
 
     const lvlEl = document.createElement('div');
-    lvlEl.style.cssText = 'color:#00F5D4;font-size:11px;margin-top:2px;font-family:"Share Tech Mono",monospace';
+    lvlEl.classList.add('forge-card__level');
     lvlEl.textContent = `${t('level')} ${level}/${def.maxLevel}`;
     info.appendChild(lvlEl);
 
@@ -113,35 +107,25 @@ export class UpgradeShopUI {
 
     // Правая часть: кнопка покупки
     const btn = document.createElement('button');
-    btn.style.cssText = `
-      border:none;border-radius:6px;padding:6px 12px;
-      font-size:12px;font-weight:600;cursor:pointer;
-      font-family:'Share Tech Mono',monospace;
-      min-width:70px;text-align:center;
-      transition:opacity 0.2s;
-    `;
+    btn.classList.add('forge-card__btn');
 
     if (isMax) {
       btn.textContent = t('upgrade_max');
-      btn.style.background = '#2A3050';
-      btn.style.color = '#4A5580';
+      btn.classList.add('forge-card__btn--max');
       btn.disabled = true;
     } else if (!canAfford) {
       btn.textContent = `${cost}`;
-      btn.style.background = '#2A3050';
-      btn.style.color = '#FF6B35';
-      btn.style.opacity = '0.5';
+      btn.classList.add('forge-card__btn--locked');
       btn.disabled = true;
     } else {
       btn.textContent = `${cost}`;
-      btn.style.background = 'linear-gradient(135deg, #FF6B35, #FFB800)';
-      btn.style.color = '#0A0E1A';
+      btn.classList.add('forge-card__btn--buy');
       const handleBuy = async (e) => {
         e.preventDefault();
-        if (btn.disabled) return; // защита от двойного клика
+        if (btn.disabled) return;
         btn.disabled = true;
         btn.style.opacity = '0.5';
-        const ok = await profile.purchaseUpgrade(upgradeId, cost);
+        await profile.purchaseUpgrade(upgradeId, cost);
         this.#refresh();
       };
       btn.addEventListener('click', handleBuy);

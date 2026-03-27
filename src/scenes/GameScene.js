@@ -717,23 +717,28 @@ export class GameScene extends Scene {
       this.swamp.update(delta);
 
       // Тёмный overlay
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.55;
       ctx.fillStyle = '#050810';
       ctx.fillRect(0, 0, this.W, this.H);
 
-      // "TAP TO RETRY" пульсирующий текст
+      // "TAP TO RETRY" пульсирующий текст с dark stroke
       const pulse = 0.6 + 0.4 * Math.sin(this.#quickRetryTime * 0.008);
-      ctx.globalAlpha = this.#quickRetryTime > 200 ? pulse : 0; // невидимый первые 200ms
+      ctx.globalAlpha = this.#quickRetryTime > 200 ? pulse : 0;
       ctx.font = `bold 28px 'Inter', sans-serif`;
       ctx.fillStyle = '#00F5D4';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.strokeStyle = '#050810';
+      ctx.lineWidth = 4;
+      ctx.strokeText(t('tap_retry'), this.W / 2, this.H * 0.45);
       ctx.fillText(t('tap_retry'), this.W / 2, this.H * 0.45);
 
-      // Хинт "↑ свайп для меню"
-      ctx.globalAlpha = 0.4;
+      // Хинт "↑ свайп для меню" с dark stroke
+      ctx.globalAlpha = 0.5;
       ctx.font = `14px 'Inter', sans-serif`;
-      ctx.fillStyle = '#4A5580';
+      ctx.fillStyle = '#8090B0';
+      ctx.lineWidth = 3;
+      ctx.strokeText(t('swipe_for_menu'), this.W / 2, this.H * 0.55);
       ctx.fillText(t('swipe_for_menu'), this.W / 2, this.H * 0.55);
       ctx.globalAlpha = 1;
 

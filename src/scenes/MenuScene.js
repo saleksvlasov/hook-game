@@ -287,7 +287,7 @@ export class MenuScene extends Scene {
     }
 
     // Кнопка FORGE
-    if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.forgeY - 22 && y <= ui.forgeY + 22) {
+    if (x >= W / 2 - 70 && x <= W / 2 + 70 && y >= ui.forgeY - 22 && y <= ui.forgeY + 22) {
       this.#upgradeShop.show();
       return;
     }
@@ -568,7 +568,7 @@ export class MenuScene extends Scene {
     // === Кнопка FORGE ===
     if (ui.forgeGfxAlpha > 0.01) {
       ctx.globalAlpha = ui.forgeGfxAlpha;
-      drawGlassButton(ctx, W / 2, ui.forgeY, 140, 32);
+      drawGlassButton(ctx, W / 2, ui.forgeY, 120, 32);
     }
     ctx.globalAlpha = ui.forgeTextAlpha;
     ctx.font = `bold 14px ${NEON_FONT}`;

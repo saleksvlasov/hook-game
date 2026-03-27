@@ -508,9 +508,11 @@ async function handleSaveLang(request, env) {
 
 // Рассчитать эмберы по высоте (серверная формула — источник правды)
 const EMBER_MILESTONES_SERVER = [
-  { height: 100, bonus: 50 },
-  { height: 500, bonus: 100 },
-  { height: 1000, bonus: 200 },
+  { height: 100, bonus: 30 },
+  { height: 500, bonus: 75 },
+  { height: 1000, bonus: 150 },
+  { height: 2000, bonus: 300 },
+  { height: 3000, bonus: 600 },
 ];
 
 function calcEmbers(height, magnetLevel) {
@@ -533,16 +535,16 @@ async function handleSaveEmbers(request, env) {
 // ---- Upgrades: покупка апгрейда ----
 
 const VALID_UPGRADES = ['hook_range', 'swing_power', 'iron_heart', 'quick_hook', 'bug_armor', 'ember_magnet'];
-const UPGRADE_MAX = { hook_range: 10, swing_power: 10, iron_heart: 3, quick_hook: 5, bug_armor: 5, ember_magnet: 5 };
+const UPGRADE_MAX = { hook_range: 6, swing_power: 10, iron_heart: 3, quick_hook: 3, bug_armor: 5, ember_magnet: 5 };
 
 // Серверный расчёт стоимости (зеркало клиентского UpgradeApplicator)
 const UPGRADE_COSTS = {
-  hook_range:   { baseCost: 50,  costScale: 1.38 },
-  swing_power:  { baseCost: 50,  costScale: 1.38 },
+  hook_range:   { baseCost: 50,  costScale: 1.50 },
+  swing_power:  { baseCost: 50,  costScale: 1.50 },
   iron_heart:   { costs: [200, 500, 1000] },
-  quick_hook:   { baseCost: 100, costScale: 1.41 },
-  bug_armor:    { baseCost: 100, costScale: 1.41 },
-  ember_magnet: { baseCost: 150, costScale: 1.41 },
+  quick_hook:   { baseCost: 100, costScale: 1.55 },
+  bug_armor:    { baseCost: 100, costScale: 1.55 },
+  ember_magnet: { baseCost: 200, costScale: 1.55 },
 };
 
 function calcUpgradeCost(upgradeId, currentLevel) {

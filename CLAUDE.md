@@ -124,7 +124,7 @@ WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
 - Кулдаун хука: 180ms после release — нельзя спам-тапать
 - Жуки-препятствия: от 50м, при касании — knockback + 2s invulnerability + звук
 - shutdown() чистит ВСЕ менеджеры + input listener
-- Neon Western палитра, процедурная графика, процедурный звук
+- Neon Western палитра (6 цветов: Cyan #00F5D4, Pink #FF2E63, Amber #FFB800, Ember Orange #FF6B35, Steel #2A3050/#4A5580, BG #0A0E1A), процедурная графика, процедурный звук
 
 ## TODO
 - [x] Telegram Mini App + Stars оплата (⭐50 за воскрешение)

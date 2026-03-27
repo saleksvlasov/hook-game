@@ -293,25 +293,34 @@ export class HUDManager {
 
     // === Ember counter — левый верхний угол ===
     if (this.#embersEarned > 0) {
-      const ex = 14;
+      const ex = 16;
       const ey = safeTop + 18;
-      // Огонёк — процедурная иконка
-      ctx.globalAlpha = 0.8;
+      const label = `+${this.#embersEarned}`;
+      ctx.font = `bold 13px ${FONT_MONO}`;
+      const tw = ctx.measureText(label).width;
+      // Dark pill подложка
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#0A0E1A';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(ex - 10, ey - 10, tw + 28, 20, 10);
+      else ctx.rect(ex - 10, ey - 10, tw + 28, 20);
+      ctx.fill();
+      // Огонёк — увеличенная иконка
+      ctx.globalAlpha = 0.85;
       ctx.fillStyle = '#FF6B35';
       ctx.beginPath();
-      ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+      ctx.arc(ex, ey, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#FFB800';
       ctx.beginPath();
-      ctx.arc(ex, ey - 1, 3, 0, Math.PI * 2);
+      ctx.arc(ex, ey - 1.5, 4, 0, Math.PI * 2);
       ctx.fill();
       // Число
       ctx.globalAlpha = 0.9;
-      ctx.font = `bold 13px ${FONT_MONO}`;
       ctx.fillStyle = '#FF6B35';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`+${this.#embersEarned}`, ex + 9, ey);
+      ctx.fillText(label, ex + 11, ey);
       ctx.globalAlpha = 1;
     }
   }
