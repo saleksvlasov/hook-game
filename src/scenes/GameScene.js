@@ -131,16 +131,16 @@ export class GameScene extends Scene {
         this.hearts = HEARTS_MAX;
         this.maxHearts = HEARTS_MAX;
       } else {
-        // Бонусное 4-е сердце на 30 секунд
+        // Бонусное 4-е сердце на 40 секунд
         this.maxHearts = HEARTS_MAX_BONUS;
         this.hearts = HEARTS_MAX_BONUS;
         this.heartBonusTimer = HEART_BONUS_DURATION;
       }
-      this.hud.updateHearts(this.hearts, this.maxHearts);
+      this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
     };
 
     // HUD hearts
-    this.hud.updateHearts(this.hearts, this.maxHearts);
+    this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
 
     // Камера
     this.camera.scrollX = 0;
@@ -310,7 +310,7 @@ export class GameScene extends Scene {
     this.maxHearts = HEARTS_MAX;
     this.heartBonusTimer = 0;
     this._heartsDisabled = false;
-    this.hud.updateHearts(this.hearts, this.maxHearts);
+    this.hud.updateHearts(this.hearts, this.maxHearts, 0);
 
     const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
     const targetY = GROUND_Y - targetHeight * 10;
@@ -521,7 +521,7 @@ export class GameScene extends Scene {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.shadowColor = '#00F5D4';
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 8;
         ctx.fillText(String(num), this.W / 2, this.H * 0.4);
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
@@ -568,7 +568,7 @@ export class GameScene extends Scene {
         && this.obstacles.checkCollision(p.x, p.y)) {
       this.hitCount++;
       this.hearts = Math.max(0, this.hearts - 1); // -0.5 сердца
-      this.hud.updateHearts(this.hearts, this.maxHearts);
+      this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
 
       if (this.isHooked) this.releaseHook();
       // Откидывание вниз и в сторону
@@ -599,9 +599,18 @@ export class GameScene extends Scene {
     // ===== 9.5 Подбор сердца =====
     if (!this.isDead && !this._heartsDisabled
         && this.obstacles.checkHeartPickup(p.x, p.y)) {
-      if (this.hearts < this.maxHearts) {
-        this.hearts = Math.min(this.hearts + 2, this.maxHearts); // +1 полное сердце
-        this.hud.updateHearts(this.hearts, this.maxHearts);
+      if (this.hearts >= HEARTS_MAX && this.maxHearts === HEARTS_MAX) {
+        // Все 3 сердца полны → бонусное 4-е сердце на 40 секунд
+        this.maxHearts = HEARTS_MAX_BONUS;
+        this.hearts = HEARTS_MAX_BONUS;
+        this.heartBonusTimer = HEART_BONUS_DURATION;
+        this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
+        playHeartPickup();
+        navigator.vibrate?.(10);
+      } else if (this.hearts < this.maxHearts) {
+        // Восполняем потерю — +1 полное сердце (2 половинки)
+        this.hearts = Math.min(this.hearts + 2, this.maxHearts);
+        this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
         playHeartPickup();
         navigator.vibrate?.(10);
       }
@@ -611,10 +620,11 @@ export class GameScene extends Scene {
     // Heart bonus timer — 4-е сердце временное
     if (this.maxHearts > HEARTS_MAX && this.heartBonusTimer > 0) {
       this.heartBonusTimer -= delta;
+      this.hud.updateBonusTimer(this.heartBonusTimer);
       if (this.heartBonusTimer <= 0) {
         this.maxHearts = HEARTS_MAX;
         this.hearts = Math.min(this.hearts, HEARTS_MAX);
-        this.hud.updateHearts(this.hearts, this.maxHearts);
+        this.hud.updateHearts(this.hearts, this.maxHearts, 0);
       }
     }
 

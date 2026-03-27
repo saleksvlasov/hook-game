@@ -314,7 +314,7 @@ export class GameOverUI {
       ctx.strokeStyle = NEON_BG;
       ctx.lineWidth = 6;
       ctx.shadowColor = '#FF2E63';
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 4;
       ctx.strokeText(t('you_died'), 0, 0);
       ctx.fillText(t('you_died'), 0, 0);
       ctx.shadowBlur = 0;
@@ -329,7 +329,7 @@ export class GameOverUI {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = '#FFB800';
-      ctx.shadowBlur = 5;
+      ctx.shadowBlur = 2;
       ctx.strokeStyle = NEON_BG;
       ctx.lineWidth = 2;
       ctx.strokeText(this._scoreStr, W / 2, this._scoreY);
@@ -346,7 +346,7 @@ export class GameOverUI {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = bestColor;
-      ctx.shadowBlur = 5;
+      ctx.shadowBlur = 2;
       ctx.strokeStyle = NEON_BG;
       ctx.lineWidth = 5;
       ctx.strokeText(this._bestStr, W / 2, this._bestY);

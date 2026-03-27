@@ -36,6 +36,7 @@ export class HUDManager {
     this._maxHearts = 6;
     this._heartBlink = false;
     this._heartBlinkTime = 0;
+    this._bonusTimer = 0; // ms оставшееся для 4-го сердца
 
     // Safe area отступ
     const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
@@ -91,13 +92,18 @@ export class HUDManager {
     this._hintScale = 1.15;
   }
 
-  updateHearts(hearts, maxHearts) {
+  updateHearts(hearts, maxHearts, bonusTimer) {
     if (hearts < this._hearts) {
       this._heartBlink = true;
       this._heartBlinkTime = 0;
     }
     this._hearts = hearts;
     this._maxHearts = maxHearts;
+    if (bonusTimer !== undefined) this._bonusTimer = bonusTimer;
+  }
+
+  updateBonusTimer(ms) {
+    this._bonusTimer = Math.max(0, ms);
   }
 
   updateChallenge(progress, target) {
@@ -175,7 +181,7 @@ export class HUDManager {
     ctx.textBaseline = 'top';
     // Cyan glow через shadow
     ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = 2;
     ctx.strokeStyle = NEON_BG;
     ctx.lineWidth = 5;
     ctx.strokeText(this._heightStr, 0, 0);
@@ -189,7 +195,7 @@ export class HUDManager {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = 2;
     ctx.strokeStyle = NEON_BG;
     ctx.lineWidth = 2;
     ctx.strokeText(this._recordStr, W / 2, safeTop + 56);
@@ -230,7 +236,28 @@ export class HUDManager {
         const hy = safeTop + 20;
         const halfHearts = this._hearts - i * 2;
         const state = halfHearts >= 2 ? 'full' : halfHearts === 1 ? 'half' : 'empty';
+        // 4-е сердце (i=3) — бонусное, рисуем с пульсацией
+        const isBonus = i === 3 && this._maxHearts > 6;
+        if (isBonus) {
+          const pulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.006);
+          ctx.globalAlpha = pulse;
+        }
         this._drawHUDHeart(ctx, hx, hy, heartSize, state);
+        if (isBonus) ctx.globalAlpha = 1;
+      }
+
+      // Таймер бонусного сердца — под сердцами
+      if (this._maxHearts > 6 && this._bonusTimer > 0) {
+        const secs = Math.ceil(this._bonusTimer / 1000);
+        const timerX = W - 20 - 3 * (heartSize * 2 + heartGap); // Под 4-м сердцем
+        const timerY = safeTop + 36;
+        ctx.font = `bold 11px ${NEON_FONT}`;
+        ctx.fillStyle = '#FF2E63';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.globalAlpha = 0.9;
+        ctx.fillText(`${secs}s`, timerX, timerY);
+        ctx.globalAlpha = 1;
       }
     }
 

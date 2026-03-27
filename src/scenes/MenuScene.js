@@ -406,7 +406,7 @@ export class MenuScene extends Scene {
     ctx.strokeStyle = BG_DARK_STR;
     ctx.lineWidth = 7;
     ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 3;
     ctx.strokeText('THE HOOK', W / 2, titleY);
     ctx.fillText('THE HOOK', W / 2, titleY);
     ctx.shadowBlur = 0;
@@ -458,7 +458,7 @@ export class MenuScene extends Scene {
     if (ui.btnGlowAlpha > 0.01) {
       ctx.globalAlpha = ui.btnGlowAlpha * pulse.alpha * 0.5;
       ctx.shadowColor = NEON_CYAN_STR;
-      ctx.shadowBlur = 30 + pulse.alpha * 20;
+      ctx.shadowBlur = 15 + pulse.alpha * 10;
       ctx.fillStyle = NEON_CYAN_STR;
       const r = 12;
       ctx.beginPath();
@@ -482,7 +482,7 @@ export class MenuScene extends Scene {
     ctx.strokeStyle = BG_DARK_STR;
     ctx.lineWidth = 4;
     ctx.shadowColor = '#FFB800';
-    ctx.shadowBlur = 4 + pulse.alpha * 6;
+    ctx.shadowBlur = 2 + pulse.alpha * 3;
     const textOffsetY = ui.btnTextY - ui.btnY; // учитываем анимацию появления
     ctx.strokeText(t('play'), 0, textOffsetY);
     ctx.fillText(t('play'), 0, textOffsetY);
@@ -502,7 +502,7 @@ export class MenuScene extends Scene {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = '#00F5D4';
-      ctx.shadowBlur = 3;
+      ctx.shadowBlur = 1;
       ctx.fillText(`${t('record')}: ${ui.best}${t('unit_m')}`, W / 2, ui.recordTextY);
       ctx.shadowBlur = 0;
     }
@@ -551,7 +551,7 @@ export class MenuScene extends Scene {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 3;
+    ctx.shadowBlur = 1;
     ctx.fillText(t('tap_to_hunt'), W / 2, ui.hintY);
     ctx.shadowBlur = 0;
 

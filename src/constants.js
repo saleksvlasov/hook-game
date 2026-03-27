@@ -41,7 +41,7 @@ export const HEART_PICKUP_CHANCE = 0.08;      // 8% шанс на уровне
 export const HEART_PICKUP_MIN_HEIGHT = 150;   // Минимальная высота для спавна (метры)
 export const HEART_PICKUP_MIN_DISTANCE = 15000; // Минимум 1500м между пикапами (пиксели)
 export const HEART_PICKUP_RADIUS = 28;        // Радиус коллизии пикапа
-export const HEART_BONUS_DURATION = 30000;    // 30 секунд бонусного 4-го сердца
+export const HEART_BONUS_DURATION = 40000;    // 40 секунд бонусного 4-го сердца
 
 // ===== ПАЛИТРА NEON WESTERN =====
 // Неоновый вестерн — яркий неон на глубоком тёмном фоне
