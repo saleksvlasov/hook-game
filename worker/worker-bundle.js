@@ -74,6 +74,8 @@ export default {
       if (url.pathname === '/save-moon') return handleSaveMoon(request, env);
       if (url.pathname === '/save-lang') return handleSaveLang(request, env);
       if (url.pathname === '/track-event') return handleTrackEvent(request, env);
+      if (url.pathname === '/save-embers') return handleSaveEmbers(request, env);
+      if (url.pathname === '/save-upgrade') return handleSaveUpgrade(request, env);
     }
 
     if (request.method === 'GET') {
@@ -301,10 +303,21 @@ async function handleSaveChallenge(request, env) {
 
   await env.CHALLENGES.put(key, JSON.stringify(existing));
 
+  // === Начисление эмберов серверно ===
+  let embersEarned = 0;
+  if (env.SCORES && height > 0) {
+    const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+    const magnetLevel = profile.upgrades?.ember_magnet || 0;
+    embersEarned = calcEmbers(height, magnetLevel);
+    profile.embers = (profile.embers || 0) + embersEarned;
+    await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+  }
+
   return jsonResponse({
     week: currentWeek,
     challenge: ch,
     unlockedSkins: existing.unlockedSkins,
+    embersEarned,
   });
 }
 
@@ -420,6 +433,8 @@ async function handleSyncProfile(request, env) {
     weeklyProgress: challengeData?.weeklyProgress || {},
     moonReached: serverProfile.moonReached || false,
     lang: serverProfile.lang || null,
+    embers: serverProfile.embers || 0,
+    upgrades: serverProfile.upgrades || {},
   });
 }
 
@@ -487,6 +502,97 @@ async function handleSaveLang(request, env) {
   await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
 
   return jsonResponse({ ok: true });
+}
+
+// ---- Embers: начисление серверное (клиент не задаёт баланс напрямую) ----
+
+// Рассчитать эмберы по высоте (серверная формула — источник правды)
+const EMBER_MILESTONES_SERVER = [
+  { height: 100, bonus: 50 },
+  { height: 500, bonus: 100 },
+  { height: 1000, bonus: 200 },
+];
+
+function calcEmbers(height, magnetLevel) {
+  const multiplier = 1 + (magnetLevel || 0) * 0.15;
+  let embers = Math.floor(height * multiplier);
+  for (const ms of EMBER_MILESTONES_SERVER) {
+    if (height >= ms.height) {
+      embers += Math.floor(ms.bonus * multiplier);
+    }
+  }
+  return embers;
+}
+
+// Заглушка — клиент вызывает, но сервер игнорирует клиентское значение
+// Эмберы начисляются только через handleSaveChallenge
+async function handleSaveEmbers(request, env) {
+  return jsonResponse({ ok: true });
+}
+
+// ---- Upgrades: покупка апгрейда ----
+
+const VALID_UPGRADES = ['hook_range', 'swing_power', 'iron_heart', 'quick_hook', 'bug_armor', 'ember_magnet'];
+const UPGRADE_MAX = { hook_range: 10, swing_power: 10, iron_heart: 3, quick_hook: 5, bug_armor: 5, ember_magnet: 5 };
+
+// Серверный расчёт стоимости (зеркало клиентского UpgradeApplicator)
+const UPGRADE_COSTS = {
+  hook_range:   { baseCost: 50,  costScale: 1.38 },
+  swing_power:  { baseCost: 50,  costScale: 1.38 },
+  iron_heart:   { costs: [200, 500, 1000] },
+  quick_hook:   { baseCost: 100, costScale: 1.41 },
+  bug_armor:    { baseCost: 100, costScale: 1.41 },
+  ember_magnet: { baseCost: 150, costScale: 1.41 },
+};
+
+function calcUpgradeCost(upgradeId, currentLevel) {
+  const def = UPGRADE_COSTS[upgradeId];
+  if (def.costs) return def.costs[currentLevel] || Infinity;
+  return Math.floor(def.baseCost * Math.pow(def.costScale, currentLevel));
+}
+
+async function handleSaveUpgrade(request, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData, upgradeId } = body;
+  if (!initData || !upgradeId) {
+    return jsonResponse({ error: 'Missing fields' }, 400);
+  }
+
+  if (!VALID_UPGRADES.includes(upgradeId)) {
+    return jsonResponse({ error: 'Invalid upgrade' }, 400);
+  }
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+  const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+
+  if (!profile.upgrades) profile.upgrades = {};
+  const currentLevel = profile.upgrades[upgradeId] || 0;
+
+  if (currentLevel >= UPGRADE_MAX[upgradeId]) {
+    return jsonResponse({ error: 'Max level reached' }, 400);
+  }
+
+  // Сервер сам считает стоимость — клиент не может повлиять
+  const cost = calcUpgradeCost(upgradeId, currentLevel);
+  const balance = profile.embers || 0;
+
+  if (balance < cost) {
+    return jsonResponse({ error: 'Insufficient embers', embers: balance }, 400);
+  }
+
+  profile.upgrades[upgradeId] = currentLevel + 1;
+  profile.embers = balance - cost;
+
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+
+  return jsonResponse({ ok: true, embers: profile.embers, upgrades: profile.upgrades });
 }
 
 // ---- Analytics: трекинг событий монетизации ----

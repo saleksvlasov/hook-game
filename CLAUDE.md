@@ -120,7 +120,7 @@ WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
 - Neon Western палитра, процедурная графика, процедурный звук
 
 ## TODO
-- [x] Telegram Mini App + Stars оплата (⭐6 за воскрешение)
+- [x] Telegram Mini App + Stars оплата (⭐50 за воскрешение)
 - [x] Leaderboard (Cloudflare KV, топ-100)
 - [x] Wrap-around (ghost sprite + камера X lerp)
 - [x] Жуки-препятствия (4 типа, от 50м)

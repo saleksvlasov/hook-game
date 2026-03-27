@@ -3,11 +3,12 @@ import { profile } from '../data/index.js';
 import { clamp } from '../engine/math.js';
 
 // Рендер охотника — скин из SkinRenderer
-// Canvas 2D API вместо Phaser Graphics
+// Power Arc: аура/glow за персонажем зависит от тира
 export class HunterRenderer {
   // Приватные поля
   #rotation = 0;
   #coatAngle = 0;
+  #hunterGlow = 0;
 
   constructor(scene) {
     this.scene = scene;
@@ -28,6 +29,11 @@ export class HunterRenderer {
 
   create() {
     this.loadActiveSkin();
+  }
+
+  // Установить параметры Power Arc тира
+  setTierParams(tierData) {
+    this.#hunterGlow = tierData.hunterGlow;
   }
 
   // Обновление анимации: rotation и coat sway
@@ -52,6 +58,28 @@ export class HunterRenderer {
 
   // Рисовать охотника в мировых координатах
   draw(ctx, x, y) {
+    // Power Arc glow — аура ЗА персонажем
+    if (this.#hunterGlow > 0) {
+      ctx.save();
+      const radius = 25 + this.#hunterGlow * 15;
+      const alpha = this.#hunterGlow * 0.3;
+
+      // Legend: amber-cyan shift
+      if (this.#hunterGlow >= 0.7) {
+        const shift = Math.sin(performance.now() * 0.003) * 0.5 + 0.5;
+        const r = Math.floor(0 + 255 * shift);
+        const g = Math.floor(245 * (1 - shift) + 184 * shift);
+        const b = Math.floor(212 * (1 - shift));
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+      } else {
+        ctx.fillStyle = `rgba(0,245,212,${alpha})`;
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(this.#rotation);

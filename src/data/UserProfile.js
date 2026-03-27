@@ -49,6 +49,8 @@ class UserProfile {
   get weeklyProgress() { return this.#data?.weeklyProgress || {}; }
   get lang() { return this.#data?.lang || null; }
   get gamesCount() { return this.#data?.gamesCount || 0; }
+  get embers() { return this.#data?.embers || 0; }
+  get upgrades() { return this.#data?.upgrades || {}; }
   get isAuthorized() { return this.#provider?.isAuthorized() || false; }
   get currentWeek() { return getCurrentWeek(); }
 
@@ -99,10 +101,63 @@ class UserProfile {
     this.#provider.saveField('weeklyProgress', weeklyProgress).catch(() => {});
   }
 
+  // --- Эмберы и апгрейды ---
+
+  getUpgradeLevel(upgradeId) {
+    return this.#data?.upgrades?.[upgradeId] || 0;
+  }
+
+  // Предварительное начисление эмберов (клиентское, сервер начислит реальные через saveChallenge)
+  addEmbers(amount) {
+    this.#data.embers = (this.#data.embers || 0) + amount;
+    // Не шлём на сервер — эмберы начисляются серверно в /save-challenge
+  }
+
+  // Синхронизировать серверный баланс эмберов (вызывается после ответа saveChallenge)
+  syncEmbers(serverEmbers) {
+    if (typeof serverEmbers === 'number') {
+      this.#data.embers = serverEmbers;
+    }
+  }
+
+  async purchaseUpgrade(upgradeId, cost) {
+    if ((this.#data.embers || 0) < cost) return false;
+    // Оптимистичное обновление клиента
+    this.#data.embers -= cost;
+    if (!this.#data.upgrades) this.#data.upgrades = {};
+    this.#data.upgrades[upgradeId] = (this.#data.upgrades[upgradeId] || 0) + 1;
+    this.#notify();
+
+    // Сервер сам считает стоимость и списывает
+    const result = await this.#provider.saveUpgrade(upgradeId);
+    if (result?.error) {
+      // Откат оптимистичного обновления
+      this.#data.embers += cost;
+      this.#data.upgrades[upgradeId]--;
+      this.#notify();
+      return false;
+    }
+    // Синхронизировать баланс с сервером
+    if (result?.embers !== undefined) {
+      this.#data.embers = result.embers;
+    }
+    if (result?.upgrades) {
+      this.#data.upgrades = result.upgrades;
+    }
+    this.#notify();
+    return true;
+  }
+
   // --- Async операции ---
 
   async saveChallenge(height, hitCount, gameTime) {
-    return this.#provider.saveChallenge(height, hitCount, gameTime);
+    const result = await this.#provider.saveChallenge(height, hitCount, gameTime);
+    // Сервер возвращает embersEarned — синхронизируем
+    if (result?.embersEarned !== undefined) {
+      // Серверный баланс = авторитетный (но мы не знаем его тут,
+      // просто доверяем серверу — при следующем sync-profile синхронизируется)
+    }
+    return result;
   }
 
   async claimSkin() {

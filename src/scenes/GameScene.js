@@ -1,11 +1,12 @@
 import { Scene } from '../engine/Scene.js';
 import { clamp, lerp } from '../engine/math.js';
-import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo } from '../audio.js';
+import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo, playTierUp } from '../audio.js';
 import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
-import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION } from '../constants.js';
+import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES } from '../constants.js';
+import { getEffectiveConstants } from '../managers/UpgradeApplicator.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
 import { TrailManager } from '../managers/TrailManager.js';
@@ -19,6 +20,7 @@ import { BiomeManager } from '../managers/BiomeManager.js';
 import { ObstacleManager } from '../managers/ObstacleManager.js';
 import { ChallengeManager } from '../managers/ChallengeManager.js';
 import { SwingPhysics } from '../managers/SwingPhysics.js';
+import { PowerArcManager } from '../managers/PowerArcManager.js';
 
 export class GameScene extends Scene {
   // Приватные поля
@@ -27,6 +29,7 @@ export class GameScene extends Scene {
   #ghostX = 0;
   #ghostY = 0;
   #onPointerDown;
+  #onPointerUp;
   #blinkActive = false;
   #blinkTime = 0;
   #blinkDuration = 0;
@@ -35,6 +38,20 @@ export class GameScene extends Scene {
   #countdownActive = false;
   #countdown = 0;
   #countdownTime = 0;
+  #lastPowerTier = -1;
+  // Quick Retry
+  #quickRetryActive = false;
+  #quickRetryTime = 0;
+  #swipeStartY = -1;
+  #pendingInterstitial = false;
+  #isNewBest = false;
+  #pendingQuickTap = false;
+  // Embers
+  #embersEarned = 0;
+  #lastEmberHeight = 0;
+  #emberFrac = 0;
+  #milestonesClaimed = new Set();
+  #effectiveConsts = null;
 
   constructor(engine) {
     super(engine);
@@ -42,6 +59,7 @@ export class GameScene extends Scene {
 
   shutdown() {
     this.input.off('pointerdown', this.#onPointerDown);
+    this.input.off('pointerup', this.#onPointerUp);
     this.gameOverUI.destroy();
     this.biome.destroy();
     this.obstacles.destroy();
@@ -50,6 +68,7 @@ export class GameScene extends Scene {
     this.swamp.destroy();
     this.hunter.destroy();
     this.anchorMgr.destroy();
+    this.powerArc.destroy();
     this.challengeMgr = null;
   }
 
@@ -80,9 +99,12 @@ export class GameScene extends Scene {
     this.lastReleaseTime = 0;
     this.bugHitCooldown = 0;
 
-    // Hearts / Lives
-    this.hearts = HEARTS_MAX;        // 6 половинок = 3 сердца
-    this.maxHearts = HEARTS_MAX;
+    // Апгрейды — вычисляем эффективные константы
+    this.#effectiveConsts = getEffectiveConstants();
+
+    // Hearts / Lives (с учётом Iron Heart)
+    this.hearts = this.#effectiveConsts.startHearts;
+    this.maxHearts = this.#effectiveConsts.startHearts;
     this.heartBonusTimer = 0;
     this.#heartsDisabled = false;    // true = 0 сердец, падение без хука
 
@@ -139,6 +161,10 @@ export class GameScene extends Scene {
       challengeMgr: this.challengeMgr,
     });
 
+    // Power Arc — визуальная прогрессия по высоте
+    this.powerArc = new PowerArcManager();
+    this.#lastPowerTier = -1;
+
     this.eggs = new EasterEggs(this);
     this.eggs.onHeartBonus = () => {
       if (this.hearts < HEARTS_MAX) {
@@ -162,8 +188,10 @@ export class GameScene extends Scene {
     this.camera.scrollY = this.player.y - this.H / 2;
 
     // Input
-    this.#onPointerDown = () => this.handlePointerDown();
+    this.#onPointerDown = (e) => this.handlePointerDown(e);
+    this.#onPointerUp = (e) => this.handlePointerUp(e);
     this.input.on('pointerdown', this.#onPointerDown);
+    this.input.on('pointerup', this.#onPointerUp);
 
     this.camera.fadeIn(400, 13, 15, 18);
 
@@ -180,17 +208,45 @@ export class GameScene extends Scene {
     this.#countdownActive = false;
     this.#countdown = 0;
     this.#countdownTime = 0;
+
+    // Embers tracking
+    this.#embersEarned = 0;
+    this.#lastEmberHeight = 0;
+    this.#emberFrac = 0;
+    this.#milestonesClaimed = new Set();
   }
 
   // ===================== INPUT =====================
 
-  handlePointerDown() {
+  handlePointerDown(pointer) {
+    // Quick retry: тап = instant restart, свайп вверх = full GameOver
+    if (this.#quickRetryActive) {
+      this.#swipeStartY = pointer?.y ?? -1;
+      if (this.#quickRetryTime > 200) {
+        // Не свайп — тап для restart (проверяем свайп в pointerup)
+        this.#pendingQuickTap = true;
+      }
+      return;
+    }
     if (this.isDead || this.#heartsDisabled) return;
     if (this.isHooked) {
       this.releaseHook();
     } else {
       this.shootHook();
     }
+  }
+
+  handlePointerUp(pointer) {
+    if (!this.#quickRetryActive || !this.#pendingQuickTap) return;
+    this.#pendingQuickTap = false;
+    const endY = pointer?.y ?? -1;
+    // Свайп вверх → полный GameOverUI
+    if (this.#swipeStartY >= 0 && endY >= 0 && this.#swipeStartY - endY > 60) {
+      this.#showFullGameOver();
+      return;
+    }
+    // Обычный тап → inline restart
+    this.#handleQuickRetryTap();
   }
 
   // ===================== HOOK MECHANICS =====================
@@ -275,7 +331,7 @@ export class GameScene extends Scene {
       duration: 400,
     });
 
-    const isNewBest = profile.saveBest(this.maxHeight);
+    this.#isNewBest = profile.saveBest(this.maxHeight);
     this.sessionBest = profile.bestScore;
 
     this.challengeMgr.updateProgress({
@@ -287,7 +343,15 @@ export class GameScene extends Scene {
     const gameTime = (Date.now() - this.gameStartTime) / 1000;
     profile.saveChallenge(this.maxHeight, this.hitCount, gameTime);
 
-    this.gameOverUI.show(this.maxHeight, this.sessionBest, isNewBest && this.maxHeight > 0);
+    // Сохраняем заработанные эмберы
+    if (this.#embersEarned > 0) {
+      profile.addEmbers(this.#embersEarned);
+    }
+
+    // Quick retry window вместо немедленного GameOver
+    this.#quickRetryActive = true;
+    this.#quickRetryTime = 0;
+    this.#swipeStartY = -1;
 
     trackEvent('death', { height: this.maxHeight, gameTime });
     playDeath();
@@ -366,6 +430,108 @@ export class GameScene extends Scene {
       await showInterstitial();
     }
     this.startScene('GameScene');
+  }
+
+  // ===================== QUICK RETRY =====================
+
+  #handleQuickRetryTap() {
+    this.#quickRetryActive = false;
+    trackGameEnd();
+
+    // Реклама: ставим флаг, покажем после рестарта
+    if (!isTelegram() && shouldShowInterstitial()) {
+      this.#pendingInterstitial = true;
+    }
+
+    this.#inlineRestart();
+  }
+
+  #showFullGameOver() {
+    this.#quickRetryActive = false;
+    this.gameOverUI.show(this.maxHeight, this.sessionBest, this.#isNewBest && this.maxHeight > 0, this.#embersEarned);
+  }
+
+  #inlineRestart() {
+    this.gameOverUI.hide();
+
+    // Сброс игрока
+    const p = this.player;
+    p.x = this.W / 2;
+    p.y = SPAWN_Y;
+    p.vx = 0;
+    p.vy = 0;
+    p.allowGravity = true;
+    p.alpha = 1;
+    p.rotation = 0;
+
+    // Сброс состояния
+    this.isHooked = false;
+    this.currentAnchor = null;
+    this.ropeLength = 0;
+    this.swingAngle = 0;
+    this.swingSpeed = 0;
+    this.maxHeight = 0;
+    this.isDead = false;
+    this.lastReleaseTime = 0;
+    this.bugHitCooldown = 0;
+    this.hitCount = 0;
+    this.gameStartTime = Date.now();
+    this.#heartsDisabled = false;
+    this.#isNewBest = false;
+    this.hearts = this.#effectiveConsts.startHearts;
+    this.maxHearts = this.#effectiveConsts.startHearts;
+    this.heartBonusTimer = 0;
+    this.#blinkActive = false;
+    this.#blinkTime = 0;
+    this.#invulnTime = 0;
+    this.#delayedCalls.length = 0;
+    this.#countdownActive = false;
+    this.#pendingQuickTap = false;
+
+    // Ember reset
+    this.#embersEarned = 0;
+    this.#lastEmberHeight = 0;
+    this.#emberFrac = 0;
+    this.#milestonesClaimed.clear();
+    this.#effectiveConsts = getEffectiveConstants();
+
+    // Сброс менеджеров (soft reset — переиспользуем)
+    this.anchorMgr.reset();
+    this.obstacles.reset();
+    this.trail.reset();
+    this.rope.clear();
+    this.swamp.reset();
+    this.eggs.reset();
+    this.powerArc.reset();
+    this.#lastPowerTier = -1;
+    // Сброс визуалов на Novice tier
+    const noviceTier = this.powerArc.tierData;
+    this.rope.setTierParams(noviceTier);
+    this.trail.setTierParams(noviceTier);
+    this.hunter.setTierParams(noviceTier);
+    // Биом сбрасываем на начальную позицию
+    this.biome.update(p.y);
+
+    // Еженедельные испытания — обновить для нового рана
+    this.challengeMgr = new ChallengeManager();
+    this.hud.create(this.challengeMgr);
+
+    // Камера
+    this.camera.scrollX = 0;
+    this.camera.scrollY = p.y - this.H / 2;
+    this.camera.fadeIn(200, 13, 15, 18);
+
+    // HUD
+    this.hud.updateHearts(this.hearts, this.maxHearts, 0);
+    this.hud.updateHeight(0, 0, this.sessionBest);
+    this.hud.updateEmbers(0);
+    this.hud.setHint('click_hook');
+
+    // Показать interstitial если накопился
+    if (this.#pendingInterstitial) {
+      this.#pendingInterstitial = false;
+      showInterstitial().catch(() => {});
+    }
   }
 
   // Утилита: отложенный вызов
@@ -545,6 +711,41 @@ export class GameScene extends Scene {
       return;
     }
 
+    // Quick Retry overlay
+    if (this.#quickRetryActive) {
+      this.#quickRetryTime += delta;
+      this.swamp.update(delta);
+
+      // Тёмный overlay
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#050810';
+      ctx.fillRect(0, 0, this.W, this.H);
+
+      // "TAP TO RETRY" пульсирующий текст
+      const pulse = 0.6 + 0.4 * Math.sin(this.#quickRetryTime * 0.008);
+      ctx.globalAlpha = this.#quickRetryTime > 200 ? pulse : 0; // невидимый первые 200ms
+      ctx.font = `bold 28px 'Inter', sans-serif`;
+      ctx.fillStyle = '#00F5D4';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t('tap_retry'), this.W / 2, this.H * 0.45);
+
+      // Хинт "↑ свайп для меню"
+      ctx.globalAlpha = 0.4;
+      ctx.font = `14px 'Inter', sans-serif`;
+      ctx.fillStyle = '#4A5580';
+      ctx.fillText(t('swipe_for_menu'), this.W / 2, this.H * 0.55);
+      ctx.globalAlpha = 1;
+
+      // Автопереход в полный GameOver после 1.5s
+      if (this.#quickRetryTime > 1500) {
+        this.#showFullGameOver();
+      }
+
+      this.hud.draw(ctx, delta);
+      return;
+    }
+
     // Если мёртв — обновляем болото и Game Over, выходим
     if (this.isDead) {
       this.swamp.update(delta);
@@ -570,6 +771,33 @@ export class GameScene extends Scene {
       }
     }
     this.hud.updateHeight(currentHeight, this.maxHeight, this.sessionBest);
+
+    // ===== 7.5. Power Arc — обновление тира визуальной прогрессии =====
+    if (this.powerArc.update(currentHeight) && this.powerArc.tier !== this.#lastPowerTier) {
+      const td = this.powerArc.tierData;
+      this.rope.setTierParams(td);
+      this.trail.setTierParams(td);
+      this.hunter.setTierParams(td);
+      if (this.#lastPowerTier >= 0) playTierUp(); // Не играть при старте
+      this.#lastPowerTier = this.powerArc.tier;
+    }
+
+    // ===== 7.6. Ember tracking (дробный аккумулятор для ember_magnet) =====
+    if (currentHeight > this.#lastEmberHeight) {
+      const delta_ = currentHeight - this.#lastEmberHeight;
+      this.#emberFrac += delta_ * this.#effectiveConsts.emberMultiplier;
+      const whole = Math.floor(this.#emberFrac);
+      this.#embersEarned += whole;
+      this.#emberFrac -= whole;
+      this.#lastEmberHeight = currentHeight;
+    }
+    for (const ms of EMBER_MILESTONES) {
+      if (currentHeight >= ms.height && !this.#milestonesClaimed.has(ms.height)) {
+        this.#milestonesClaimed.add(ms.height);
+        this.#embersEarned += Math.floor(ms.bonus * this.#effectiveConsts.emberMultiplier);
+      }
+    }
+    this.hud.updateEmbers(this.#embersEarned);
 
     // ===== 8. Процедурная генерация =====
     this.anchorMgr.generateAnchorsUpTo(p.y - 2000);
@@ -614,10 +842,11 @@ export class GameScene extends Scene {
     // ===== 9.5 Подбор сердца =====
     if (!this.isDead && !this.#heartsDisabled
         && this.obstacles.checkHeartPickup(p.x, p.y)) {
-      if (this.hearts >= HEARTS_MAX && this.maxHearts === HEARTS_MAX) {
-        // Все 3 сердца полны → бонусное 4-е сердце на 40 секунд
-        this.maxHearts = HEARTS_MAX_BONUS;
-        this.hearts = HEARTS_MAX_BONUS;
+      const baseMax = this.#effectiveConsts.startHearts;
+      if (this.hearts >= baseMax && this.heartBonusTimer <= 0) {
+        // Все сердца полны → бонусное 4-е сердце на 40 секунд
+        this.maxHearts = baseMax + 2; // +1 полное бонусное сердце
+        this.hearts = this.maxHearts;
         this.heartBonusTimer = HEART_BONUS_DURATION;
         this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
         playHeartPickup();
@@ -632,13 +861,14 @@ export class GameScene extends Scene {
     }
     if (this.bugHitCooldown > 0) this.bugHitCooldown -= delta;
 
-    // Heart bonus timer — 4-е сердце временное
-    if (this.maxHearts > HEARTS_MAX && this.heartBonusTimer > 0) {
+    // Heart bonus timer — бонусное сердце временное
+    const baseMax = this.#effectiveConsts.startHearts;
+    if (this.maxHearts > baseMax && this.heartBonusTimer > 0) {
       this.heartBonusTimer -= delta;
       this.hud.updateBonusTimer(this.heartBonusTimer);
       if (this.heartBonusTimer <= 0) {
-        this.maxHearts = HEARTS_MAX;
-        this.hearts = Math.min(this.hearts, HEARTS_MAX);
+        this.maxHearts = baseMax;
+        this.hearts = Math.min(this.hearts, baseMax);
         this.hud.updateHearts(this.hearts, this.maxHearts, 0);
       }
     }

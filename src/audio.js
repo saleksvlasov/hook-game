@@ -219,6 +219,28 @@ export function playHeartPickup() {
   osc('triangle', 659, 0.12, 0.1, 1047); // E5 → C6
 }
 
+// Переход Power Arc тира — восходящий chime
+export function playTierUp() {
+  try {
+    const c = getCtx();
+    const now = c.currentTime;
+    const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+    notes.forEach((freq, i) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      const start = now + i * 0.06;
+      o.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.12, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+      o.connect(g).connect(c.destination);
+      o.start(start);
+      o.stop(start + 0.15);
+    });
+  } catch(e) { /* audio context closed or unavailable */ }
+}
+
 export function destroyAudio() {
   if (ctx && ctx.state !== 'closed') {
     ctx.close().catch(() => {});

@@ -34,6 +34,9 @@ export class HUDManager {
   #heartBlinkTime = 0;
   #bonusTimer = 0; // ms оставшееся для 4-го сердца
 
+  // Embers
+  #embersEarned = 0;
+
   // Safe area отступ
   #safeTop;
 
@@ -92,6 +95,10 @@ export class HUDManager {
   setHint(key) {
     this.#hintStr = t(key);
     this.#hintScale = 1.15;
+  }
+
+  updateEmbers(count) {
+    this.#embersEarned = count;
   }
 
   updateHearts(hearts, maxHearts, bonusTimer) {
@@ -281,6 +288,30 @@ export class HUDManager {
       ctx.lineWidth = 2;
       ctx.strokeText(this.#challengeStr, W / 2, chipY);
       ctx.fillText(this.#challengeStr, W / 2, chipY);
+      ctx.globalAlpha = 1;
+    }
+
+    // === Ember counter — левый верхний угол ===
+    if (this.#embersEarned > 0) {
+      const ex = 14;
+      const ey = safeTop + 18;
+      // Огонёк — процедурная иконка
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = '#FF6B35';
+      ctx.beginPath();
+      ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFB800';
+      ctx.beginPath();
+      ctx.arc(ex, ey - 1, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Число
+      ctx.globalAlpha = 0.9;
+      ctx.font = `bold 13px ${FONT_MONO}`;
+      ctx.fillStyle = '#FF6B35';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`+${this.#embersEarned}`, ex + 9, ey);
       ctx.globalAlpha = 1;
     }
   }
