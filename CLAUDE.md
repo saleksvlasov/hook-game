@@ -73,12 +73,15 @@ src/
     SwampManager.js    — Болото + пузыри (ObjectPool)
     EasterEggs.js      — Bounty (1000м), Moonwalker (3000м)
     ObjectPool.js      — Переиспользуемый пул объектов
+    PowerArcManager.js — 5 тиров визуальной прогрессии по высоте
+    UpgradeApplicator.js — getEffectiveConstants() из апгрейдов
+    UpgradeShopUI.js   — HTML overlay магазина "Кузница"
   data/
     UserProfile.js     — Singleton профиля, геттеры/сеттеры, серверная синхронизация
     TelegramProvider.js — Сервер = единственный источник правды, без localStorage
     index.js           — Экспорт profile + getCurrentWeek
 worker/
-  worker-bundle.js — Cloudflare Worker: invoice, leaderboard, profile, challenges, lang (KV)
+  worker-bundle.js — Cloudflare Worker: invoice, leaderboard, profile, challenges, embers, upgrades, lang (KV)
 ```
 
 ## КОНСТАНТЫ
@@ -97,7 +100,11 @@ WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
 
 ## ХРАНЕНИЕ ДАННЫХ
 - **localStorage НЕ ИСПОЛЬЗУЕТСЯ** — полностью убран
-- Сервер (Cloudflare KV) = единственный источник правды
+- **Сервер (Cloudflare KV) = ЕДИНСТВЕННЫЙ источник правды для ВСЕХ данных**
+- Любые числовые балансы (эмберы, апгрейды, рекорды) — ТОЛЬКО серверный расчёт
+- Клиент может показывать предварительные значения, но сервер авторитетен
+- Эмберы начисляются серверно в `/save-challenge` по validated height
+- Стоимость апгрейдов считается серверно в `/save-upgrade` — клиент не передаёт цену/баланс
 - Загрузочный экран ждёт ответ сервера перед стартом
 - Сервер недоступен → экран ошибки + Retry
 - `lang` хранится на сервере (`/save-lang` эндпоинт)
@@ -120,7 +127,7 @@ WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
 - Neon Western палитра, процедурная графика, процедурный звук
 
 ## TODO
-- [x] Telegram Mini App + Stars оплата (⭐6 за воскрешение)
+- [x] Telegram Mini App + Stars оплата (⭐50 за воскрешение)
 - [x] Leaderboard (Cloudflare KV, топ-100)
 - [x] Wrap-around (ghost sprite + камера X lerp)
 - [x] Жуки-препятствия (4 типа, от 50м)
@@ -132,8 +139,15 @@ WORLD_WIDTH = this.scale.width (динамический), WORLD_HEIGHT = 100000
 - [x] Загрузочный экран + экран ошибки сервера
 - [x] 4-е бонусное сердце на 40с с таймером
 - [x] Уменьшено свечение текста (shadowBlur) для читаемости
+- [x] Power Arc — визуальная прогрессия (5 тиров: novice→legend)
+- [x] Instant Retry — <1.5s от смерти до геймплея (inline restart)
+- [x] Ember Economy — валюта + 6 апгрейдов + магазин "Кузница"
 - [ ] Деплой Yandex Games + SDK
 - [ ] Тест на мобиле (375/390/414px)
 - [ ] Туториал первой игры
 - [ ] Движущиеся якоря
 - [ ] A/B тест сложности (ECONOMICS)
+- [ ] Daily challenges + streaks
+- [ ] Nearby rivals leaderboard
+- [ ] Milestone unlocks + коллекция
+- [ ] Prestige system

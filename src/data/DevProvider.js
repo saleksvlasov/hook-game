@@ -11,6 +11,8 @@ export class DevProvider {
     unlockedSkins: ['default'],
     weeklyProgress: {},
     lang: null,
+    embers: 500, // dev: стартовый баланс для тестирования
+    upgrades: {},
   };
 
   async loadProfile() {
@@ -40,6 +42,15 @@ export class DevProvider {
 
   async fetchLeaderboard() {
     return [];
+  }
+
+  async saveEmbers(embers) {
+    this.#data.embers = embers;
+  }
+
+  async saveUpgrade(upgradeId) {
+    // Мок — просто подтверждаем, клиент уже обновил оптимистично
+    return { ok: true, embers: this.#data.embers, upgrades: this.#data.upgrades };
   }
 
   isAuthorized() {

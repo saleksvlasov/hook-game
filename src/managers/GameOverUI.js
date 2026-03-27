@@ -42,6 +42,7 @@ export class GameOverUI {
   #bloodAlpha = 0;
   #bloodSeed = Math.random();
   #buttonsShown = false;
+  #embersEarned = 0;
 
   constructor(scene) {
     this.scene = scene;
@@ -135,12 +136,13 @@ export class GameOverUI {
     return btn;
   }
 
-  show(score, best, isNewBest) {
+  show(score, best, isNewBest, embersEarned = 0) {
     const H = this.scene.H;
     this.#visible = true;
     this.#score = score;
     this.#best = best;
     this.#isNewBest = isNewBest;
+    this.#embersEarned = embersEarned;
     this.#scoreStr = `${t('depth_label')}: ${score}${t('unit_m')}`;
     this.#bestStr = `${t('record_label')}: ${best}${t('unit_m')}`;
 
@@ -373,6 +375,21 @@ export class GameOverUI {
       ctx.strokeText(t('new_record'), 0, 0);
       ctx.fillText(t('new_record'), 0, 0);
       ctx.restore();
+    }
+
+    // Embers earned
+    if (this.#embersEarned > 0 && this.#scoreAlpha > 0.5) {
+      const emberY = this.#isNewBest ? H * 0.48 : H * 0.44;
+      ctx.globalAlpha = this.#scoreAlpha * 0.9;
+      ctx.font = `bold 18px ${NEON_FONT}`;
+      ctx.fillStyle = '#FF6B35';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 3;
+      const emberStr = `+${this.#embersEarned} ${t('embers').toLowerCase()}`;
+      ctx.strokeText(emberStr, W / 2, emberY);
+      ctx.fillText(emberStr, W / 2, emberY);
     }
 
     ctx.globalAlpha = 1;

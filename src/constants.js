@@ -208,4 +208,30 @@ export const STEERING = {
   },
 };
 
+// ===== POWER ARC — визуальная прогрессия внутри рана =====
+export const POWER_ARC_TIERS = [
+  { name: 'novice',      startHeight: 0,    endHeight: 500,   ropeWidth: 2.5, ropeGlow: 0,    trailSizeMult: 1.0, trailSpawnMult: 1.0, hunterGlow: 0 },
+  { name: 'apprentice',  startHeight: 500,  endHeight: 1500,  ropeWidth: 3.0, ropeGlow: 0.15, trailSizeMult: 1.2, trailSpawnMult: 1.3, hunterGlow: 0.1 },
+  { name: 'journeyman',  startHeight: 1500, endHeight: 3000,  ropeWidth: 3.5, ropeGlow: 0.3,  trailSizeMult: 1.5, trailSpawnMult: 1.6, hunterGlow: 0.25 },
+  { name: 'master',      startHeight: 3000, endHeight: 5000,  ropeWidth: 4.0, ropeGlow: 0.5,  trailSizeMult: 1.8, trailSpawnMult: 2.0, hunterGlow: 0.4 },
+  { name: 'legend',      startHeight: 5000, endHeight: 99999, ropeWidth: 5.0, ropeGlow: 0.8,  trailSizeMult: 2.5, trailSpawnMult: 2.5, hunterGlow: 0.7 },
+];
+
+// ===== EMBER ECONOMY =====
+export const EMBER_RATE = 1;  // 1 ember за 1м высоты
+export const EMBER_MILESTONES = [
+  { height: 100, bonus: 50 },
+  { height: 500, bonus: 100 },
+  { height: 1000, bonus: 200 },
+];
+
+export const UPGRADES = {
+  hook_range:   { maxLevel: 10, effect: 0.05, baseCost: 50,  costScale: 1.38 },
+  swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 50,  costScale: 1.38 },
+  iron_heart:   { maxLevel: 3,  effect: 1,    costs: [200, 500, 1000] },
+  quick_hook:   { maxLevel: 5,  effect: 0.10, baseCost: 100, costScale: 1.41 },
+  bug_armor:    { maxLevel: 5,  effect: 0.10, baseCost: 100, costScale: 1.41 },
+  ember_magnet: { maxLevel: 5,  effect: 0.15, baseCost: 150, costScale: 1.41 },
+};
+
 // Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()

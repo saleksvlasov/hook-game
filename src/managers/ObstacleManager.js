@@ -264,6 +264,13 @@ export class ObstacleManager {
     ctx.globalAlpha = 1;
   }
 
+  // Soft reset для inline restart — очистка без пересоздания менеджера
+  reset() {
+    this.active.length = 0;
+    this.highestObstacleY = SPAWN_Y;
+    this.lastHeartPickupY = Infinity;
+  }
+
   destroy() {
     this.active = [];
   }

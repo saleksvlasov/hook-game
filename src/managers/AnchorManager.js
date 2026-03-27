@@ -147,6 +147,18 @@ export class AnchorManager {
     return maxY;
   }
 
+  // Soft reset для inline restart — очистка без пересоздания менеджера
+  reset() {
+    this.anchors.length = 0;
+    this.highestAnchorY = SPAWN_Y - 120;
+    this.prevAnchorX = this.scene.W / 2;
+    this.addAnchor(
+      this.scene.W / 2 + between(-60, 60),
+      this.highestAnchorY
+    );
+    this.generateAnchorsUpTo(SPAWN_Y - 3000);
+  }
+
   destroy() {
     this.anchors.length = 0;
   }

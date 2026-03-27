@@ -35,6 +35,8 @@ export class TelegramProvider {
       weeklyProgress: server.weeklyProgress || {},
       lang: server.lang || null,
       gamesCount: 0, // per-session, не хранится
+      embers: server.embers || 0,
+      upgrades: server.upgrades || {},
     };
   }
 
@@ -77,6 +79,16 @@ export class TelegramProvider {
     } catch {
       return [];
     }
+  }
+
+  // Сохранить эмберы (fire-and-forget)
+  async saveEmbers(embers) {
+    this.#fireAndForget('/save-embers', { embers });
+  }
+
+  // Покупка апгрейда (сервер сам считает стоимость)
+  async saveUpgrade(upgradeId) {
+    return this.#fetchServer('/save-upgrade', { upgradeId });
   }
 
   isAuthorized() {

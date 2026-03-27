@@ -1,5 +1,5 @@
 // Рендер верёвки — Bezier кривая с неоновым cyan свечением
-// Canvas 2D API вместо Phaser Graphics
+// Power Arc: толщина, glow и цвет зависят от тира
 export class RopeRenderer {
   // Приватные поля
   #visible = false;
@@ -9,12 +9,22 @@ export class RopeRenderer {
   #py = 0;
   #ropeLength = 0;
 
+  // Tier params (defaults = novice)
+  #ropeWidth = 2.5;
+  #ropeGlow = 0;
+
   constructor(scene) {
     this.scene = scene;
   }
 
   create() {
     // Ничего — всё рисуется в draw()
+  }
+
+  // Установить параметры Power Arc тира
+  setTierParams(tierData) {
+    this.#ropeWidth = tierData.ropeWidth;
+    this.#ropeGlow = tierData.ropeGlow;
   }
 
   // Запомнить данные для отрисовки (вызывается из GameScene)
@@ -46,14 +56,35 @@ export class RopeRenderer {
     // Тень
     ctx.globalAlpha = 0.3;
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = this.#ropeWidth + 1.5;
     this.#bezier(ctx, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
+
+    // Glow (тиры 1+)
+    if (this.#ropeGlow > 0) {
+      let glowAlpha = this.#ropeGlow * 0.4;
+      // Master+: пульсация
+      if (this.#ropeGlow >= 0.5) {
+        glowAlpha *= 0.85 + 0.15 * Math.sin(performance.now() * 0.005);
+      }
+      ctx.globalAlpha = glowAlpha;
+      ctx.strokeStyle = '#00F5D4';
+      ctx.lineWidth = this.#ropeWidth + 6;
+      this.#bezier(ctx, ax, ay, cpX, cpY, px, py);
+    }
 
     // Основная верёвка — neon cyan
     ctx.globalAlpha = 0.7;
     ctx.strokeStyle = '#00F5D4';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = this.#ropeWidth;
     this.#bezier(ctx, ax, ay, cpX, cpY, px, py);
+
+    // Legend: золотой highlight
+    if (this.#ropeGlow >= 0.8) {
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = '#FFB800';
+      ctx.lineWidth = this.#ropeWidth - 0.5;
+      this.#bezier(ctx, ax, ay, cpX, cpY, px, py);
+    }
 
     // Highlight — холодный белый блик
     ctx.globalAlpha = 0.25;

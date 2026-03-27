@@ -8,6 +8,7 @@ import { FONT_MONO } from '../constants.js';
 import { SkinCarousel } from '../managers/SkinCarousel.js';
 import { MenuHunter } from '../managers/MenuHunter.js';
 import { LeaderboardUI } from '../managers/LeaderboardUI.js';
+import { UpgradeShopUI } from '../managers/UpgradeShopUI.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN_STR = '#00F5D4';
@@ -24,6 +25,7 @@ export class MenuScene extends Scene {
   #scanlinesCanvas;
   #skinCarousel;
   #leaderboardUI;
+  #upgradeShop;
   #onPointerDown;
   #konamiHandler;
   #profileUnsub;
@@ -112,13 +114,15 @@ export class MenuScene extends Scene {
 
     // --- Leaderboard ---
     this.#leaderboardUI = new LeaderboardUI();
+    this.#upgradeShop = new UpgradeShopUI();
 
     // --- UI элементы как state ---
     const titleY = H * 0.19;
     const btnY = H * 0.66;
     const recordY = H * 0.75;
-    const skinsY = H * 0.82;
-    const topY = skinsY + 40;
+    const skinsY = H * 0.78;
+    const forgeY = skinsY + 38;
+    const topY = forgeY + 38;
     const best = profile.bestScore;
 
     this._ui = {
@@ -126,6 +130,7 @@ export class MenuScene extends Scene {
       btnY,
       recordY,
       skinsY,
+      forgeY,
       topY,
       best,
       // Анимации через tweens
@@ -144,6 +149,9 @@ export class MenuScene extends Scene {
       skinsGfxAlpha: 0,
       skinsTextAlpha: 0,
       skinsTextY: skinsY + 20,
+      forgeGfxAlpha: 0,
+      forgeTextAlpha: 0,
+      forgeTextY: forgeY + 20,
       topGfxAlpha: 0,
       topTextAlpha: 0,
       topTextY: topY + 20,
@@ -178,9 +186,12 @@ export class MenuScene extends Scene {
     // Skins
     this.tweens.add({ targets: this._ui, skinsGfxAlpha: 1, duration: 250, delay: 750, ease: 'Cubic.easeOut' });
     this.tweens.add({ targets: this._ui, skinsTextAlpha: 1, skinsTextY: skinsY, duration: 250, delay: 750, ease: 'Cubic.easeOut' });
+    // Forge
+    this.tweens.add({ targets: this._ui, forgeGfxAlpha: 1, duration: 250, delay: 780, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: this._ui, forgeTextAlpha: 1, forgeTextY: forgeY, duration: 250, delay: 780, ease: 'Cubic.easeOut' });
     // Top
-    this.tweens.add({ targets: this._ui, topGfxAlpha: 1, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: this._ui, topTextAlpha: 1, topTextY: topY, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: this._ui, topGfxAlpha: 1, duration: 250, delay: 830, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: this._ui, topTextAlpha: 1, topTextY: topY, duration: 250, delay: 830, ease: 'Cubic.easeOut' });
     // Hint
     this.tweens.add({ targets: this._ui, hintAlpha: 1, hintY: H - 24, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
 
@@ -271,6 +282,12 @@ export class MenuScene extends Scene {
     // Кнопка SKINS
     if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.skinsY - 22 && y <= ui.skinsY + 22) {
       this.#skinCarousel.toggle();
+      return;
+    }
+
+    // Кнопка FORGE
+    if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.forgeY - 22 && y <= ui.forgeY + 22) {
+      this.#upgradeShop.show();
       return;
     }
 
@@ -547,6 +564,19 @@ export class MenuScene extends Scene {
     ctx.textBaseline = 'middle';
     ctx.fillText(t('skins_title'), W / 2, ui.skinsTextY);
 
+    // === Кнопка FORGE ===
+    if (ui.forgeGfxAlpha > 0.01) {
+      ctx.globalAlpha = ui.forgeGfxAlpha;
+      drawGlassButton(ctx, W / 2, ui.forgeY, 140, 32);
+    }
+    ctx.globalAlpha = ui.forgeTextAlpha;
+    ctx.font = `bold 14px ${NEON_FONT}`;
+    ctx.fillStyle = '#FF6B35';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const forgeLabel = `${t('forge')} (${profile.embers})`;
+    ctx.fillText(forgeLabel, W / 2, ui.forgeTextY);
+
     // === Кнопка TOP ===
     if (ui.topGfxAlpha > 0.01) {
       ctx.globalAlpha = ui.topGfxAlpha;
@@ -618,6 +648,7 @@ export class MenuScene extends Scene {
     if (this.#profileUnsub) this.#profileUnsub();
     if (this.#skinCarousel) this.#skinCarousel.destroy();
     if (this.#leaderboardUI) { this.#leaderboardUI.destroy(); this.#leaderboardUI = null; }
+    if (this.#upgradeShop) { this.#upgradeShop.destroy(); this.#upgradeShop = null; }
     if (this.menuHunterObj) this.menuHunterObj.destroy();
   }
 }
