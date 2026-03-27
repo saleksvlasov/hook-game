@@ -18,11 +18,12 @@ export class SwingPhysics {
    * Пытается зацепиться за ближайший якорь.
    * @returns {{ anchor, ropeLength, swingAngle, swingSpeed } | null}
    */
-  tryHook(px, py, vx, vy, anchors, now, lastReleaseTime, screenW) {
+  tryHook(px, py, vx, vy, anchors, now, lastReleaseTime, screenW, overrides = {}) {
     // Кулдаун — нельзя мгновенно перецепиться
-    if (now - lastReleaseTime < HOOK_COOLDOWN) return null;
+    const cooldown = overrides.hookCooldown ?? HOOK_COOLDOWN;
+    if (now - lastReleaseTime < cooldown) return null;
 
-    const effectiveRange = this.getEffectiveRange(vy);
+    const effectiveRange = this.getEffectiveRange(vy, overrides.hookRange);
 
     let nearest = null;
     let minDist = Infinity;
@@ -74,8 +75,9 @@ export class SwingPhysics {
    * Рассчитывает вектор скорости при отпускании крюка.
    * @returns {{ vx: number, vy: number }}
    */
-  calcRelease(swingAngle, swingSpeed, ropeLength) {
-    const speed = swingSpeed * ropeLength * RELEASE_BOOST;
+  calcRelease(swingAngle, swingSpeed, ropeLength, overrides = {}) {
+    const releaseBoost = overrides.releaseBoost ?? RELEASE_BOOST;
+    const speed = swingSpeed * ropeLength * releaseBoost;
     return {
       vx: -speed * Math.sin(swingAngle),
       vy:  speed * Math.cos(swingAngle),
@@ -122,12 +124,12 @@ export class SwingPhysics {
   // ===================== FALL PENALTY =====================
 
   /** Эффективный радиус зацепа с учётом штрафа за падение. */
-  getEffectiveRange(vy) {
+  getEffectiveRange(vy, hookRange = HOOK_RANGE) {
     const fallSpeed = Math.max(0, vy);
     const penalty = clamp(
       (fallSpeed - FALL_SPEED_PENALTY_START) / (FALL_SPEED_PENALTY_MAX - FALL_SPEED_PENALTY_START),
       0, 1
     );
-    return HOOK_RANGE * (1 - penalty * (1 - HOOK_RANGE_FALLING_MIN));
+    return hookRange * (1 - penalty * (1 - HOOK_RANGE_FALLING_MIN));
   }
 }

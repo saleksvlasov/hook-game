@@ -259,7 +259,8 @@ export class GameScene extends Scene {
 
     const result = this.physics_.tryHook(
       px, py, vx, vy,
-      this.anchorMgr.anchors, this.time.now, this.lastReleaseTime, this.W
+      this.anchorMgr.anchors, this.time.now, this.lastReleaseTime, this.W,
+      this.#effectiveConsts
     );
 
     if (!result) return;
@@ -294,7 +295,7 @@ export class GameScene extends Scene {
     this.player.allowGravity = true;
     this.lastReleaseTime = this.time.now;
 
-    const vel = this.physics_.calcRelease(this.swingAngle, this.swingSpeed, this.ropeLength);
+    const vel = this.physics_.calcRelease(this.swingAngle, this.swingSpeed, this.ropeLength, this.#effectiveConsts);
     this.player.vx = vel.vx;
     this.player.vy = vel.vy;
 
