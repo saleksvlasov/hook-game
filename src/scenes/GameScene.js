@@ -21,12 +21,27 @@ import { ChallengeManager } from '../managers/ChallengeManager.js';
 import { SwingPhysics } from '../managers/SwingPhysics.js';
 
 export class GameScene extends Scene {
+  // Приватные поля
+  #heartsDisabled = false;
+  #ghostVisible = false;
+  #ghostX = 0;
+  #ghostY = 0;
+  #onPointerDown;
+  #blinkActive = false;
+  #blinkTime = 0;
+  #blinkDuration = 0;
+  #invulnTime = 0;
+  #delayedCalls = [];
+  #countdownActive = false;
+  #countdown = 0;
+  #countdownTime = 0;
+
   constructor(engine) {
     super(engine);
   }
 
   shutdown() {
-    this.input.off('pointerdown', this._onPointerDown);
+    this.input.off('pointerdown', this.#onPointerDown);
     this.gameOverUI.destroy();
     this.biome.destroy();
     this.obstacles.destroy();
@@ -69,7 +84,7 @@ export class GameScene extends Scene {
     this.hearts = HEARTS_MAX;        // 6 половинок = 3 сердца
     this.maxHearts = HEARTS_MAX;
     this.heartBonusTimer = 0;
-    this._heartsDisabled = false;    // true = 0 сердец, падение без хука
+    this.#heartsDisabled = false;    // true = 0 сердец, падение без хука
 
     // Физика маятника — чистые расчёты
     this.physics_ = new SwingPhysics();
@@ -82,9 +97,9 @@ export class GameScene extends Scene {
     this.hunter.create();
 
     // Ghost — данные для wrap-around клона
-    this._ghostVisible = false;
-    this._ghostX = 0;
-    this._ghostY = 0;
+    this.#ghostVisible = false;
+    this.#ghostX = 0;
+    this.#ghostY = 0;
 
     // Менеджеры подсистем
     this.trail = new TrailManager(this);
@@ -147,30 +162,30 @@ export class GameScene extends Scene {
     this.camera.scrollY = this.player.y - this.H / 2;
 
     // Input
-    this._onPointerDown = () => this.handlePointerDown();
-    this.input.on('pointerdown', this._onPointerDown);
+    this.#onPointerDown = () => this.handlePointerDown();
+    this.input.on('pointerdown', this.#onPointerDown);
 
     this.camera.fadeIn(400, 13, 15, 18);
 
     // Анимация мигания при ударе жуком
-    this._blinkActive = false;
-    this._blinkTime = 0;
-    this._blinkDuration = 0;
-    this._invulnTime = 0;
+    this.#blinkActive = false;
+    this.#blinkTime = 0;
+    this.#blinkDuration = 0;
+    this.#invulnTime = 0;
 
     // Delayed calls (замена this.time.delayedCall)
-    this._delayedCalls = [];
+    this.#delayedCalls = [];
 
     // Обратный отсчёт при воскрешении
-    this._countdownActive = false;
-    this._countdown = 0;
-    this._countdownTime = 0;
+    this.#countdownActive = false;
+    this.#countdown = 0;
+    this.#countdownTime = 0;
   }
 
   // ===================== INPUT =====================
 
   handlePointerDown() {
-    if (this.isDead || this._heartsDisabled) return;
+    if (this.isDead || this.#heartsDisabled) return;
     if (this.isHooked) {
       this.releaseHook();
     } else {
@@ -211,7 +226,7 @@ export class GameScene extends Scene {
 
     navigator.vibrate?.(15);
     playHook();
-    this._delayedCall(80, () => playAttach());
+    this.#delayedCall(80, () => playAttach());
 
     this.hud.setHint('click_release');
   }
@@ -284,7 +299,7 @@ export class GameScene extends Scene {
     if (!this.isDead) return;
     if (rewarded) {
       trackEvent('ad_completed', { height: this.maxHeight });
-      this._respawnPlayer();
+      this.#respawnPlayer();
     } else {
       trackEvent('ad_skipped', { height: this.maxHeight });
     }
@@ -296,20 +311,20 @@ export class GameScene extends Scene {
     if (!this.isDead) return;
     if (paid) {
       trackEvent('stars_success', { height: this.maxHeight });
-      this._respawnPlayer();
+      this.#respawnPlayer();
     } else {
       trackEvent('stars_fail', { height: this.maxHeight });
     }
   }
 
-  _respawnPlayer() {
+  #respawnPlayer() {
     this.gameOverUI.hide();
 
     // Восстановить пол сердца (1 половинку) — не все три
     this.hearts = 1;
     this.maxHearts = HEARTS_MAX;
     this.heartBonusTimer = 0;
-    this._heartsDisabled = false;
+    this.#heartsDisabled = false;
     this.hud.updateHearts(this.hearts, this.maxHearts, 0);
 
     const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
@@ -328,16 +343,16 @@ export class GameScene extends Scene {
     this.camera.scrollY = targetY - this.H * 0.55;
 
     // Обратный отсчёт 3-2-1
-    this._countdown = 3;
-    this._countdownTime = 0;
-    this._countdownActive = true;
+    this.#countdown = 3;
+    this.#countdownTime = 0;
+    this.#countdownActive = true;
     this.isDead = true; // Блокируем input до конца отсчёта
     playCountdownTick(); // Звук для "3"
   }
 
-  _finishCountdown() {
-    this._countdownActive = false;
-    this._countdown = 0;
+  #finishCountdown() {
+    this.#countdownActive = false;
+    this.#countdown = 0;
     this.isDead = false;
     this.player.vy = -300;
     this.player.allowGravity = true;
@@ -354,22 +369,22 @@ export class GameScene extends Scene {
   }
 
   // Утилита: отложенный вызов
-  _delayedCall(ms, fn) {
-    this._delayedCalls.push({ remaining: ms, fn });
+  #delayedCall(ms, fn) {
+    this.#delayedCalls.push({ remaining: ms, fn });
   }
 
-  _updateDelayedCalls(delta) {
+  #updateDelayedCalls(delta) {
     let w = 0;
-    for (let i = 0; i < this._delayedCalls.length; i++) {
-      const dc = this._delayedCalls[i];
+    for (let i = 0; i < this.#delayedCalls.length; i++) {
+      const dc = this.#delayedCalls[i];
       dc.remaining -= delta;
       if (dc.remaining <= 0) {
         dc.fn();
       } else {
-        this._delayedCalls[w++] = dc;
+        this.#delayedCalls[w++] = dc;
       }
     }
-    this._delayedCalls.length = w;
+    this.#delayedCalls.length = w;
   }
 
   // ===================== UPDATE =====================
@@ -380,7 +395,7 @@ export class GameScene extends Scene {
     const p = this.player;
 
     // Обновляем delayed calls
-    this._updateDelayedCalls(delta);
+    this.#updateDelayedCalls(delta);
 
     // ===== 1. Физика: гравитация для свободного полёта =====
     if (!this.isDead && p.allowGravity) {
@@ -401,12 +416,12 @@ export class GameScene extends Scene {
 
     // ===== 3. Ghost sprite — только в свободном полёте у края =====
     const edgeZone = 50;
-    this._ghostVisible = !this.isDead && !this.isHooked
+    this.#ghostVisible = !this.isDead && !this.isHooked
       && (p.x < edgeZone || p.x > this.W - edgeZone);
 
-    if (this._ghostVisible) {
-      this._ghostX = p.x < this.W / 2 ? p.x + this.W : p.x - this.W;
-      this._ghostY = p.y;
+    if (this.#ghostVisible) {
+      this.#ghostX = p.x < this.W / 2 ? p.x + this.W : p.x - this.W;
+      this.#ghostY = p.y;
     }
 
     // ===== 4. Камера — X следит при hooked, Y всегда =====
@@ -468,12 +483,12 @@ export class GameScene extends Scene {
     // 5.8 Охотник + ghost
     if (!this.isDead) {
       // Мигание при неуязвимости
-      if (this._blinkActive) {
-        this._blinkTime += delta;
-        const blinkPhase = Math.floor(this._blinkTime / 100) % 2;
+      if (this.#blinkActive) {
+        this.#blinkTime += delta;
+        const blinkPhase = Math.floor(this.#blinkTime / 100) % 2;
         p.alpha = blinkPhase === 0 ? 0.3 : 0.6;
-        if (this._blinkTime > this._blinkDuration) {
-          this._blinkActive = false;
+        if (this.#blinkTime > this.#blinkDuration) {
+          this.#blinkActive = false;
           // Плавно возвращаем яркость
           this.tweens.add({ targets: p, alpha: 1, duration: 400 });
         }
@@ -488,8 +503,8 @@ export class GameScene extends Scene {
     ctx.globalAlpha = p.alpha;
     this.hunter.draw(ctx, p.x, p.y);
 
-    if (this._ghostVisible) {
-      this.hunter.drawGhost(ctx, this._ghostX, this._ghostY);
+    if (this.#ghostVisible) {
+      this.hunter.drawGhost(ctx, this.#ghostX, this.#ghostY);
     }
     ctx.globalAlpha = 1;
 
@@ -500,20 +515,20 @@ export class GameScene extends Scene {
     this.camera.resetTransform(ctx);
 
     // Обратный отсчёт при воскрешении (3-2-1)
-    if (this._countdownActive) {
-      this._countdownTime += delta;
-      if (this._countdownTime >= 1000) {
-        this._countdownTime -= 1000;
-        this._countdown--;
-        if (this._countdown <= 0) {
+    if (this.#countdownActive) {
+      this.#countdownTime += delta;
+      if (this.#countdownTime >= 1000) {
+        this.#countdownTime -= 1000;
+        this.#countdown--;
+        if (this.#countdown <= 0) {
           playCountdownGo();
-          this._finishCountdown();
+          this.#finishCountdown();
         } else {
           playCountdownTick(); // Звук для "2" и "1"
         }
       }
       // Рисуем счётчик по центру экрана
-      const num = this._countdown;
+      const num = this.#countdown;
       if (num > 0) {
         ctx.globalAlpha = 0.9;
         ctx.font = `bold 120px 'Inter', sans-serif`;
@@ -564,7 +579,7 @@ export class GameScene extends Scene {
     this.obstacles.update(delta, p.y);
 
     // ===== 9. Коллизия с жуками =====
-    if (!this.isDead && !this._heartsDisabled && this.bugHitCooldown <= 0
+    if (!this.isDead && !this.#heartsDisabled && this.bugHitCooldown <= 0
         && this.obstacles.checkCollision(p.x, p.y)) {
       this.hitCount++;
       this.hearts = Math.max(0, this.hearts - 1); // -0.5 сердца
@@ -585,19 +600,19 @@ export class GameScene extends Scene {
 
       // Мигание
       p.alpha = 0.4;
-      this._blinkActive = true;
-      this._blinkTime = 0;
-      this._blinkDuration = 600;
-      this._invulnTime = 1500;
+      this.#blinkActive = true;
+      this.#blinkTime = 0;
+      this.#blinkDuration = 600;
+      this.#invulnTime = 1500;
 
       // 0 сердец → неизбежная смерть (падение без возможности зацепиться)
       if (this.hearts <= 0) {
-        this._heartsDisabled = true;
+        this.#heartsDisabled = true;
       }
     }
 
     // ===== 9.5 Подбор сердца =====
-    if (!this.isDead && !this._heartsDisabled
+    if (!this.isDead && !this.#heartsDisabled
         && this.obstacles.checkHeartPickup(p.x, p.y)) {
       if (this.hearts >= HEARTS_MAX && this.maxHearts === HEARTS_MAX) {
         // Все 3 сердца полны → бонусное 4-е сердце на 40 секунд

@@ -13,13 +13,16 @@ function hexCSS(hex) {
  * Искры рисуются с ручным parallax offset.
  */
 export class BiomeManager {
+  // Приватные поля
+  #bgCanvases = [];
+  #moonX = 0;
+  #moonY = 0;
+
   constructor(scene) {
     this.scene = scene;
     this.W = scene.W;
     this.layers = [];
     this.currentBiomeIdx = 0;
-    // Кешированный offscreen canvas для фоновых градиентов
-    this._bgCanvases = [];
   }
 
   create() {
@@ -28,7 +31,7 @@ export class BiomeManager {
       const layer = {};
 
       // Создаём offscreen canvas с градиентом биома
-      layer.bgCanvas = this._createBgCanvas(biome);
+      layer.bgCanvas = this.#createBgCanvas(biome);
 
       // 3 слоя искр с разным parallax
       const scrollFactors = [0.25, 0.5, 0.8];
@@ -39,9 +42,9 @@ export class BiomeManager {
       }
 
       // Заполняем данные искр по слоям
-      this._fillSparkLayer(layer.sparkLayers[0], biome, 50, 0.5, 1.5, 0.15, 0.35);  // дальние
-      this._fillSparkLayer(layer.sparkLayers[1], biome, 40, 1.0, 2.5, 0.25, 0.55);  // средние
-      this._fillSparkLayer(layer.sparkLayers[2], biome, 25, 1.5, 4.0, 0.35, 0.75);  // ближние
+      this.#fillSparkLayer(layer.sparkLayers[0], biome, 50, 0.5, 1.5, 0.15, 0.35);  // дальние
+      this.#fillSparkLayer(layer.sparkLayers[1], biome, 40, 1.0, 2.5, 0.25, 0.55);  // средние
+      this.#fillSparkLayer(layer.sparkLayers[2], biome, 25, 1.5, 4.0, 0.35, 0.75);  // ближние
 
       layer.particleColor = hexCSS(biome.particleColor);
       layer.alpha = 0;
@@ -50,11 +53,11 @@ export class BiomeManager {
     }
 
     // Луна — правый верхний угол экрана
-    this._moonX = this.W * 0.78;
-    this._moonY = 120;
+    this.#moonX = this.W * 0.78;
+    this.#moonY = 120;
   }
 
-  _fillSparkLayer(sparkLayer, biome, count, minSize, maxSize, minAlpha, maxAlpha) {
+  #fillSparkLayer(sparkLayer, biome, count, minSize, maxSize, minAlpha, maxAlpha) {
     const sf = sparkLayer.sf;
     const yStart = (GROUND_Y - biome.endHeight * 10) * sf;
     const yEnd = (GROUND_Y - biome.startHeight * 10) * sf;
@@ -127,7 +130,7 @@ export class BiomeManager {
     }
 
     // Луна (scrollFactor=0 — всегда на экране)
-    this._drawMoon(ctx);
+    this.#drawMoon(ctx);
 
     // Искры с parallax — рисуем с ручным scroll offset
     for (let i = 0; i < this.layers.length; i++) {
@@ -135,14 +138,14 @@ export class BiomeManager {
       if (layer.alpha === 0) continue;
 
       for (let j = 0; j < layer.sparkLayers.length; j++) {
-        this._updateAndDrawSparks(ctx, layer.sparkLayers[j], layer.particleColor, layer.alpha, time, camera);
+        this.#updateAndDrawSparks(ctx, layer.sparkLayers[j], layer.particleColor, layer.alpha, time, camera);
       }
     }
 
     ctx.globalAlpha = 1;
   }
 
-  _updateAndDrawSparks(ctx, sparkLayer, color, layerAlpha, time, camera) {
+  #updateAndDrawSparks(ctx, sparkLayer, color, layerAlpha, time, camera) {
     const sparks = sparkLayer.sparks;
     const sf = sparkLayer.sf;
     const spanX = this.W / sf;
@@ -197,7 +200,7 @@ export class BiomeManager {
     }
   }
 
-  _createBgCanvas(biome) {
+  #createBgCanvas(biome) {
     const canvas = document.createElement('canvas');
     canvas.width = 1;
     canvas.height = 200; // Маленький — будет растянут
@@ -211,13 +214,13 @@ export class BiomeManager {
     return canvas;
   }
 
-  _drawMoon(ctx) {
+  #drawMoon(ctx) {
     // Луна — далёкий объект, слабый параллакс (scrollFactor 0.02)
     // Чем выше игрок поднимается, тем чуть выше сдвигается луна
     const camera = this.scene.camera;
     const parallax = 0.02;
-    const mx = this._moonX - camera.scrollX * parallax;
-    const my = this._moonY - camera.scrollY * parallax;
+    const mx = this.#moonX - camera.scrollX * parallax;
+    const my = this.#moonY - camera.scrollY * parallax;
     const R = 65;
 
     // Neon Western луна — тёмная стальная с мягким cyan свечением
@@ -249,6 +252,6 @@ export class BiomeManager {
 
   destroy() {
     this.layers = [];
-    this._bgCanvases = [];
+    this.#bgCanvases = [];
   }
 }

@@ -3,31 +3,30 @@
 // Используется автоматически когда нет Telegram initData
 
 export class DevProvider {
-  constructor() {
-    this._data = {
-      bestScore: 0,
-      moonReached: false,
-      activeSkin: 'default',
-      unlockedSkins: ['default'],
-      weeklyProgress: {},
-      lang: null,
-    };
-  }
+  // Приватные поля
+  #data = {
+    bestScore: 0,
+    moonReached: false,
+    activeSkin: 'default',
+    unlockedSkins: ['default'],
+    weeklyProgress: {},
+    lang: null,
+  };
 
   async loadProfile() {
     return {
-      ...this._data,
+      ...this.#data,
       gamesCount: 0,
     };
   }
 
   async saveField(key, value) {
-    this._data[key] = value;
+    this.#data[key] = value;
   }
 
   async saveScore(score) {
-    const isNew = score > this._data.bestScore;
-    if (isNew) this._data.bestScore = score;
+    const isNew = score > this.#data.bestScore;
+    if (isNew) this.#data.bestScore = score;
     return { newBest: isNew, score };
   }
 

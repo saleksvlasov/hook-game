@@ -1,28 +1,32 @@
 // Переиспользуемый пул объектов — избавляет от push/splice в горячих циклах
 export class ObjectPool {
+  // Приватные поля
+  #factory;
+  #reset;
+  #pool = [];
+
   constructor(factory, reset) {
-    this._factory = factory; // () => новый объект
-    this._reset = reset;     // (obj) => сброс свойств перед переиспользованием
-    this._pool = [];
+    this.#factory = factory; // () => новый объект
+    this.#reset = reset;     // (obj) => сброс свойств перед переиспользованием
   }
 
   // Взять объект из пула или создать новый
   acquire() {
-    if (this._pool.length > 0) {
-      const obj = this._pool.pop();
-      this._reset(obj);
+    if (this.#pool.length > 0) {
+      const obj = this.#pool.pop();
+      this.#reset(obj);
       return obj;
     }
-    return this._factory();
+    return this.#factory();
   }
 
   // Вернуть объект в пул
   release(obj) {
-    this._pool.push(obj);
+    this.#pool.push(obj);
   }
 
   // Очистить пул
   clear() {
-    this._pool.length = 0;
+    this.#pool.length = 0;
   }
 }

@@ -5,20 +5,20 @@ import { getTelegramUserId } from '../telegram.js';
 // Панель лидерборда — HTML overlay в #game-ui
 // Создаётся один раз в конструкторе, show/hide через CSS класс overlay--visible
 export class LeaderboardUI {
-  constructor() {
-    this._panel = null;
-    this._list = null;
-    this._built = false;
-  }
+  // Приватные поля
+  #panel = null;
+  #list = null;
+  #built = false;
+  #fetchTimeout = null;
 
   // Построить DOM один раз, вставить в #game-ui
-  _build() {
-    if (this._built) return;
-    this._built = true;
+  #build() {
+    if (this.#built) return;
+    this.#built = true;
 
     const panel = document.createElement('div');
     panel.classList.add('overlay', 'overlay--dark', 'leaderboard');
-    this._panel = panel;
+    this.#panel = panel;
 
     // Кнопка закрытия
     const closeBtn = document.createElement('button');
@@ -35,9 +35,9 @@ export class LeaderboardUI {
     panel.appendChild(title);
 
     // Контейнер списка
-    this._list = document.createElement('div');
-    this._list.classList.add('leaderboard__list');
-    panel.appendChild(this._list);
+    this.#list = document.createElement('div');
+    this.#list.classList.add('leaderboard__list');
+    panel.appendChild(this.#list);
 
     // Вставляем в корневой UI контейнер
     const root = document.getElementById('game-ui');
@@ -50,14 +50,14 @@ export class LeaderboardUI {
 
   // Показать лидерборд — добавить класс видимости, загрузить данные
   async show() {
-    this._build();
-    this._showLoading();
-    this._panel.classList.add('overlay--visible');
-    await this._fetchAndRender();
+    this.#build();
+    this.#showLoading();
+    this.#panel.classList.add('overlay--visible');
+    await this.#fetchAndRender();
   }
 
-  _showLoading() {
-    this._list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:24px;color:#4A5580;padding:40px 0">
+  #showLoading() {
+    this.#list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:24px;color:#4A5580;padding:40px 0">
       <span style="display:inline-block;animation:spin 1s linear infinite">\u23F3</span>
       <span style="margin-left:8px;font-size:16px">${t('loading')}</span>
     </div>`;
@@ -70,27 +70,27 @@ export class LeaderboardUI {
     }
   }
 
-  async _fetchAndRender() {
+  async #fetchAndRender() {
     // Загружаем данные с timeout 5с
     let lb = [];
     let fetchError = false;
     try {
       const fetchPromise = profile.fetchLeaderboard();
       const timeoutPromise = new Promise((_, reject) => {
-        this._fetchTimeout = window.setTimeout(() => reject(new Error('timeout')), 5000);
+        this.#fetchTimeout = window.setTimeout(() => reject(new Error('timeout')), 5000);
       });
       lb = await Promise.race([fetchPromise, timeoutPromise]);
-      window.clearTimeout(this._fetchTimeout);
+      window.clearTimeout(this.#fetchTimeout);
     } catch {
-      window.clearTimeout(this._fetchTimeout);
+      window.clearTimeout(this.#fetchTimeout);
       fetchError = true;
     }
 
     // Проверяем что панель не была закрыта пока грузились
-    if (!this._panel || !this._panel.classList.contains('overlay--visible')) return;
+    if (!this.#panel || !this.#panel.classList.contains('overlay--visible')) return;
 
     const myId = getTelegramUserId();
-    this._list.innerHTML = '';
+    this.#list.innerHTML = '';
 
     if (fetchError) {
       // Ошибка — показываем текст + кнопку retry
@@ -102,13 +102,13 @@ export class LeaderboardUI {
       retryBtn.classList.add('btn-neon', 'btn-neon--small');
       retryBtn.textContent = t('lb_retry');
       retryBtn.addEventListener('click', () => {
-        this._showLoading();
-        this._fetchAndRender();
+        this.#showLoading();
+        this.#fetchAndRender();
       });
       errorDiv.appendChild(retryBtn);
-      this._list.appendChild(errorDiv);
+      this.#list.appendChild(errorDiv);
     } else if (lb.length === 0) {
-      this._list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:16px;color:#4A5580;padding:40px 0">${t('lb_empty')}</div>`;
+      this.#list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:16px;color:#4A5580;padding:40px 0">${t('lb_empty')}</div>`;
     } else {
       lb.forEach((entry, i) => {
         const isMe = myId && entry.userId === myId;
@@ -143,25 +143,25 @@ export class LeaderboardUI {
         scoreEl.textContent = `${entry.score}${t('unit_m')}`;
         row.appendChild(scoreEl);
 
-        this._list.appendChild(row);
+        this.#list.appendChild(row);
       });
     }
   }
 
   // Скрыть — убрать класс видимости (CSS transition сделает fade)
   hide() {
-    if (this._panel) {
-      this._panel.classList.remove('overlay--visible');
+    if (this.#panel) {
+      this.#panel.classList.remove('overlay--visible');
     }
   }
 
   // Удалить DOM-элемент полностью
   destroy() {
-    if (this._panel) {
-      this._panel.remove();
-      this._panel = null;
-      this._list = null;
-      this._built = false;
+    if (this.#panel) {
+      this.#panel.remove();
+      this.#panel = null;
+      this.#list = null;
+      this.#built = false;
     }
   }
 }

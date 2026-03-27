@@ -6,6 +6,14 @@ import { Input } from './Input.js';
 import { TweenManager } from './Tween.js';
 
 export class Engine {
+  // Приватные поля
+  #scenes;
+  #currentScene;
+  #currentSceneName;
+  #running;
+  #lastTime;
+  #raf;
+
   constructor(config) {
     // Canvas
     this.width = config.width;
@@ -30,14 +38,14 @@ export class Engine {
     this.time = { now: 0 };
 
     // Сцены
-    this._scenes = {};
-    this._currentScene = null;
-    this._currentSceneName = null;
+    this.#scenes = {};
+    this.#currentScene = null;
+    this.#currentSceneName = null;
 
     // Регистрируем сцены из конфига
     if (config.scenes) {
       for (const [name, SceneClass] of Object.entries(config.scenes)) {
-        this._scenes[name] = SceneClass;
+        this.#scenes[name] = SceneClass;
       }
     }
 
@@ -45,9 +53,9 @@ export class Engine {
     this.gravity = config.gravity || 550;
 
     // Game loop
-    this._running = false;
-    this._lastTime = 0;
-    this._raf = null;
+    this.#running = false;
+    this.#lastTime = 0;
+    this.#raf = null;
 
     // Фоновый цвет
     this.bgColor = config.backgroundColor || '#141820';
@@ -55,43 +63,43 @@ export class Engine {
 
   // Запустить движок и первую сцену
   start(sceneName) {
-    this._running = true;
+    this.#running = true;
     this.switchScene(sceneName);
     // Запускаем loop через rAF (не синхронно — чтобы первый delta был корректный)
-    this._lastTime = performance.now();
-    this._raf = requestAnimationFrame((t) => this._loop(t));
+    this.#lastTime = performance.now();
+    this.#raf = requestAnimationFrame((t) => this.#loop(t));
   }
 
   // Переключить сцену
   switchScene(name) {
     // Остановить текущую
-    if (this._currentScene) {
-      this._currentScene.shutdown();
+    if (this.#currentScene) {
+      this.#currentScene.shutdown();
       this.tweens.clear();
       this.input.removeAllListeners();
     }
 
     // Создать новую
-    const SceneClass = this._scenes[name];
+    const SceneClass = this.#scenes[name];
     if (!SceneClass) throw new Error(`Scene "${name}" not found`);
 
-    this._currentScene = new SceneClass(this);
-    this._currentSceneName = name;
-    this._currentScene.create();
+    this.#currentScene = new SceneClass(this);
+    this.#currentSceneName = name;
+    this.#currentScene.create();
   }
 
   // Остановить движок
   stop() {
-    this._running = false;
-    if (this._raf) cancelAnimationFrame(this._raf);
+    this.#running = false;
+    if (this.#raf) cancelAnimationFrame(this.#raf);
   }
 
   // Основной game loop
-  _loop(timestamp) {
-    if (!this._running) return;
+  #loop(timestamp) {
+    if (!this.#running) return;
 
-    const delta = Math.min(timestamp - this._lastTime, 33.33); // Cap ~30fps min
-    this._lastTime = timestamp;
+    const delta = Math.min(timestamp - this.#lastTime, 33.33); // Cap ~30fps min
+    this.#lastTime = timestamp;
     this.time.now = timestamp;
 
     try {
@@ -107,8 +115,8 @@ export class Engine {
       this.ctx.fillRect(0, 0, this.width, this.height);
 
       // Рендер сцены
-      if (this._currentScene) {
-        this._currentScene.update(timestamp, delta);
+      if (this.#currentScene) {
+        this.#currentScene.update(timestamp, delta);
       }
 
       // Camera эффекты поверх всего (flash, fadeIn)
@@ -117,6 +125,6 @@ export class Engine {
       console.error('Engine loop error:', err);
     }
 
-    this._raf = requestAnimationFrame((t) => this._loop(t));
+    this.#raf = requestAnimationFrame((t) => this.#loop(t));
   }
 }

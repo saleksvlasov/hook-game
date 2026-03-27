@@ -2,23 +2,32 @@
 // Замена Phaser.Input
 
 export class Input {
+  // Приватные поля
+  #canvas;
+  #listeners;
+  #scrollX;
+  #scrollY;
+  #onDown;
+  #onUp;
+  #onMove;
+
   constructor(canvas) {
-    this._canvas = canvas;
-    this._listeners = { pointerdown: [], pointerup: [], pointermove: [] };
-    this._scrollX = 0;
-    this._scrollY = 0;
+    this.#canvas = canvas;
+    this.#listeners = { pointerdown: [], pointerup: [], pointermove: [] };
+    this.#scrollX = 0;
+    this.#scrollY = 0;
 
     // Состояние активного pointer'а
     this.activePointer = { x: 0, y: 0, isDown: false };
 
     // Привязываем обработчики к canvas
-    this._onDown = (e) => this._handle('pointerdown', e);
-    this._onUp = (e) => this._handle('pointerup', e);
-    this._onMove = (e) => this._handle('pointermove', e);
+    this.#onDown = (e) => this.#handle('pointerdown', e);
+    this.#onUp = (e) => this.#handle('pointerup', e);
+    this.#onMove = (e) => this.#handle('pointermove', e);
 
-    canvas.addEventListener('pointerdown', this._onDown);
-    canvas.addEventListener('pointerup', this._onUp);
-    canvas.addEventListener('pointermove', this._onMove);
+    canvas.addEventListener('pointerdown', this.#onDown);
+    canvas.addEventListener('pointerup', this.#onUp);
+    canvas.addEventListener('pointermove', this.#onMove);
 
     // Предотвращаем контекстное меню и выделение
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -30,49 +39,49 @@ export class Input {
 
   // Обновить позицию камеры для пересчёта координат
   setCameraScroll(scrollX, scrollY) {
-    this._scrollX = scrollX;
-    this._scrollY = scrollY;
+    this.#scrollX = scrollX;
+    this.#scrollY = scrollY;
   }
 
   // Подписка на событие
   on(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event].push(callback);
+    if (this.#listeners[event]) {
+      this.#listeners[event].push(callback);
     }
   }
 
   // Отписка от события
   off(event, callback) {
-    if (this._listeners[event]) {
-      this._listeners[event] = this._listeners[event].filter(cb => cb !== callback);
+    if (this.#listeners[event]) {
+      this.#listeners[event] = this.#listeners[event].filter(cb => cb !== callback);
     }
   }
 
   // Очистить все подписки
   removeAllListeners() {
-    for (const key of Object.keys(this._listeners)) {
-      this._listeners[key].length = 0;
+    for (const key of Object.keys(this.#listeners)) {
+      this.#listeners[key].length = 0;
     }
   }
 
   // Полная очистка (при уничтожении)
   destroy() {
     this.removeAllListeners();
-    this._canvas.removeEventListener('pointerdown', this._onDown);
-    this._canvas.removeEventListener('pointerup', this._onUp);
-    this._canvas.removeEventListener('pointermove', this._onMove);
+    this.#canvas.removeEventListener('pointerdown', this.#onDown);
+    this.#canvas.removeEventListener('pointerup', this.#onUp);
+    this.#canvas.removeEventListener('pointermove', this.#onMove);
   }
 
   // Приватный обработчик — пересчёт координат + вызов listeners
-  _handle(event, e) {
+  #handle(event, e) {
     e.preventDefault(); // Предотвращаем двойное срабатывание (touch→mouse emulation)
-    const rect = this._canvas.getBoundingClientRect();
+    const rect = this.#canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     // Мировые координаты (с учётом камеры)
-    const worldX = x + this._scrollX;
-    const worldY = y + this._scrollY;
+    const worldX = x + this.#scrollX;
+    const worldY = y + this.#scrollY;
 
     this.activePointer.x = worldX;
     this.activePointer.y = worldY;
@@ -80,7 +89,7 @@ export class Input {
     if (event === 'pointerdown') this.activePointer.isDown = true;
     if (event === 'pointerup') this.activePointer.isDown = false;
 
-    for (const cb of this._listeners[event]) {
+    for (const cb of this.#listeners[event]) {
       cb({ x, y, worldX, worldY, originalEvent: e });
     }
   }

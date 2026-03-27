@@ -17,6 +17,27 @@ const BG_DARK_STR = '#0A0E1A';
 const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
 
 export class MenuScene extends Scene {
+  // Приватные поля
+  #bgCanvas;
+  #trees = [];
+  #particles = [];
+  #scanlinesCanvas;
+  #skinCarousel;
+  #leaderboardUI;
+  #onPointerDown;
+  #konamiHandler;
+  #profileUnsub;
+  #transitioning = false;
+  #transitionAlpha = 0;
+  #glowPhases = [];
+  #konamiText = null;
+  #konamiTextAlpha = 0;
+  #crackPoints = null;
+  #titleFloat;
+  #subtitleText;
+  #subtitleChars = 0;
+  #subtitleDelay = 0;
+
   constructor(engine) {
     super(engine);
   }
@@ -26,10 +47,10 @@ export class MenuScene extends Scene {
     const H = this.H;
 
     // Фоновый градиент — offscreen canvas
-    this._bgCanvas = document.createElement('canvas');
-    this._bgCanvas.width = 1;
-    this._bgCanvas.height = H;
-    const bgCtx = this._bgCanvas.getContext('2d');
+    this.#bgCanvas = document.createElement('canvas');
+    this.#bgCanvas.width = 1;
+    this.#bgCanvas.height = H;
+    const bgCtx = this.#bgCanvas.getContext('2d');
     const grad = bgCtx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, '#050810');
     grad.addColorStop(0.3, '#0A0E1A');
@@ -39,7 +60,7 @@ export class MenuScene extends Scene {
     bgCtx.fillRect(0, 0, 1, H);
 
     // Предгенерируем деревья
-    this._trees = [];
+    this.#trees = [];
     for (let tx = 20; tx < W; tx += 50 + Math.random() * 30) {
       const h = 80 + Math.random() * 160;
       const w = 6 + Math.random() * 8;
@@ -51,14 +72,14 @@ export class MenuScene extends Scene {
           dir: Math.random() > 0.5 ? 1 : -1,
         });
       }
-      this._trees.push({ x: tx, y: H - 100, h, w, branches });
+      this.#trees.push({ x: tx, y: H - 100, h, w, branches });
     }
 
     // Неоновые искры
-    this._particles = [];
+    this.#particles = [];
     for (let i = 0; i < 50; i++) {
       const isCyan = Math.random() < 0.5;
-      this._particles.push({
+      this.#particles.push({
         x: between(0, W), y: between(0, H),
         size: 1 + Math.random() * 2,
         speed: isCyan ? -(8 + Math.random() * 15) : (8 + Math.random() * 15),
@@ -69,10 +90,10 @@ export class MenuScene extends Scene {
     }
 
     // Scanlines — предгенерируем offscreen
-    this._scanlinesCanvas = document.createElement('canvas');
-    this._scanlinesCanvas.width = W;
-    this._scanlinesCanvas.height = H;
-    const slCtx = this._scanlinesCanvas.getContext('2d');
+    this.#scanlinesCanvas = document.createElement('canvas');
+    this.#scanlinesCanvas.width = W;
+    this.#scanlinesCanvas.height = H;
+    const slCtx = this.#scanlinesCanvas.getContext('2d');
     slCtx.strokeStyle = 'rgba(255,255,255,0.03)';
     slCtx.lineWidth = 1;
     for (let y = 0; y < H; y += 4) {
@@ -87,10 +108,10 @@ export class MenuScene extends Scene {
     this.menuHunterObj.create();
 
     // --- Skin Carousel ---
-    this._skinCarousel = new SkinCarousel(this);
+    this.#skinCarousel = new SkinCarousel(this);
 
     // --- Leaderboard ---
-    this._leaderboardUI = new LeaderboardUI();
+    this.#leaderboardUI = new LeaderboardUI();
 
     // --- UI элементы как state ---
     const titleY = H * 0.19;
@@ -175,19 +196,19 @@ export class MenuScene extends Scene {
     });
 
     // Title float tween
-    this._titleFloat = { y: titleY };
+    this.#titleFloat = { y: titleY };
     this.tweens.add({
-      targets: this._titleFloat, y: titleY - 5,
+      targets: this.#titleFloat, y: titleY - 5,
       duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
     // Typewriter подзаголовок
-    this._subtitleText = t('title_sub');
-    this._subtitleChars = 0;
-    this._subtitleDelay = 0;
+    this.#subtitleText = t('title_sub');
+    this.#subtitleChars = 0;
+    this.#subtitleDelay = 0;
 
     // Подписка на серверную синхронизацию — обновить рекорд если сервер вернул больше
-    this._profileUnsub = profile.onUpdated((data) => {
+    this.#profileUnsub = profile.onUpdated((data) => {
       if (data.bestScore > this._ui.best) {
         this._ui.best = data.bestScore;
         // Показать chip рекорда если он был скрыт (рекорд был 0 локально)
@@ -202,48 +223,40 @@ export class MenuScene extends Scene {
     this.konamiSequence = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right'];
     this.konamiIndex = 0;
     this.konamiTriggered = false;
-    this._konamiHandler = (event) => this._checkKonami(event);
-    document.addEventListener('keydown', this._konamiHandler);
-
-    // Transition state
-    this._transitioning = false;
-    this._transitionAlpha = 0;
+    this.#konamiHandler = (event) => this.#checkKonami(event);
+    document.addEventListener('keydown', this.#konamiHandler);
 
     // Glow colors для заголовка
-    this._glowPhases = [
+    this.#glowPhases = [
       { color: NEON_AMBER_STR, alpha: 0, phase: 0 },
       { color: NEON_CYAN_STR, alpha: 0, phase: 0 },
       { color: NEON_PINK_STR, alpha: 0, phase: 0 },
     ];
 
-    // Konami визуал
-    this._konamiText = null;
-    this._konamiTextAlpha = 0;
-
     // Input
-    this._onPointerDown = (e) => this._handlePointerDown(e);
-    this.input.on('pointerdown', this._onPointerDown);
+    this.#onPointerDown = (e) => this.#handlePointerDown(e);
+    this.input.on('pointerdown', this.#onPointerDown);
 
     this.camera.fadeIn(400);
   }
 
-  _handlePointerDown(e) {
-    if (this._transitioning) return;
+  #handlePointerDown(e) {
+    if (this.#transitioning) return;
 
     const x = e.x;
     const y = e.y;
     const W = this.W;
     const ui = this._ui;
 
-    // Tooltip check first
-    if (this._skinCarousel._tooltipVisible) {
-      this._skinCarousel.handleTooltipTap(x, y);
+    // Tooltip check first — handleTooltipTap возвращает true если поглотил событие
+    if (this.#skinCarousel.hasTooltip) {
+      this.#skinCarousel.handleTooltipTap(x, y);
       return;
     }
 
     // Когда карусель скинов открыта — блокируем остальные кнопки
-    if (this._skinCarousel.isOpen) {
-      this._skinCarousel.handleTap(x, y);
+    if (this.#skinCarousel.isOpen) {
+      this.#skinCarousel.handleTap(x, y);
       return;
     }
 
@@ -251,19 +264,19 @@ export class MenuScene extends Scene {
     const btnW = 250, btnH = 64;
     if (x >= W / 2 - btnW / 2 && x <= W / 2 + btnW / 2 &&
         y >= ui.btnY - btnH / 2 && y <= ui.btnY + btnH / 2) {
-      this._startTransition();
+      this.#startTransition();
       return;
     }
 
     // Кнопка SKINS
     if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.skinsY - 22 && y <= ui.skinsY + 22) {
-      this._skinCarousel.toggle();
+      this.#skinCarousel.toggle();
       return;
     }
 
     // Кнопка TOP
     if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.topY - 22 && y <= ui.topY + 22) {
-      this._leaderboardUI.show();
+      this.#leaderboardUI.show();
       return;
     }
 
@@ -279,20 +292,23 @@ export class MenuScene extends Scene {
     }
   }
 
-  _startTransition() {
-    this._transitioning = true;
-    this._transitionAlpha = 0;
+  #startTransition() {
+    this.#transitioning = true;
+    this.#transitionAlpha = 0;
     // Fade to black, then switch scene
+    // Используем объект-обёртку для tween (приватные поля не анимируются напрямую)
+    this._transitionState = { alpha: 0 };
     this.tweens.add({
-      targets: this,
-      _transitionAlpha: 1,
+      targets: this._transitionState,
+      alpha: 1,
       duration: 400,
       ease: 'Linear',
+      onUpdate: () => { this.#transitionAlpha = this._transitionState.alpha; },
       onComplete: () => this.startScene('GameScene'),
     });
   }
 
-  _checkKonami(event) {
+  #checkKonami(event) {
     if (this.konamiTriggered) return;
     const keyMap = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
     const key = keyMap[event.key];
@@ -301,20 +317,23 @@ export class MenuScene extends Scene {
       this.konamiIndex++;
       if (this.konamiIndex >= this.konamiSequence.length) {
         this.konamiTriggered = true;
-        this._triggerKonami();
+        this.#triggerKonami();
       }
     } else {
       this.konamiIndex = key === this.konamiSequence[0] ? 1 : 0;
     }
   }
 
-  _triggerKonami() {
+  #triggerKonami() {
     playOminous();
-    this._konamiText = t('butcher');
-    this._konamiTextAlpha = 0;
+    this.#konamiText = t('butcher');
+    this.#konamiTextAlpha = 0;
+    // Объект-обёртка для tween
+    this._konamiState = { alpha: 0 };
     this.tweens.add({
-      targets: this, _konamiTextAlpha: 1,
+      targets: this._konamiState, alpha: 1,
       duration: 600, ease: 'Back.easeOut',
+      onUpdate: () => { this.#konamiTextAlpha = this._konamiState.alpha; },
     });
     this.camera.shake(200, 0.01);
   }
@@ -326,7 +345,7 @@ export class MenuScene extends Scene {
     const ui = this._ui;
 
     // === Фон ===
-    ctx.drawImage(this._bgCanvas, 0, 0, W, H);
+    ctx.drawImage(this.#bgCanvas, 0, 0, W, H);
 
     // === Луна ===
     ctx.fillStyle = '#00F5D4';
@@ -345,7 +364,7 @@ export class MenuScene extends Scene {
     // === Деревья ===
     ctx.fillStyle = '#0E1225';
     ctx.globalAlpha = 0.4;
-    for (const tree of this._trees) {
+    for (const tree of this.#trees) {
       ctx.fillRect(tree.x - tree.w / 2, tree.y - tree.h, tree.w, tree.h);
       for (const b of tree.branches) {
         ctx.fillRect(tree.x, b.y, b.len * b.dir, 2);
@@ -361,7 +380,7 @@ export class MenuScene extends Scene {
     ctx.fillRect(0, H - 250, W, 100);
 
     // === Неоновые искры ===
-    for (const p of this._particles) {
+    for (const p of this.#particles) {
       p.y += p.speed * (delta / 1000);
       p.x += p.drift * (delta / 1000);
       if (p.speed > 0 && p.y > H + 5) { p.y = -5; p.x = between(0, W); }
@@ -381,11 +400,11 @@ export class MenuScene extends Scene {
     }
 
     // === Glow titles ===
-    const titleY = this._titleFloat.y;
+    const titleY = this.#titleFloat.y;
 
     // Glow layers (пульсирующие)
-    for (let i = 0; i < this._glowPhases.length; i++) {
-      const g = this._glowPhases[i];
+    for (let i = 0; i < this.#glowPhases.length; i++) {
+      const g = this.#glowPhases[i];
       g.phase += delta * 0.001;
       const a = (0.18 + i * 0.06) * (0.5 + 0.5 * Math.sin(g.phase * (0.5 + i * 0.2)));
       ctx.globalAlpha = a * ui.titleAlpha;
@@ -420,29 +439,29 @@ export class MenuScene extends Scene {
     const crackRight = W * 0.75;
     ctx.moveTo(crackLeft, crackY);
     // Используем стабильные значения (не рандомные каждый кадр)
-    if (!this._crackPoints) {
-      this._crackPoints = [];
+    if (!this.#crackPoints) {
+      this.#crackPoints = [];
       for (let i = 1; i <= 20; i++) {
-        this._crackPoints.push({ x: crackLeft + (crackRight - crackLeft) * (i / 20), y: crackY + (Math.random() - 0.5) * 4 });
+        this.#crackPoints.push({ x: crackLeft + (crackRight - crackLeft) * (i / 20), y: crackY + (Math.random() - 0.5) * 4 });
       }
     }
-    for (const p of this._crackPoints) {
+    for (const p of this.#crackPoints) {
       ctx.lineTo(p.x, p.y);
     }
     ctx.stroke();
 
     // Подзаголовок (typewriter)
-    this._subtitleDelay += delta;
-    if (this._subtitleChars < this._subtitleText.length && this._subtitleDelay > 50) {
-      this._subtitleDelay = 0;
-      this._subtitleChars++;
+    this.#subtitleDelay += delta;
+    if (this.#subtitleChars < this.#subtitleText.length && this.#subtitleDelay > 50) {
+      this.#subtitleDelay = 0;
+      this.#subtitleChars++;
     }
     ctx.globalAlpha = ui.subtitleAlpha;
     ctx.font = `italic 16px ${NEON_FONT}`;
     ctx.fillStyle = NEON_CYAN_STR;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this._subtitleText.substring(0, this._subtitleChars), W / 2, ui.subtitleY);
+    ctx.fillText(this.#subtitleText.substring(0, this.#subtitleChars), W / 2, ui.subtitleY);
 
     // === Кнопка CLIMB — пульсация самой кнопки ===
     const btnW = 250, btnH = 64;
@@ -541,7 +560,7 @@ export class MenuScene extends Scene {
     ctx.fillText(t('top_button'), W / 2, ui.topTextY);
 
     // === Skin Carousel ===
-    this._skinCarousel.draw(ctx);
+    this.#skinCarousel.draw(ctx);
 
     // === Подсказка ===
     ctx.globalAlpha = ui.hintAlpha * ui.hintPulse.alpha;
@@ -568,24 +587,24 @@ export class MenuScene extends Scene {
 
     // === Scanlines ===
     ctx.globalAlpha = 1;
-    ctx.drawImage(this._scanlinesCanvas, 0, 0);
+    ctx.drawImage(this.#scanlinesCanvas, 0, 0);
 
     // === Konami ===
-    if (this._konamiText && this._konamiTextAlpha > 0.01) {
-      ctx.globalAlpha = this._konamiTextAlpha;
+    if (this.#konamiText && this.#konamiTextAlpha > 0.01) {
+      ctx.globalAlpha = this.#konamiTextAlpha;
       ctx.font = `bold 28px ${NEON_FONT}`;
       ctx.fillStyle = NEON_PINK_STR;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.strokeStyle = BG_DARK_STR;
       ctx.lineWidth = 5;
-      ctx.strokeText(this._konamiText, W / 2, H / 2);
-      ctx.fillText(this._konamiText, W / 2, H / 2);
+      ctx.strokeText(this.#konamiText, W / 2, H / 2);
+      ctx.fillText(this.#konamiText, W / 2, H / 2);
     }
 
     // === Transition overlay ===
-    if (this._transitioning) {
-      ctx.globalAlpha = this._transitionAlpha;
+    if (this.#transitioning) {
+      ctx.globalAlpha = this.#transitionAlpha;
       ctx.fillStyle = '#0A0E1A';
       ctx.fillRect(0, 0, W, H);
     }
@@ -594,11 +613,11 @@ export class MenuScene extends Scene {
   }
 
   shutdown() {
-    if (this._onPointerDown) this.input.off('pointerdown', this._onPointerDown);
-    if (this._konamiHandler) document.removeEventListener('keydown', this._konamiHandler);
-    if (this._profileUnsub) this._profileUnsub();
-    if (this._skinCarousel) this._skinCarousel.destroy();
-    if (this._leaderboardUI) { this._leaderboardUI.destroy(); this._leaderboardUI = null; }
+    if (this.#onPointerDown) this.input.off('pointerdown', this.#onPointerDown);
+    if (this.#konamiHandler) document.removeEventListener('keydown', this.#konamiHandler);
+    if (this.#profileUnsub) this.#profileUnsub();
+    if (this.#skinCarousel) this.#skinCarousel.destroy();
+    if (this.#leaderboardUI) { this.#leaderboardUI.destroy(); this.#leaderboardUI = null; }
     if (this.menuHunterObj) this.menuHunterObj.destroy();
   }
 }

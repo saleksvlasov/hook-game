@@ -5,6 +5,9 @@ import { ObjectPool } from './ObjectPool.js';
 // Менеджер болота + пузыри с object pool
 // Canvas 2D API вместо Phaser Graphics
 export class SwampManager {
+  // Приватные поля
+  #floorRects = [];
+
   constructor(scene) {
     this.scene = scene;
     this.active = [];
@@ -12,8 +15,6 @@ export class SwampManager {
       () => ({ x: 0, y: 0, size: 0, life: 0, maxLife: 0, speed: 0 }),
       (b) => { b.life = 0; }
     );
-    // Генерируем "текстуру" пола один раз
-    this._floorRects = [];
   }
 
   create() {
@@ -23,7 +24,7 @@ export class SwampManager {
     const sw = W * 5;
     for (let x = sx; x < sx + sw; x += 8) {
       const h = 1 + Math.random() * 3;
-      this._floorRects.push({ x, h, alpha: 0.1 + Math.random() * 0.1 });
+      this.#floorRects.push({ x, h, alpha: 0.1 + Math.random() * 0.1 });
     }
   }
 
@@ -92,7 +93,7 @@ export class SwampManager {
 
     // Рандомные прямоугольники текстуры
     ctx.fillStyle = '#2A3050';
-    for (const r of this._floorRects) {
+    for (const r of this.#floorRects) {
       ctx.globalAlpha = r.alpha;
       ctx.fillRect(r.x, GROUND_Y - 16 - r.h, 6, r.h);
     }

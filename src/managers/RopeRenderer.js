@@ -1,12 +1,16 @@
 // Рендер верёвки — Bezier кривая с неоновым cyan свечением
 // Canvas 2D API вместо Phaser Graphics
 export class RopeRenderer {
+  // Приватные поля
+  #visible = false;
+  #ax = 0;
+  #ay = 0;
+  #px = 0;
+  #py = 0;
+  #ropeLength = 0;
+
   constructor(scene) {
     this.scene = scene;
-    this._visible = false;
-    this._ax = 0; this._ay = 0;
-    this._px = 0; this._py = 0;
-    this._ropeLength = 0;
   }
 
   create() {
@@ -15,22 +19,22 @@ export class RopeRenderer {
 
   // Запомнить данные для отрисовки (вызывается из GameScene)
   setPoints(ax, ay, px, py, ropeLength) {
-    this._visible = true;
-    this._ax = ax; this._ay = ay;
-    this._px = px; this._py = py;
-    this._ropeLength = ropeLength;
+    this.#visible = true;
+    this.#ax = ax; this.#ay = ay;
+    this.#px = px; this.#py = py;
+    this.#ropeLength = ropeLength;
   }
 
   clear() {
-    this._visible = false;
+    this.#visible = false;
   }
 
   draw(ctx) {
-    if (!this._visible) return;
+    if (!this.#visible) return;
 
-    const ax = this._ax, ay = this._ay;
-    const px = this._px, py = this._py;
-    const ropeLength = this._ropeLength;
+    const ax = this.#ax, ay = this.#ay;
+    const px = this.#px, py = this.#py;
+    const ropeLength = this.#ropeLength;
 
     const midX = (ax + px) / 2;
     const midY = (ay + py) / 2;
@@ -43,24 +47,24 @@ export class RopeRenderer {
     ctx.globalAlpha = 0.3;
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 4;
-    this._bezier(ctx, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
+    this.#bezier(ctx, ax + 1, ay + 2, cpX + 1, cpY + 2, px + 1, py + 2);
 
     // Основная верёвка — neon cyan
     ctx.globalAlpha = 0.7;
     ctx.strokeStyle = '#00F5D4';
     ctx.lineWidth = 2.5;
-    this._bezier(ctx, ax, ay, cpX, cpY, px, py);
+    this.#bezier(ctx, ax, ay, cpX, cpY, px, py);
 
     // Highlight — холодный белый блик
     ctx.globalAlpha = 0.25;
     ctx.strokeStyle = '#E0F0FF';
     ctx.lineWidth = 1;
-    this._bezier(ctx, ax, ay - 1, cpX, cpY - 1, px, py - 1);
+    this.#bezier(ctx, ax, ay - 1, cpX, cpY - 1, px, py - 1);
 
     ctx.globalAlpha = 1;
   }
 
-  _bezier(ctx, x1, y1, cx, cy, x2, y2) {
+  #bezier(ctx, x1, y1, cx, cy, x2, y2) {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     // Квадратичная Безье

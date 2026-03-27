@@ -74,12 +74,12 @@ export class AnchorManager {
       ctx.save();
       ctx.translate(a.x, a.y);
       ctx.scale(a.scale, a.scale);
-      this._drawButcherHook(ctx, a.highlighted);
+      this.#drawButcherHook(ctx, a.highlighted);
       ctx.restore();
     }
   }
 
-  _drawButcherHook(ctx, active) {
+  #drawButcherHook(ctx, active) {
     // Стержень — тёмная сталь
     ctx.fillStyle = '#2A3050';
     ctx.globalAlpha = 1;

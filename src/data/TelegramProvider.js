@@ -12,13 +12,16 @@ export function getCurrentWeek() {
 }
 
 export class TelegramProvider {
+  // Приватные поля
+  #initData;
+
   constructor() {
-    this._initData = window.Telegram?.WebApp?.initData || '';
+    this.#initData = window.Telegram?.WebApp?.initData || '';
   }
 
   // Загрузить профиль с сервера. Возвращает null при ошибке.
   async loadProfile() {
-    const server = await this._fetchServer('/sync-profile', {
+    const server = await this.#fetchServer('/sync-profile', {
       clientData: {},
     });
 
@@ -38,30 +41,30 @@ export class TelegramProvider {
   // Сохранить поле на сервере
   async saveField(key, value) {
     if (key === 'activeSkin') {
-      this._fireAndForget('/save-active-skin', { skinId: value });
+      this.#fireAndForget('/save-active-skin', { skinId: value });
     }
     if (key === 'moonReached' && value === true) {
-      this._fireAndForget('/save-moon', {});
+      this.#fireAndForget('/save-moon', {});
     }
     if (key === 'lang') {
-      this._fireAndForget('/save-lang', { lang: value });
+      this.#fireAndForget('/save-lang', { lang: value });
     }
   }
 
   // Сохранить рекорд на сервере
   async saveScore(score) {
-    const server = await this._fetchServer('/save-score', { score });
+    const server = await this.#fetchServer('/save-score', { score });
     return server || { newBest: false, score };
   }
 
   // Сохранить результат игры + обновить челлендж
   async saveChallenge(height, hitCount, gameTime) {
-    return this._fetchServer('/save-challenge', { height, hitCount, gameTime });
+    return this.#fetchServer('/save-challenge', { height, hitCount, gameTime });
   }
 
   // Забрать скин за челлендж
   async claimSkin() {
-    return this._fetchServer('/claim-skin', {});
+    return this.#fetchServer('/claim-skin', {});
   }
 
   // Загрузить лидерборд
@@ -77,18 +80,18 @@ export class TelegramProvider {
   }
 
   isAuthorized() {
-    return !!this._initData;
+    return !!this.#initData;
   }
 
   // --- Приватные ---
 
-  async _fetchServer(path, body) {
-    if (!this._initData) return null;
+  async #fetchServer(path, body) {
+    if (!this.#initData) return null;
     try {
       const resp = await fetch(`${WORKER_URL}${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: this._initData, ...body }),
+        body: JSON.stringify({ initData: this.#initData, ...body }),
       });
       if (!resp.ok) return null;
       return await resp.json();
@@ -97,7 +100,7 @@ export class TelegramProvider {
     }
   }
 
-  _fireAndForget(path, body) {
-    this._fetchServer(path, body).catch(() => {});
+  #fireAndForget(path, body) {
+    this.#fetchServer(path, body).catch(() => {});
   }
 }

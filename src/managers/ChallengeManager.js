@@ -15,17 +15,17 @@ export class ChallengeManager {
     this.week = getCurrentWeek();
     // Данные приходят из profile (который уже загрузил с сервера)
     this.data = { unlockedSkins: profile.unlockedSkins, weeklyProgress: { ...profile.weeklyProgress } };
-    this._ensureWeekChallenge();
+    this.#ensureWeekChallenge();
     this.cleanupOldWeeks();
 
     // Подписка: когда серверные данные придут — обновить локальное состояние
     profile.onUpdated((serverData) => {
-      this._syncFromServer(serverData);
+      this.#syncFromServer(serverData);
     });
   }
 
   // Обновить состояние из серверных данных (сервер = правда)
-  _syncFromServer(serverData) {
+  #syncFromServer(serverData) {
     if (!serverData?.weeklyProgress) return;
 
     const weekKey = `week${this.week}`;
@@ -55,7 +55,7 @@ export class ChallengeManager {
   }
 
   // Генерация испытания для текущей недели (детерминированная по номеру недели)
-  _ensureWeekChallenge() {
+  #ensureWeekChallenge() {
     const weekKey = `week${this.week}`;
     const existing = this.data.weeklyProgress[weekKey];
 

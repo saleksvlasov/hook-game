@@ -50,9 +50,8 @@ function resolveEase(ease) {
 // === TweenManager ===
 
 export class TweenManager {
-  constructor() {
-    this._tweens = [];
-  }
+  // Приватные поля
+  #tweens = [];
 
   // Добавить tween — совместимый с Phaser API
   // config: { targets, duration, delay, ease, yoyo, repeat, onComplete, onUpdate, ...props }
@@ -88,7 +87,7 @@ export class TweenManager {
         }
       }
 
-      this._tweens.push({
+      this.#tweens.push({
         target,
         props,
         startValues,
@@ -109,8 +108,8 @@ export class TweenManager {
 
   // Обновить все tweens — вызывается каждый кадр
   update(delta) {
-    for (let i = this._tweens.length - 1; i >= 0; i--) {
-      const tw = this._tweens[i];
+    for (let i = this.#tweens.length - 1; i >= 0; i--) {
+      const tw = this.#tweens[i];
       // Защита: clear() мог обнулить массив во время итерации (switchScene из onComplete)
       if (!tw) break;
 
@@ -164,10 +163,10 @@ export class TweenManager {
             if (tw.onComplete) tw.onComplete();
             // Swap-and-pop вместо splice (O(1) вместо O(n))
             // Guard: onComplete мог вызвать clear()
-            if (this._tweens.length > 0) {
-              const last = this._tweens.length - 1;
-              if (i < last) this._tweens[i] = this._tweens[last];
-              this._tweens.length = last;
+            if (this.#tweens.length > 0) {
+              const last = this.#tweens.length - 1;
+              if (i < last) this.#tweens[i] = this.#tweens[last];
+              this.#tweens.length = last;
             }
           }
         }
@@ -177,11 +176,11 @@ export class TweenManager {
 
   // Остановить все tweens для объекта
   killTweensOf(target) {
-    this._tweens = this._tweens.filter(tw => tw.target !== target);
+    this.#tweens = this.#tweens.filter(tw => tw.target !== target);
   }
 
   // Остановить все tweens
   clear() {
-    this._tweens.length = 0;
+    this.#tweens.length = 0;
   }
 }

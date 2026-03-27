@@ -15,25 +15,24 @@ const NEON_FONT = "'Inter', 'Helvetica Neue', sans-serif";
  * Canvas 2D API — всё рисуется в draw(ctx).
  */
 export class SkinCarousel {
+  // Приватные поля
+  #skinScrollX = 0;
+  #tooltipSkinIndex = -1;
+  #tooltipVisible = false;
+  #dragging = false;
+  #dragStartX = 0;
+  #totalDragDist = 0;
+  #onPointerDown = null;
+  #onPointerMove = null;
+  #onPointerUp = null;
+
   constructor(scene) {
     this.scene = scene;
     this.skinSelectorOpen = false;
-    this._skinScrollX = 0;
-    this._tooltipSkinIndex = -1;
-    this._tooltipVisible = false;
-
-    // Pointer state
-    this._dragging = false;
-    this._dragStartX = 0;
-    this._totalDragDist = 0;
-
-    // Handlers
-    this._onPointerDown = null;
-    this._onPointerMove = null;
-    this._onPointerUp = null;
   }
 
   get isOpen() { return this.skinSelectorOpen; }
+  get hasTooltip() { return this.#tooltipVisible; }
 
   // Обработка тапа когда карусель открыта (вне карусели — закрыть)
   handleTap(x, y) {
@@ -42,27 +41,27 @@ export class SkinCarousel {
     // Если тап в зоне карусели — обрабатывается через pointer handlers
     // Если тап вне — закрываем карусель
     if (y < stripY - 45 || y > stripY + 45) {
-      this._close();
+      this.#close();
     }
   }
 
   toggle() {
     if (this.skinSelectorOpen) {
-      this._close();
+      this.#close();
     } else {
-      this._open();
+      this.#open();
     }
   }
 
-  _close() {
+  #close() {
     this.skinSelectorOpen = false;
-    this._tooltipVisible = false;
-    this._removePointerListeners();
+    this.#tooltipVisible = false;
+    this.#removePointerListeners();
   }
 
-  _open() {
+  #open() {
     this.skinSelectorOpen = true;
-    this._tooltipVisible = false;
+    this.#tooltipVisible = false;
 
     const cellW = 56;
     const activeSkin = profile.activeSkin;
@@ -72,57 +71,56 @@ export class SkinCarousel {
 
     // Начальный offset
     const centerOffset = W / 2 - (activeIdx >= 0 ? activeIdx : 0) * cellW - cellW / 2;
-    this._skinScrollX = clamp(centerOffset, W - totalW, 0);
+    this.#skinScrollX = clamp(centerOffset, W - totalW, 0);
 
-    this._setupPointerListeners();
+    this.#setupPointerListeners();
   }
 
-  _setupPointerListeners() {
+  #setupPointerListeners() {
     const cellW = 56;
     const totalW = SKINS.length * cellW;
     const W = this.scene.W;
     const y = this.scene.H * 0.88;
-    const self = this;
 
-    this._onPointerDown = (e) => {
+    this.#onPointerDown = (e) => {
       if (e.y < y - 40 || e.y > y + 40) return;
-      self._dragging = true;
-      self._dragStartX = e.x;
-      self._totalDragDist = 0;
+      this.#dragging = true;
+      this.#dragStartX = e.x;
+      this.#totalDragDist = 0;
     };
 
-    this._onPointerMove = (e) => {
-      if (!self._dragging) return;
-      const dx = e.x - self._dragStartX;
-      self._totalDragDist += Math.abs(dx);
-      self._skinScrollX = clamp(self._skinScrollX + dx, W - totalW, 0);
-      self._dragStartX = e.x;
+    this.#onPointerMove = (e) => {
+      if (!this.#dragging) return;
+      const dx = e.x - this.#dragStartX;
+      this.#totalDragDist += Math.abs(dx);
+      this.#skinScrollX = clamp(this.#skinScrollX + dx, W - totalW, 0);
+      this.#dragStartX = e.x;
     };
 
-    this._onPointerUp = (e) => {
-      if (!self._dragging) return;
-      self._dragging = false;
-      if (self._totalDragDist < 8 && e.y >= y - 40 && e.y <= y + 40) {
+    this.#onPointerUp = (e) => {
+      if (!this.#dragging) return;
+      this.#dragging = false;
+      if (this.#totalDragDist < 8 && e.y >= y - 40 && e.y <= y + 40) {
         const tapX = e.x;
         for (let i = 0; i < SKINS.length; i++) {
-          const skinX = self._skinScrollX + i * cellW + cellW / 2;
+          const skinX = this.#skinScrollX + i * cellW + cellW / 2;
           if (Math.abs(tapX - skinX) < cellW / 2) {
-            self._tooltipSkinIndex = i;
-            self._tooltipVisible = true;
+            this.#tooltipSkinIndex = i;
+            this.#tooltipVisible = true;
             break;
           }
         }
       }
     };
 
-    this.scene.input.on('pointerdown', this._onPointerDown);
-    this.scene.input.on('pointermove', this._onPointerMove);
-    this.scene.input.on('pointerup', this._onPointerUp);
+    this.scene.input.on('pointerdown', this.#onPointerDown);
+    this.scene.input.on('pointermove', this.#onPointerMove);
+    this.scene.input.on('pointerup', this.#onPointerUp);
   }
 
   // Обработка тапа на тултипе (equip/close) — вызывается из MenuScene
   handleTooltipTap(x, y) {
-    if (!this._tooltipVisible) return false;
+    if (!this.#tooltipVisible) return false;
 
     const W = this.scene.W;
     const H = this.scene.H;
@@ -134,16 +132,16 @@ export class SkinCarousel {
     // Внутри карточки?
     if (x >= cx - cardW / 2 && x <= cx + cardW / 2 && y >= cy - cardH / 2 && y <= cy + cardH / 2) {
       // Проверяем кнопку EQUIP (cy + 75..cy + 95)
-      const skin = SKINS[this._tooltipSkinIndex];
+      const skin = SKINS[this.#tooltipSkinIndex];
       if (skin && profile.isSkinUnlocked(skin.id) && skin.id !== profile.activeSkin) {
         if (y >= cy + 70 && y <= cy + 100) {
           profile.setActiveSkin(skin.id);
-          if (this.scene.menuHunterObj) this.scene.menuHunterObj.redraw(this._tooltipSkinIndex);
-          this._tooltipVisible = false;
+          if (this.scene.menuHunterObj) this.scene.menuHunterObj.redraw(this.#tooltipSkinIndex);
+          this.#tooltipVisible = false;
           // Пересоздать карусель для обновления рамки
           if (this.skinSelectorOpen) {
-            this._close();
-            this._open();
+            this.#close();
+            this.#open();
           }
           return true;
         }
@@ -152,7 +150,7 @@ export class SkinCarousel {
     }
 
     // Клик за пределами карточки — закрываем
-    this._tooltipVisible = false;
+    this.#tooltipVisible = false;
     return true;
   }
 
@@ -179,7 +177,7 @@ export class SkinCarousel {
     // Скины
     for (let i = 0; i < SKINS.length; i++) {
       const skin = SKINS[i];
-      const x = this._skinScrollX + i * cellW + cellW / 2;
+      const x = this.#skinScrollX + i * cellW + cellW / 2;
       const unlocked = profile.isSkinUnlocked(skin.id);
       const isActive = skin.id === activeSkin;
 
@@ -214,15 +212,15 @@ export class SkinCarousel {
     ctx.fillText('\u2190 swipe \u00B7 tap to preview \u2192', W / 2, y + 32);
 
     // Тултип-карточка
-    if (this._tooltipVisible) {
-      this._drawTooltip(ctx);
+    if (this.#tooltipVisible) {
+      this.#drawTooltip(ctx);
     }
 
     ctx.globalAlpha = 1;
   }
 
-  _drawTooltip(ctx) {
-    const skin = SKINS[this._tooltipSkinIndex];
+  #drawTooltip(ctx) {
+    const skin = SKINS[this.#tooltipSkinIndex];
     if (!skin) return;
 
     const W = this.scene.W;
@@ -269,7 +267,7 @@ export class SkinCarousel {
     ctx.translate(cx, cy - 40);
     ctx.scale(2, 2);
     ctx.globalAlpha = 1;
-    drawSkinPose(ctx, this._tooltipSkinIndex, 0);
+    drawSkinPose(ctx, this.#tooltipSkinIndex, 0);
     ctx.restore();
 
     // Имя
@@ -316,18 +314,18 @@ export class SkinCarousel {
   }
 
   destroy() {
-    this._removePointerListeners();
-    this._tooltipVisible = false;
+    this.#removePointerListeners();
+    this.#tooltipVisible = false;
     this.skinSelectorOpen = false;
   }
 
-  _removePointerListeners() {
+  #removePointerListeners() {
     const inp = this.scene.input;
-    if (this._onPointerDown) inp.off('pointerdown', this._onPointerDown);
-    if (this._onPointerMove) inp.off('pointermove', this._onPointerMove);
-    if (this._onPointerUp) inp.off('pointerup', this._onPointerUp);
-    this._onPointerDown = null;
-    this._onPointerMove = null;
-    this._onPointerUp = null;
+    if (this.#onPointerDown) inp.off('pointerdown', this.#onPointerDown);
+    if (this.#onPointerMove) inp.off('pointermove', this.#onPointerMove);
+    if (this.#onPointerUp) inp.off('pointerup', this.#onPointerUp);
+    this.#onPointerDown = null;
+    this.#onPointerMove = null;
+    this.#onPointerUp = null;
   }
 }
