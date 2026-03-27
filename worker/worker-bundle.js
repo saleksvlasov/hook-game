@@ -72,6 +72,7 @@ export default {
       if (url.pathname === '/sync-profile') return handleSyncProfile(request, env);
       if (url.pathname === '/save-active-skin') return handleSaveActiveSkin(request, env);
       if (url.pathname === '/save-moon') return handleSaveMoon(request, env);
+      if (url.pathname === '/save-lang') return handleSaveLang(request, env);
       if (url.pathname === '/track-event') return handleTrackEvent(request, env);
     }
 
@@ -418,6 +419,7 @@ async function handleSyncProfile(request, env) {
     activeSkin: challengeData?.activeSkin || serverProfile.activeSkin || 'default',
     weeklyProgress: challengeData?.weeklyProgress || {},
     moonReached: serverProfile.moonReached || false,
+    lang: serverProfile.lang || null,
   });
 }
 
@@ -460,6 +462,28 @@ async function handleSaveMoon(request, env) {
   const userId = String(user.id);
   const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
   profile.moonReached = true;
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+
+  return jsonResponse({ ok: true });
+}
+
+// ---- Save Lang ----
+
+async function handleSaveLang(request, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData, lang } = body;
+  if (!initData || !lang) return jsonResponse({ error: 'Missing fields' }, 400);
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+  const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+  profile.lang = lang;
   await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
 
   return jsonResponse({ ok: true });

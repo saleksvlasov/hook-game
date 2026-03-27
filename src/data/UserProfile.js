@@ -1,7 +1,8 @@
 import { TelegramProvider, getCurrentWeek } from './TelegramProvider.js';
+import { setLang } from '../i18n.js';
 
 // Единая точка входа к данным пользователя
-// Архитектура: СЕРВЕР = единственный источник правды, localStorage = кэш
+// Архитектура: СЕРВЕР = единственный источник правды, localStorage убран полностью
 class UserProfile {
   constructor() {
     this._provider = null;
@@ -10,27 +11,26 @@ class UserProfile {
     this._initialized = false;
   }
 
-  // Инициализация — вызвать один раз в main.js (await обязателен)
+  // Инициализация — загружает данные с сервера
+  // Бросает ошибку если сервер недоступен
   async init() {
     this._provider = new TelegramProvider();
 
-    // Мгновенно: кэш для первого кадра
-    this._data = this._provider.readCache();
+    const serverData = await this._provider.loadProfile();
+    if (!serverData) {
+      throw new Error('Server unavailable');
+    }
+
+    this._data = serverData;
     this._initialized = true;
 
-    // Async: загружаем серверные данные (сервер ПЕРЕЗАПИСЫВАЕТ кэш)
-    try {
-      const serverData = await this._provider.loadProfile();
-      if (serverData) {
-        this._data = serverData;
-        this._notify();
-      }
-    } catch {
-      // Сервер недоступен — работаем с кэшем
+    // Установить язык из серверного профиля
+    if (serverData.lang) {
+      setLang(serverData.lang);
     }
   }
 
-  // --- Синхронные геттеры (из кэша/серверных данных) ---
+  // --- Синхронные геттеры ---
 
   get bestScore() { return this._data?.bestScore || 0; }
   get moonReached() { return this._data?.moonReached || false; }
@@ -46,7 +46,7 @@ class UserProfile {
     return this.unlockedSkins.includes(skinId);
   }
 
-  // --- Сеттеры (обновляют _data + сервер + кэш) ---
+  // --- Сеттеры ---
 
   saveBest(score) {
     if (score <= this._data.bestScore) return false;
@@ -74,12 +74,13 @@ class UserProfile {
 
   setLang(code) {
     this._data.lang = code;
+    setLang(code);
     this._provider.saveField('lang', code).catch(() => {});
   }
 
   incrementGames() {
+    // per-session — не сохраняется на сервер
     this._data.gamesCount = (this._data.gamesCount || 0) + 1;
-    this._provider.saveField('gamesCount', this._data.gamesCount).catch(() => {});
     return this._data.gamesCount;
   }
 
@@ -108,7 +109,7 @@ class UserProfile {
     return this._provider.fetchLeaderboard();
   }
 
-  // --- Подписка на серверные обновления ---
+  // --- Подписка на обновления ---
 
   onUpdated(callback) {
     this._listeners.push(callback);

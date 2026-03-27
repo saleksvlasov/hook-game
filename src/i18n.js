@@ -1,5 +1,3 @@
-const LANG_KEY = 'thehook_lang';
-
 export const LANGS = {
   en: {
     title_sub: 'How high can you go?',
@@ -51,6 +49,8 @@ export const LANGS = {
     sdk_error_title: 'SOMETHING WENT WRONG',
     sdk_error_msg: 'Failed to load required components.\nPlease restart the app.',
     sdk_error_retry: 'RETRY',
+    server_error_title: 'SERVER UNAVAILABLE',
+    server_error_msg: 'Could not connect to the server.\nCheck your connection and try again.',
   },
   ru: {
     title_sub: 'Как высоко заберёшься?',
@@ -102,12 +102,13 @@ export const LANGS = {
     sdk_error_title: 'ЧТО-ТО ПОШЛО НЕ ТАК',
     sdk_error_msg: 'Не удалось загрузить необходимые компоненты.\nПерезапустите приложение.',
     sdk_error_retry: 'ПОВТОРИТЬ',
+    server_error_title: 'СЕРВЕР НЕДОСТУПЕН',
+    server_error_msg: 'Не удалось подключиться к серверу.\nПроверьте соединение и попробуйте снова.',
   },
 };
 
+// Определение языка: сервер → navigator → 'en'
 function detectLang() {
-  const saved = localStorage.getItem(LANG_KEY);
-  if (saved && LANGS[saved]) return saved;
   return navigator.language.startsWith('ru') ? 'ru' : 'en';
 }
 
@@ -117,9 +118,9 @@ export function getLang() {
   return currentLang;
 }
 
+// Установить язык (вызывается после загрузки профиля с сервера)
 export function setLang(code) {
-  currentLang = code;
-  try { localStorage.setItem(LANG_KEY, code); } catch(e) { /* quota exceeded */ }
+  if (code && LANGS[code]) currentLang = code;
 }
 
 export function t(key) {

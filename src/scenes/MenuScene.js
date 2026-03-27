@@ -2,7 +2,7 @@ import { Scene } from '../engine/Scene.js';
 import { between } from '../engine/math.js';
 import { profile } from '../data/index.js';
 import { playOminous } from '../audio.js';
-import { t, getLang, setLang } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 import { drawGlassButton, drawChip } from '../managers/UIFactory.js';
 import { FONT_MONO } from '../constants.js';
 import { SkinCarousel } from '../managers/SkinCarousel.js';
@@ -273,7 +273,6 @@ export class MenuScene extends Scene {
     const langY = Math.max(envTop, 10) + 16;
     if (x >= langX - 23 && x <= langX + 23 && y >= langY - 13 && y <= langY + 13) {
       const newLang = getLang() === 'ru' ? 'en' : 'ru';
-      setLang(newLang);
       profile.setLang(newLang);
       this.startScene('MenuScene');
       return;

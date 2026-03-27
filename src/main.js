@@ -22,9 +22,57 @@ function waitForGlobal(name, timeoutMs, intervalMs = 30) {
   });
 }
 
+// Загрузочный экран — показывается пока ждём сервер
+function showLoadingScreen() {
+  const root = document.createElement('div');
+  root.id = 'loading-screen';
+  root.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0A0E1A;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    color: #E0E0E0; text-align: center;
+  `;
+
+  // Заголовок
+  const title = document.createElement('div');
+  title.textContent = 'THE HOOK';
+  title.style.cssText = `
+    font-size: 42px; font-weight: 700; color: #FFB800;
+    letter-spacing: 3px; margin-bottom: 32px;
+  `;
+
+  // Индикатор загрузки — пульсирующий крюк
+  const spinner = document.createElement('div');
+  spinner.style.cssText = `
+    width: 24px; height: 24px;
+    border: 3px solid rgba(0, 245, 212, 0.2);
+    border-top-color: #00F5D4;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  `;
+
+  // CSS анимация
+  const style = document.createElement('style');
+  style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+  document.head.appendChild(style);
+
+  root.appendChild(title);
+  root.appendChild(spinner);
+  document.body.appendChild(root);
+
+  return root;
+}
+
+// Убрать загрузочный экран
+function removeLoadingScreen() {
+  const el = document.getElementById('loading-screen');
+  if (el) el.remove();
+}
+
 // Экран ошибки — блокирует запуск, предлагает перезапуск
-function showErrorScreen() {
-  // Убираем всё что могло появиться
+function showErrorScreen(titleKey, msgKey) {
+  removeLoadingScreen();
   document.body.innerHTML = '';
 
   const root = document.createElement('div');
@@ -36,9 +84,9 @@ function showErrorScreen() {
     color: #E0E0E0; padding: 32px; text-align: center;
   `;
 
-  const title = document.createElement('div');
-  title.textContent = t('sdk_error_title');
-  title.style.cssText = `
+  const titleEl = document.createElement('div');
+  titleEl.textContent = t(titleKey);
+  titleEl.style.cssText = `
     font-size: 22px; font-weight: 700; color: #FF2E63;
     margin-bottom: 16px; letter-spacing: 1px;
   `;
@@ -48,7 +96,7 @@ function showErrorScreen() {
     font-size: 15px; line-height: 1.6; color: #8892A4;
     margin-bottom: 32px; white-space: pre-line;
   `;
-  msg.textContent = t('sdk_error_msg');
+  msg.textContent = t(msgKey);
 
   const btn = document.createElement('button');
   btn.textContent = t('sdk_error_retry');
@@ -60,28 +108,28 @@ function showErrorScreen() {
   `;
   btn.addEventListener('click', () => location.reload());
 
-  root.appendChild(title);
+  root.appendChild(titleEl);
   root.appendChild(msg);
   root.appendChild(btn);
   document.body.appendChild(root);
 }
 
-// Инициализация — ждём все SDK, если хоть один не загрузился — экран ошибки
+// Инициализация
 (async () => {
+  // Показываем загрузочный экран сразу
+  showLoadingScreen();
+
   // Параллельное ожидание всех SDK
   const [tgLoaded, adsLoaded] = await Promise.all([
-    // Telegram SDK — ждём только если мы внутри Telegram
     isTgEnv ? waitForGlobal('Telegram', 3000) : Promise.resolve(true),
-    // Adsgram SDK — нужен всегда (загружается безусловно в index.html)
     waitForGlobal('Adsgram', 4000, 50),
   ]);
 
-  // Дополнительная проверка: Telegram SDK загрузился, но WebApp недоступен
   const tgOk = !isTgEnv || (tgLoaded && window.Telegram?.WebApp);
 
   if (!tgOk || !adsLoaded) {
     console.error('[BOOT] SDK load failed — Telegram:', tgOk, 'Adsgram:', adsLoaded);
-    showErrorScreen();
+    showErrorScreen('sdk_error_title', 'sdk_error_msg');
     return;
   }
 
@@ -92,21 +140,31 @@ function showErrorScreen() {
     tg.expand();
   }
 
-  // Инициализация профиля — ждём серверные данные перед стартом игры
-  await profile.init();
+  // Инициализация профиля — ждём серверные данные
+  // Если сервер недоступен — показываем экран ошибки
+  try {
+    await profile.init();
+  } catch (e) {
+    console.error('[BOOT] Server unavailable:', e);
+    showErrorScreen('server_error_title', 'server_error_msg');
+    return;
+  }
 
-  // Safe area: set CSS variable from env() for JS access
+  // Убираем загрузочный экран
+  removeLoadingScreen();
+
+  // Safe area
   const sat = getComputedStyle(document.documentElement).getPropertyValue('--sat');
   if (!sat || sat === '0px') {
     const isNotched = /iPhone/.test(navigator.userAgent) && screen.height >= 812;
     document.documentElement.style.setProperty('--sat', isNotched ? '47px' : '0px');
   }
 
-  // Размеры берём после expand() — используем максимальные из доступных
+  // Размеры после expand()
   const W = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const H = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
-  // Корневой контейнер для всех UI overlay — единая точка монтирования
+  // Корневой контейнер для UI overlay
   const gameUI = document.createElement('div');
   gameUI.id = 'game-ui';
   document.body.appendChild(gameUI);
