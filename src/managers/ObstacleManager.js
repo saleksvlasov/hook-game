@@ -217,11 +217,11 @@ export class ObstacleManager {
   }
 
   // Проверка коллизии с жуками (skip type 4 = сердца)
-  checkCollision(playerX, playerY) {
+  checkCollision(playerX, playerY, hitRadius = OBSTACLE_HIT_RADIUS) {
     for (const obs of this.active) {
       if (obs.hit || obs.type === 4) continue;
       const dist = distance(playerX, playerY, obs.x, obs.y);
-      if (dist < OBSTACLE_HIT_RADIUS) {
+      if (dist < hitRadius) {
         obs.hit = true;
         obs.fadeOut = true;
         obs.fadeLife = 300;

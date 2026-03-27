@@ -813,7 +813,7 @@ export class GameScene extends Scene {
 
     // ===== 9. Коллизия с жуками =====
     if (!this.isDead && !this.#heartsDisabled && this.bugHitCooldown <= 0
-        && this.obstacles.checkCollision(p.x, p.y)) {
+        && this.obstacles.checkCollision(p.x, p.y, this.#effectiveConsts.obstacleHitRadius)) {
       this.hitCount++;
       this.hearts = Math.max(0, this.hearts - 1); // -0.5 сердца
       this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
