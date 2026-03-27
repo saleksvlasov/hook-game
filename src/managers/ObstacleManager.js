@@ -1,15 +1,17 @@
 import { between } from '../engine/math.js';
 import { distance } from '../engine/math.js';
+import { seek, flee, wander, arrive, contain, applyForce } from '../engine/Steering.js';
 import {
   ANCHOR_SPACING_Y, GROUND_Y, SPAWN_Y,
   OBSTACLE_START_HEIGHT, OBSTACLE_CHANCE, OBSTACLE_HIT_RADIUS,
   HEART_PICKUP_CHANCE, HEART_PICKUP_MIN_HEIGHT,
   HEART_PICKUP_MIN_DISTANCE, HEART_PICKUP_RADIUS,
+  STEERING,
 } from '../constants.js';
 import { drawBug } from './BugRenderer.js';
 
 // Менеджер жуков-препятствий + пикапы сердец
-// Canvas 2D API вместо Phaser Graphics + Container
+// Canvas 2D API, Steering Behaviors (Craig Reynolds)
 export class ObstacleManager {
   constructor(scene) {
     this.scene = scene;
@@ -70,37 +72,57 @@ export class ObstacleManager {
     const obs = {
       x, y, type, hit: false, baseX: x, baseY: y,
       alpha: 1, fadeOut: false, fadeLife: 0,
-      // Движение — pre-computed параметры по типу
-      mPhase: seed % (Math.PI * 2),
-      mSpeed: 0, mRadiusX: 0, mRadiusY: 0,
+      // Steering — скорость и wander angle
+      vx: 0, vy: 0,
+      maxSpeed: 0, maxForce: 0,
+      wanderAngle: seed % (Math.PI * 2),
+      // Spider patrol — массив целевых точек
+      patrolTargets: null,
+      patrolIdx: 0,
     };
+
+    // Инициализация steering параметров по типу
     switch (type) {
-      case 0: // Beetle — горизонтальный патруль
-        obs.mSpeed = 0.0008 + (seed % 100) / 100 * 0.0006;
-        obs.mRadiusX = 35 + (seed % 50) / 50 * 25;
-        obs.mRadiusY = 3;
+      case 0: { // Beetle — wander + contain
+        const s = STEERING.beetle;
+        obs.maxSpeed = s.maxSpeed;
+        obs.maxForce = s.maxForce;
         break;
-      case 1: // Spider — вертикальный drop/climb
-        obs.mSpeed = 0.0015 + (seed % 100) / 100 * 0.001;
-        obs.mRadiusX = 4;
-        obs.mRadiusY = 30 + (seed % 50) / 50 * 30;
+      }
+      case 1: { // Spider — patrol arrive между точками
+        const s = STEERING.spider;
+        obs.maxSpeed = s.maxSpeed;
+        obs.maxForce = s.maxForce;
+        // Генерируем патрульные точки вокруг базы
+        obs.patrolTargets = [];
+        for (let i = 0; i < s.patrolPoints; i++) {
+          const angle = (i / s.patrolPoints) * Math.PI * 2 + seed;
+          obs.patrolTargets.push({
+            x: x + Math.cos(angle) * s.patrolRadiusX,
+            y: y + Math.sin(angle) * s.patrolRadiusY,
+          });
+        }
         break;
-      case 2: // Scorpion — диагональные рывки с паузами
-        obs.mSpeed = 0.004;
-        obs.mRadiusX = 40;
-        obs.mRadiusY = 30;
+      }
+      case 2: { // Scorpion — wander + flee от игрока
+        const s = STEERING.scorpion;
+        obs.maxSpeed = s.maxSpeed;
+        obs.maxForce = s.maxForce;
         break;
-      case 3: // Firefly — фигура-8 / лемниската
-        obs.mSpeed = 0.002 + (seed % 100) / 100 * 0.001;
-        obs.mRadiusX = 30 + (seed % 40) / 40 * 20;
-        obs.mRadiusY = 20 + (seed % 40) / 40 * 15;
+      }
+      case 3: { // Firefly — wander (высокий jitter)
+        const s = STEERING.firefly;
+        obs.maxSpeed = s.maxSpeed;
+        obs.maxForce = s.maxForce;
         break;
+      }
     }
+
     this.active.push(obs);
   }
 
-  // Обновление: движение по типу + cleanup
-  update(delta, playerY) {
+  // Обновление: steering behaviors + cleanup
+  update(delta, playerY, playerX) {
     const time = this.scene.time.now;
     // Viewport culling — обновляем только видимых (±800px от игрока)
     const visTop = playerY - 800;
@@ -115,63 +137,71 @@ export class ObstacleManager {
       }
       if (obs.hit) continue;
 
-      // Пропускаем далёкие — экономим trig
+      // Пропускаем далёкие — экономим CPU
       if (obs.baseY < visTop || obs.baseY > visBot) continue;
 
-      // Heart pickup — мягкая вертикальная пульсация
+      // Heart pickup — мягкая вертикальная пульсация (без steering)
       if (obs.type === 4) {
         obs.y = obs.baseY + Math.sin(time * obs.mSpeed + obs.mPhase) * obs.mRadiusY;
         obs.alpha = 0.7 + 0.3 * Math.sin(time * 0.004 + obs.mPhase);
         continue;
       }
 
-      // Движение жуков по типу
-      const phase = obs.mPhase;
+      // --- Steering behaviors по типу ---
+      let fx = 0, fy = 0;
+
       switch (obs.type) {
-        case 0: { // Beetle — горизонтальный патруль + лёгкий bob
-          obs.x = obs.baseX + Math.sin(time * obs.mSpeed + phase) * obs.mRadiusX;
-          obs.y = obs.baseY + Math.sin(time * obs.mSpeed * 2.3 + phase) * obs.mRadiusY;
+        case 0: { // Beetle — wander + contain
+          const s = STEERING.beetle;
+          const [wx, wy] = wander(obs, s.wanderRadius, s.wanderDist, s.wanderJitter);
+          const [cx, cy] = contain(obs, obs.baseX, obs.baseY, s.containRadiusX, s.containRadiusY);
+          fx = wx + cx;
+          fy = wy + cy;
           break;
         }
-        case 1: { // Spider — асимметричный drop/climb
-          const cycle = ((time * obs.mSpeed + phase) % (Math.PI * 2)) / (Math.PI * 2);
-          let yOffset;
-          if (cycle < 0.6) {
-            yOffset = (cycle / 0.6) * obs.mRadiusY; // медленный спуск
-          } else {
-            yOffset = (1 - (cycle - 0.6) / 0.4) * obs.mRadiusY; // быстрый подъём
+        case 1: { // Spider — patrol arrive
+          const s = STEERING.spider;
+          const target = obs.patrolTargets[obs.patrolIdx];
+          const [ax, ay] = arrive(obs, target.x, target.y, s.arriveSlowRadius);
+          fx = ax;
+          fy = ay;
+          // Переключаем цель когда достаточно близко
+          const dx = target.x - obs.x;
+          const dy = target.y - obs.y;
+          if (dx * dx + dy * dy < 16) { // < 4px
+            obs.patrolIdx = (obs.patrolIdx + 1) % obs.patrolTargets.length;
           }
-          obs.y = obs.baseY + yOffset;
-          obs.x = obs.baseX + Math.sin(time * 0.001 + phase) * obs.mRadiusX;
+          // Мягкий contain на всякий случай
+          const [cx, cy] = contain(obs, obs.baseX, obs.baseY, s.containRadiusX, s.containRadiusY);
+          fx += cx;
+          fy += cy;
           break;
         }
-        case 2: { // Scorpion — dash-pause (golden angle)
-          const dashCycle = Math.floor((time + phase * 1000) / 1500);
-          const dashT = ((time + phase * 1000) % 1500) / 1500;
-          const prevAngle = dashCycle * 2.39996;
-          const nextAngle = (dashCycle + 1) * 2.39996;
-          if (dashT < 0.3) {
-            // пауза — стоит на месте
-            obs.x = obs.baseX + Math.cos(prevAngle) * obs.mRadiusX;
-            obs.y = obs.baseY + Math.sin(prevAngle) * obs.mRadiusY;
-          } else {
-            // рывок — smoothstep интерполяция
-            const lerpT = (dashT - 0.3) / 0.7;
-            const eased = lerpT * lerpT * (3 - 2 * lerpT);
-            obs.x = obs.baseX + (Math.cos(prevAngle) * (1 - eased) + Math.cos(nextAngle) * eased) * obs.mRadiusX;
-            obs.y = obs.baseY + (Math.sin(prevAngle) * (1 - eased) + Math.sin(nextAngle) * eased) * obs.mRadiusY;
-          }
+        case 2: { // Scorpion — wander + flee от игрока
+          const s = STEERING.scorpion;
+          const [wx, wy] = wander(obs, s.wanderRadius, s.wanderDist, s.wanderJitter);
+          // Flee от игрока если он рядом
+          const px = playerX !== undefined ? playerX : obs.baseX;
+          const [flx, fly] = flee(obs, px, playerY, s.fleeRadius);
+          const [cx, cy] = contain(obs, obs.baseX, obs.baseY, s.containRadiusX, s.containRadiusY);
+          fx = wx * s.wanderWeight + flx * s.fleeWeight + cx;
+          fy = wy * s.wanderWeight + fly * s.fleeWeight + cy;
           break;
         }
-        case 3: { // Firefly — фигура-8
-          const ft = time * obs.mSpeed + phase;
-          obs.x = obs.baseX + Math.sin(ft) * obs.mRadiusX;
-          obs.y = obs.baseY + Math.sin(ft * 2) * obs.mRadiusY;
+        case 3: { // Firefly — wander хаотичный + contain
+          const s = STEERING.firefly;
+          const [wx, wy] = wander(obs, s.wanderRadius, s.wanderDist, s.wanderJitter);
+          const [cx, cy] = contain(obs, obs.baseX, obs.baseY, s.containRadiusX, s.containRadiusY);
+          fx = wx + cx;
+          fy = wy + cy;
+          // Пульсация альфы
           const pulse = 0.5 + 0.5 * Math.sin(time * 0.005 + obs.baseX);
           obs.alpha = 0.7 + pulse * 0.3;
           break;
         }
       }
+
+      applyForce(obs, fx, fy, delta);
     }
 
     // Cleanup

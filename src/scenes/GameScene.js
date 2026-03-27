@@ -576,7 +576,7 @@ export class GameScene extends Scene {
     this.anchorMgr.cleanup(p.y);
 
     this.obstacles.generateUpTo(p.y - 2000, this.anchorMgr.anchors);
-    this.obstacles.update(delta, p.y);
+    this.obstacles.update(delta, p.y, p.x);
 
     // ===== 9. Коллизия с жуками =====
     if (!this.isDead && !this.#heartsDisabled && this.bugHitCooldown <= 0

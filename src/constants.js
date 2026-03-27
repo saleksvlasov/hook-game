@@ -159,4 +159,53 @@ export const BIOMES = [
   },
 ];
 
+// ===== STEERING BEHAVIORS =====
+// Параметры для каждого типа жука — Craig Reynolds steering
+export const STEERING = {
+  // Beetle — медленный бродяга, бродит вокруг базы
+  beetle: {
+    maxSpeed: 0.8,
+    maxForce: 0.02,
+    wanderRadius: 20,
+    wanderDist: 40,
+    wanderJitter: 0.3,
+    containRadiusX: 50,
+    containRadiusY: 25,
+  },
+  // Spider — патруль между точками паутины
+  spider: {
+    maxSpeed: 1.2,
+    maxForce: 0.04,
+    arriveSlowRadius: 30,
+    patrolPoints: 3,
+    patrolRadiusX: 40,
+    patrolRadiusY: 50,
+    containRadiusX: 60,
+    containRadiusY: 70,
+  },
+  // Scorpion — агрессивный, ходит к игроку но убегает если слишком близко
+  scorpion: {
+    maxSpeed: 1.5,
+    maxForce: 0.05,
+    wanderRadius: 15,
+    wanderDist: 30,
+    wanderJitter: 0.4,
+    fleeRadius: 80,
+    fleeWeight: 1.5,
+    wanderWeight: 0.6,
+    containRadiusX: 60,
+    containRadiusY: 45,
+  },
+  // Firefly — хаотичный мерцающий бродяга
+  firefly: {
+    maxSpeed: 0.6,
+    maxForce: 0.015,
+    wanderRadius: 25,
+    wanderDist: 50,
+    wanderJitter: 0.8,
+    containRadiusX: 40,
+    containRadiusY: 30,
+  },
+};
+
 // Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()
