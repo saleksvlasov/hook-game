@@ -78,7 +78,7 @@ export class Camera {
     // Flash
     if (this.#flashElapsed < this.#flashDuration) {
       this.#flashElapsed += delta;
-      this.#flashAlpha = 1 - this.#flashElapsed / this.#flashDuration;
+      this.#flashAlpha = this.#flashDuration > 0 ? 1 - this.#flashElapsed / this.#flashDuration : 0;
     } else {
       this.#flashAlpha = 0;
     }
@@ -86,7 +86,7 @@ export class Camera {
     // FadeIn
     if (this.#fadeActive) {
       this.#fadeElapsed += delta;
-      this.#fadeAlpha = 1 - this.#fadeElapsed / this.#fadeDuration;
+      this.#fadeAlpha = this.#fadeDuration > 0 ? 1 - this.#fadeElapsed / this.#fadeDuration : 0;
       if (this.#fadeAlpha <= 0) {
         this.#fadeAlpha = 0;
         this.#fadeActive = false;

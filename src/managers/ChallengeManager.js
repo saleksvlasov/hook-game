@@ -19,9 +19,19 @@ export class ChallengeManager {
     this.cleanupOldWeeks();
 
     // Подписка: когда серверные данные придут — обновить локальное состояние
-    profile.onUpdated((serverData) => {
+    this.#unsubscribe = profile.onUpdated((serverData) => {
       this.#syncFromServer(serverData);
     });
+  }
+
+  // Приватное поле для отписки
+  #unsubscribe = null;
+
+  destroy() {
+    if (this.#unsubscribe) {
+      this.#unsubscribe();
+      this.#unsubscribe = null;
+    }
   }
 
   // Обновить состояние из серверных данных (сервер = правда)

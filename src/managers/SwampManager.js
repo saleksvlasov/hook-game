@@ -87,7 +87,7 @@ export class SwampManager {
     ctx.globalAlpha = 0.9;
     ctx.fillRect(sx, GROUND_Y - 16, sw, 6);
 
-    ctx.fillStyle = '#2a1a10';
+    ctx.fillStyle = '#2A3050';
     ctx.globalAlpha = 0.3;
     ctx.fillRect(sx, GROUND_Y - 14, sw, 4);
 
@@ -104,7 +104,7 @@ export class SwampManager {
       const frac = b.life / b.maxLife;
       const alpha = frac * 0.25;
       ctx.globalAlpha = alpha;
-      ctx.strokeStyle = '#4A3020';
+      ctx.strokeStyle = '#4A5580';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.size * frac, 0, Math.PI * 2);
