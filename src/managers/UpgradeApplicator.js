@@ -15,6 +15,15 @@ export function getEffectiveConstants() {
     hookCooldown: HOOK_COOLDOWN * (1 - lvl('quick_hook') * UPGRADES.quick_hook.effect),
     obstacleHitRadius: OBSTACLE_HIT_RADIUS * (1 - lvl('bug_armor') * UPGRADES.bug_armor.effect),
     emberMultiplier: 1 + lvl('ember_magnet') * UPGRADES.ember_magnet.effect,
+    // Уровни перков для визуального отображения в HUD
+    perkLevels: {
+      hook_range: lvl('hook_range'),
+      swing_power: lvl('swing_power'),
+      iron_heart: lvl('iron_heart'),
+      quick_hook: lvl('quick_hook'),
+      bug_armor: lvl('bug_armor'),
+      ember_magnet: lvl('ember_magnet'),
+    },
   };
 }
 

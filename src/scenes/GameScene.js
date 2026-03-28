@@ -146,6 +146,7 @@ export class GameScene extends Scene {
 
     this.hud = new HUDManager(this);
     this.hud.create(this.challengeMgr);
+    this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
 
     this.gameOverUI = new GameOverUI(this);
     this.gameOverUI.create({
@@ -516,6 +517,7 @@ export class GameScene extends Scene {
     // Еженедельные испытания — обновить для нового рана
     this.challengeMgr = new ChallengeManager();
     this.hud.create(this.challengeMgr);
+    this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
 
     // Камера
     this.camera.scrollX = 0;
@@ -676,7 +678,7 @@ export class GameScene extends Scene {
     ctx.globalAlpha = 1;
 
     // 5.9 Жуки
-    this.obstacles.draw(ctx);
+    this.obstacles.draw(ctx, this.#effectiveConsts.obstacleHitRadius);
 
     // 5.10 Camera reset
     this.camera.resetTransform(ctx);

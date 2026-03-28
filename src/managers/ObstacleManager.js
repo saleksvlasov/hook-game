@@ -248,10 +248,14 @@ export class ObstacleManager {
   }
 
   // Отрисовка — только видимые
-  draw(ctx) {
+  draw(ctx, armorRadius = 0) {
     const cam = this.scene.camera;
     const top = cam.scrollY - 50;
     const bot = cam.scrollY + this.scene.H + 50;
+    const showShield = armorRadius > 0 && armorRadius < OBSTACLE_HIT_RADIUS;
+    const shieldAlpha = showShield
+      ? 0.08 + 0.07 * Math.sin(performance.now() * 0.004)
+      : 0;
     for (const obs of this.active) {
       if (obs.alpha <= 0) continue;
       if (obs.y < top || obs.y > bot) continue;
@@ -259,6 +263,15 @@ export class ObstacleManager {
       ctx.translate(obs.x, obs.y);
       ctx.globalAlpha = obs.alpha;
       drawBug(ctx, obs.type);
+      // Shield ring — показываем уменьшенный радиус коллизии
+      if (showShield && obs.type !== 4) {
+        ctx.globalAlpha = shieldAlpha;
+        ctx.strokeStyle = '#00F5D4';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, armorRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.restore();
     }
     ctx.globalAlpha = 1;

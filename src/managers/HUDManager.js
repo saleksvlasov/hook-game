@@ -37,6 +37,9 @@ export class HUDManager {
   // Embers
   #embersEarned = 0;
 
+  // Perk levels для отображения иконок
+  #perkLevels = null;
+
   // Safe area отступ
   #safeTop;
 
@@ -99,6 +102,10 @@ export class HUDManager {
 
   updateEmbers(count) {
     this.#embersEarned = count;
+  }
+
+  setPerkLevels(perkLevels) {
+    this.#perkLevels = perkLevels;
   }
 
   updateHearts(hearts, maxHearts, bonusTimer) {
@@ -323,6 +330,63 @@ export class HUDManager {
       ctx.fillText(label, ex + 11, ey);
       ctx.globalAlpha = 1;
     }
+
+    // === Иконки активных перков ===
+    this.#drawPerkIcons(ctx, safeTop);
+  }
+
+  // Иконки активных перков — под ember-счётчиком
+  #drawPerkIcons(ctx, safeTop) {
+    if (!this.#perkLevels) return;
+
+    const PERKS = [
+      { id: 'hook_range',   icon: '\u2197', color: '#00F5D4' },  // ↗
+      { id: 'swing_power',  icon: '\u26A1', color: '#FFB800' },  // ⚡
+      { id: 'iron_heart',   icon: '\u2665', color: '#FF2E63' },  // ♥
+      { id: 'quick_hook',   icon: '\u21BB', color: '#00F5D4' },  // ↻
+      { id: 'bug_armor',    icon: '\u25C8', color: '#00F5D4' },  // ◈
+      { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },  // ❂
+    ];
+
+    let x = 8;
+    const y = safeTop + 42;
+
+    for (const perk of PERKS) {
+      const lvl = this.#perkLevels[perk.id];
+      if (!lvl) continue;
+
+      const label = `${perk.icon}${lvl}`;
+      ctx.font = `bold 11px ${FONT_MONO}`;
+      const tw = ctx.measureText(label).width + 10;
+      const h = 16;
+
+      // Pill подложка
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = '#0A0E1A';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y - h / 2, tw, h, h / 2);
+      else ctx.rect(x, y - h / 2, tw, h);
+      ctx.fill();
+
+      // Рамка
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = perk.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y - h / 2, tw, h, h / 2);
+      else ctx.rect(x, y - h / 2, tw, h);
+      ctx.stroke();
+
+      // Текст
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = perk.color;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x + 5, y);
+
+      x += tw + 4;
+    }
+    ctx.globalAlpha = 1;
   }
 
   // Рисование одного HUD-сердца (full/half/empty)
