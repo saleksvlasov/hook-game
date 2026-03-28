@@ -281,9 +281,10 @@ export class ObstacleManager {
     return false;
   }
 
-  // Уничтожение жуков пилой (мгновенно, без knockback)
+  // Уничтожение жуков пилой (мгновенно, без knockback).
+  // Возвращает массив {x,y} убитых жуков (пустой если ничего не убито).
   checkSaw(playerX, playerY, sawRadius) {
-    let killed = false;
+    const hits = [];
     for (const obs of this.active) {
       if (obs.hit || obs.fadeOut || obs.type === 4) continue;
       const dist = Math.sqrt(
@@ -293,10 +294,10 @@ export class ObstacleManager {
         obs.hit = true;
         obs.fadeOut = true;
         obs.fadeLife = 200;
-        killed = true;
+        hits.push({ x: obs.x, y: obs.y });
       }
     }
-    return killed;
+    return hits;
   }
 
   // Отрисовка — только видимые

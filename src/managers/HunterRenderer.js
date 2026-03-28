@@ -422,8 +422,8 @@ export class HunterRenderer {
     ctx.globalCompositeOperation = 'lighter';
     ctx.translate(x, y);
 
-    const R_INNER = 22;
-    const R_OUTER = 33;
+    const R_INNER = 32;   // было 22 — увеличено чтобы пила крутилась вокруг тела, а не вокруг лица
+    const R_OUTER = 44;   // было 33
     const TEETH = 12;
 
     // Внутреннее кольцо — orange
@@ -464,7 +464,7 @@ export class HunterRenderer {
     ctx.save();
     ctx.rotate(-rotAngle * 0.43);
     ctx.beginPath();
-    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.arc(0, 0, 36, 0, Math.PI * 2); // было 26 — увеличено пропорционально R_INNER
     ctx.strokeStyle = '#FFB800';
     ctx.lineWidth = 1;
     ctx.globalAlpha = drawAlpha * 0.4;
