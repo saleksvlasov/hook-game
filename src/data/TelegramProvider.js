@@ -37,6 +37,7 @@ export class TelegramProvider {
       gamesCount: 0, // per-session, не хранится
       embers: server.embers || 0,
       upgrades: server.upgrades || {},
+      hasShield: server.hasShield || false,
     };
   }
 
@@ -89,6 +90,11 @@ export class TelegramProvider {
   // Покупка апгрейда (сервер сам считает стоимость)
   async saveUpgrade(upgradeId) {
     return this.#fetchServer('/save-upgrade', { upgradeId });
+  }
+
+  // Покупка / использование щита
+  async saveShield(use = false) {
+    return this.#fetchServer('/save-shield', { use });
   }
 
   isAuthorized() {

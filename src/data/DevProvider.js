@@ -13,6 +13,7 @@ export class DevProvider {
     lang: null,
     embers: 500, // dev: стартовый баланс для тестирования
     upgrades: {},
+    hasShield: false,
   };
 
   async loadProfile() {
@@ -51,6 +52,19 @@ export class DevProvider {
   async saveUpgrade(upgradeId) {
     // Мок — просто подтверждаем, клиент уже обновил оптимистично
     return { ok: true, embers: this.#data.embers, upgrades: this.#data.upgrades };
+  }
+
+  async saveShield(use = false) {
+    if (use) {
+      this.#data.hasShield = false;
+      return { ok: true, hasShield: false };
+    }
+    const SHIELD_COST = 300;
+    if (this.#data.embers < SHIELD_COST) return { error: 'Insufficient embers' };
+    if (this.#data.hasShield) return { error: 'Already owned' };
+    this.#data.hasShield = true;
+    this.#data.embers -= SHIELD_COST;
+    return { ok: true, embers: this.#data.embers, hasShield: true };
   }
 
   isAuthorized() {

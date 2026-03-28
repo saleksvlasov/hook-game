@@ -93,6 +93,38 @@ export class HunterRenderer {
     ctx.restore();
   }
 
+  // Рисовать щит-ауру вокруг игрока
+  drawShield(ctx, x, y, radius, shieldAlpha = 0) {
+    if (shieldAlpha <= 0) return;
+
+    // Пульсирующий cyan circle
+    const baseAlpha = 0.08 + 0.05 * Math.sin(performance.now() * 0.005);
+    const alpha = Math.max(baseAlpha, shieldAlpha); // shieldAlpha > 0 при deflect flash
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Gradient aura
+    const grad = ctx.createRadialGradient(x, y, radius * 0.7, x, y, radius);
+    grad.addColorStop(0, 'rgba(0, 245, 212, 0)');
+    grad.addColorStop(0.7, `rgba(0, 245, 212, ${alpha * 0.3})`);
+    grad.addColorStop(1, `rgba(0, 245, 212, ${alpha})`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Контур
+    ctx.strokeStyle = '#00F5D4';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = alpha * 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   // Рисовать ghost (клон для wrap-around)
   drawGhost(ctx, x, y) {
     this.draw(ctx, x, y);

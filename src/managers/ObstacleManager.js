@@ -202,6 +202,17 @@ export class ObstacleManager {
       }
 
       applyForce(obs, fx, fy, delta);
+
+      // Deflect velocity — отталкивание щитом
+      if (obs.deflectTime > 0) {
+        obs.x += obs.deflectVx * delta;
+        obs.y += obs.deflectVy * delta;
+        obs.deflectTime -= delta * 1000;
+        if (obs.deflectTime <= 0) {
+          obs.deflectVx = 0;
+          obs.deflectVy = 0;
+        }
+      }
     }
 
     // Cleanup
@@ -231,6 +242,28 @@ export class ObstacleManager {
     return false;
   }
 
+  // Проверка отталкивания жуков щитом (без урона)
+  checkDeflect(playerX, playerY, shieldRadius) {
+    let deflected = false;
+    for (const obs of this.active) {
+      if (obs.hit || obs.type === 4) continue; // Пропускаем убитых и сердца
+      const dx = obs.x - playerX;
+      const dy = obs.y - playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < shieldRadius && dist > 0) {
+        // Отталкиваем жука от игрока
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const force = 200; // px/s
+        obs.deflectVx = nx * force;
+        obs.deflectVy = ny * force;
+        obs.deflectTime = 300; // ms анимации отталкивания
+        deflected = true;
+      }
+    }
+    return deflected;
+  }
+
   // Проверка подбора сердца
   checkHeartPickup(playerX, playerY) {
     for (const obs of this.active) {
@@ -248,14 +281,10 @@ export class ObstacleManager {
   }
 
   // Отрисовка — только видимые
-  draw(ctx, armorRadius = 0) {
+  draw(ctx) {
     const cam = this.scene.camera;
     const top = cam.scrollY - 50;
     const bot = cam.scrollY + this.scene.H + 50;
-    const showShield = armorRadius > 0 && armorRadius < OBSTACLE_HIT_RADIUS;
-    const shieldAlpha = showShield
-      ? 0.15 + 0.10 * Math.sin(performance.now() * 0.004)
-      : 0;
     for (const obs of this.active) {
       if (obs.alpha <= 0) continue;
       if (obs.y < top || obs.y > bot) continue;
@@ -263,15 +292,6 @@ export class ObstacleManager {
       ctx.translate(obs.x, obs.y);
       ctx.globalAlpha = obs.alpha;
       drawBug(ctx, obs.type);
-      // Shield ring — показываем уменьшенный радиус коллизии
-      if (showShield && obs.type !== 4) {
-        ctx.globalAlpha = shieldAlpha;
-        ctx.strokeStyle = '#00F5D4';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, armorRadius, 0, Math.PI * 2);
-        ctx.stroke();
-      }
       ctx.restore();
     }
     ctx.globalAlpha = 1;

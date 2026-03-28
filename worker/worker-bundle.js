@@ -76,6 +76,7 @@ export default {
       if (url.pathname === '/track-event') return handleTrackEvent(request, env);
       if (url.pathname === '/save-embers') return handleSaveEmbers(request, env);
       if (url.pathname === '/save-upgrade') return handleSaveUpgrade(request, env);
+      if (url.pathname === '/save-shield') return handleSaveShield(request, env);
     }
 
     if (request.method === 'GET') {
@@ -440,6 +441,7 @@ async function handleSyncProfile(request, env) {
     lang: serverProfile.lang || null,
     embers: serverProfile.embers || 0,
     upgrades: serverProfile.upgrades || {},
+    hasShield: serverProfile.hasShield || false,
   });
 }
 
@@ -539,8 +541,8 @@ async function handleSaveEmbers(request, env) {
 
 // ---- Upgrades: покупка апгрейда ----
 
-const VALID_UPGRADES = ['hook_range', 'swing_power', 'iron_heart', 'quick_hook', 'bug_armor', 'ember_magnet'];
-const UPGRADE_MAX = { hook_range: 6, swing_power: 10, iron_heart: 3, quick_hook: 3, bug_armor: 5, ember_magnet: 5 };
+const VALID_UPGRADES = ['hook_range', 'swing_power', 'iron_heart', 'quick_hook', 'ember_magnet'];
+const UPGRADE_MAX = { hook_range: 6, swing_power: 10, iron_heart: 3, quick_hook: 3, ember_magnet: 5 };
 
 // Серверный расчёт стоимости (зеркало клиентского UpgradeApplicator)
 const UPGRADE_COSTS = {
@@ -548,7 +550,6 @@ const UPGRADE_COSTS = {
   swing_power:  { baseCost: 80,  costScale: 1.60 },
   iron_heart:   { costs: [300, 800, 1800] },
   quick_hook:   { baseCost: 150, costScale: 1.65 },
-  bug_armor:    { baseCost: 150, costScale: 1.65 },
   ember_magnet: { baseCost: 250, costScale: 1.65 },
 };
 
@@ -600,6 +601,47 @@ async function handleSaveUpgrade(request, env) {
   await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
 
   return jsonResponse({ ok: true, embers: profile.embers, upgrades: profile.upgrades });
+}
+
+// ---- Shield: покупка / использование одноразового щита ----
+
+const SHIELD_COST = 300;
+
+async function handleSaveShield(request, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData, use } = body;
+  if (!initData) return jsonResponse({ error: 'Missing initData' }, 400);
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+  const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+
+  if (use) {
+    // Использование щита в игре
+    profile.hasShield = false;
+    await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+    return jsonResponse({ ok: true, hasShield: false });
+  }
+
+  // Покупка щита
+  const balance = profile.embers || 0;
+  if (balance < SHIELD_COST) {
+    return jsonResponse({ error: 'Insufficient embers', embers: balance }, 400);
+  }
+  if (profile.hasShield) {
+    return jsonResponse({ error: 'Already owned', hasShield: true }, 400);
+  }
+
+  profile.hasShield = true;
+  profile.embers = balance - SHIELD_COST;
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+
+  return jsonResponse({ ok: true, embers: profile.embers, hasShield: true });
 }
 
 // ---- Analytics: трекинг событий монетизации ----

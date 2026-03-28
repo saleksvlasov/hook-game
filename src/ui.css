@@ -217,8 +217,8 @@
   background: rgba(42, 48, 80, 0.5);
   border: 1px solid rgba(0, 245, 212, 0.2);
   border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -227,13 +227,13 @@
 
 .forge-card__name {
   color: #E0F0FF;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .forge-card__desc {
-  color: #8090B0;
-  font-size: 11px;
+  color: #A0B0C8;
+  font-size: 13px;
   margin-top: 2px;
 }
 
@@ -247,13 +247,13 @@
 .forge-card__btn {
   border: none;
   border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 12px;
+  padding: 14px 20px;
+  font-size: 15px;
   font-weight: 600;
-  min-height: 36px;
+  min-height: 48px;
   cursor: pointer;
   font-family: 'Share Tech Mono', monospace;
-  min-width: 70px;
+  min-width: 90px;
   text-align: center;
   transition: opacity 0.2s;
   -webkit-tap-highlight-color: transparent;
@@ -262,6 +262,13 @@
 .forge-card__btn--buy {
   background: linear-gradient(135deg, #FF6B35, #FFB800);
   color: #0A0E1A;
+  box-shadow: 0 0 8px rgba(255, 107, 53, 0.3);
+  transition: all 0.15s ease;
+}
+
+.forge-card__btn--buy:active {
+  transform: scale(0.95);
+  box-shadow: 0 0 16px rgba(255, 107, 53, 0.5);
 }
 
 .forge-card__btn--locked {
@@ -288,3 +295,26 @@
   color: #aaa;
   font-family: monospace;
 }
+
+/* === Shield button (in-game) === */
+
+.shield-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #00F5D4;
+  background: rgba(0, 245, 212, 0.15);
+  color: #00F5D4;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 90;
+  display: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s ease;
+}
+.shield-btn--visible { display: flex; align-items: center; justify-content: center; }
+.shield-btn:active { transform: translateX(-50%) scale(0.9); background: rgba(0, 245, 212, 0.3); }

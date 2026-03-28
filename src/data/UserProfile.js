@@ -51,6 +51,7 @@ class UserProfile {
   get gamesCount() { return this.#data?.gamesCount || 0; }
   get embers() { return this.#data?.embers || 0; }
   get upgrades() { return this.#data?.upgrades || {}; }
+  get hasShield() { return this.#data?.hasShield || false; }
   get isAuthorized() { return this.#provider?.isAuthorized() || false; }
   get currentWeek() { return getCurrentWeek(); }
 
@@ -146,6 +147,32 @@ class UserProfile {
     }
     this.#notify();
     return true;
+  }
+
+  async purchaseShield() {
+    // Оптимистичное обновление
+    this.#data.hasShield = true;
+    this.#notify();
+
+    const result = await this.#provider.saveShield(false);
+    if (result?.error) {
+      // Откат
+      this.#data.hasShield = false;
+      this.#notify();
+      return false;
+    }
+    // Синхронизировать баланс с сервером
+    if (result?.embers !== undefined) {
+      this.#data.embers = result.embers;
+    }
+    this.#notify();
+    return true;
+  }
+
+  useShield() {
+    this.#data.hasShield = false;
+    this.#notify();
+    this.#provider.saveShield(true).catch(() => {});
   }
 
   // --- Async операции ---

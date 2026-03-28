@@ -1,7 +1,7 @@
 import { profile } from '../data/index.js';
 import {
   HOOK_RANGE, RELEASE_BOOST, HEARTS_MAX, HOOK_COOLDOWN,
-  OBSTACLE_HIT_RADIUS, UPGRADES,
+  UPGRADES,
 } from '../constants.js';
 
 // Вычисляет эффективные игровые константы с учётом апгрейдов
@@ -13,7 +13,6 @@ export function getEffectiveConstants() {
     releaseBoost: RELEASE_BOOST * (1 + lvl('swing_power') * UPGRADES.swing_power.effect),
     startHearts: HEARTS_MAX + lvl('iron_heart') * UPGRADES.iron_heart.effect,
     hookCooldown: HOOK_COOLDOWN * (1 - lvl('quick_hook') * UPGRADES.quick_hook.effect),
-    obstacleHitRadius: OBSTACLE_HIT_RADIUS * (1 - lvl('bug_armor') * UPGRADES.bug_armor.effect),
     emberMultiplier: 1 + lvl('ember_magnet') * UPGRADES.ember_magnet.effect,
     // Уровни перков для визуального отображения в HUD
     perkLevels: {
@@ -21,7 +20,6 @@ export function getEffectiveConstants() {
       swing_power: lvl('swing_power'),
       iron_heart: lvl('iron_heart'),
       quick_hook: lvl('quick_hook'),
-      bug_armor: lvl('bug_armor'),
       ember_magnet: lvl('ember_magnet'),
     },
   };

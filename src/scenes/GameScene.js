@@ -1,11 +1,11 @@
 import { Scene } from '../engine/Scene.js';
 import { clamp, lerp } from '../engine/math.js';
-import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo, playTierUp } from '../audio.js';
+import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo, playTierUp, playDeflect } from '../audio.js';
 import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
 import { t } from '../i18n.js';
-import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES, EMBER_RATE } from '../constants.js';
+import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES, EMBER_RATE, OBSTACLE_HIT_RADIUS, SHIELD_DURATION, SHIELD_RADIUS } from '../constants.js';
 import { getEffectiveConstants } from '../managers/UpgradeApplicator.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -52,6 +52,11 @@ export class GameScene extends Scene {
   #emberFrac = 0;
   #milestonesClaimed = new Set();
   #effectiveConsts = null;
+  // Shield
+  #shieldActive = false;
+  #shieldTimer = 0;
+  #shieldFlash = 0; // alpha flash при deflect
+  #shieldBtn = null;
 
   constructor(engine) {
     super(engine);
@@ -71,6 +76,7 @@ export class GameScene extends Scene {
     this.powerArc.destroy();
     if (this.challengeMgr) this.challengeMgr.destroy();
     this.challengeMgr = null;
+    this.#destroyShieldButton();
   }
 
   create() {
@@ -148,6 +154,9 @@ export class GameScene extends Scene {
     this.hud = new HUDManager(this);
     this.hud.create(this.challengeMgr);
     this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
+
+    // Shield кнопка (HTML)
+    this.#createShieldButton();
 
     this.gameOverUI = new GameOverUI(this);
     this.gameOverUI.create({
@@ -498,6 +507,12 @@ export class GameScene extends Scene {
     this.#milestonesClaimed.clear();
     this.#effectiveConsts = getEffectiveConstants();
 
+    // Shield reset (не потрачен → сохраняется)
+    this.#shieldActive = false;
+    this.#shieldTimer = 0;
+    this.#shieldFlash = 0;
+    this.#updateShieldButton();
+
     // Сброс менеджеров (soft reset — переиспользуем)
     this.anchorMgr.reset();
     this.obstacles.reset();
@@ -679,8 +694,13 @@ export class GameScene extends Scene {
     }
     ctx.globalAlpha = 1;
 
-    // 5.9 Жуки
-    this.obstacles.draw(ctx, this.#effectiveConsts.obstacleHitRadius);
+    // 5.9 Shield аура (перед жуками, за игроком)
+    if (this.#shieldActive) {
+      this.hunter.drawShield(ctx, p.x, p.y, SHIELD_RADIUS, Math.max(0.15, this.#shieldFlash));
+    }
+
+    // 5.10 Жуки
+    this.obstacles.draw(ctx);
 
     // 5.10 Camera reset
     this.camera.resetTransform(ctx);
@@ -816,34 +836,62 @@ export class GameScene extends Scene {
     this.obstacles.generateUpTo(p.y - 2000, this.anchorMgr.anchors);
     this.obstacles.update(delta, p.y, p.x);
 
-    // ===== 9. Коллизия с жуками =====
+    // ===== 9. Shield deflect + Коллизия с жуками =====
+
+    // Shield timer
+    if (this.#shieldActive) {
+      this.#shieldTimer -= delta * 1000;
+      this.hud.updateShieldTimer(this.#shieldTimer);
+      if (this.#shieldTimer <= 0) {
+        this.#shieldActive = false;
+        this.#shieldTimer = 0;
+        this.hud.updateShieldTimer(0);
+      }
+    }
+
+    // Shield flash decay
+    if (this.#shieldFlash > 0) {
+      this.#shieldFlash = Math.max(0, this.#shieldFlash - delta * 0.005);
+    }
+
+    // Deflect жуков щитом (без урона)
+    if (this.#shieldActive && !this.isDead) {
+      if (this.obstacles.checkDeflect(p.x, p.y, SHIELD_RADIUS)) {
+        this.#shieldFlash = 0.4;
+        this.camera.shake(100, 0.005);
+        this.camera.flash(80, 0, 245, 212);
+        playDeflect();
+        navigator.vibrate?.(15);
+      }
+    }
+
+    // Коллизия с жуками (урон)
     if (!this.isDead && !this.#heartsDisabled && this.bugHitCooldown <= 0
-        && this.obstacles.checkCollision(p.x, p.y, this.#effectiveConsts.obstacleHitRadius)) {
+        && this.obstacles.checkCollision(p.x, p.y, OBSTACLE_HIT_RADIUS)) {
       this.hitCount++;
-      this.hearts = Math.max(0, this.hearts - 1); // -0.5 сердца
+      this.hearts = Math.max(0, this.hearts - 1);
       this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
 
       if (this.isHooked) this.releaseHook();
-      // Откидывание вниз и в сторону
-      const knockX = (Math.random() - 0.5) * 300;
+      // Усиленное откидывание
+      const knockX = (Math.random() - 0.5) * 400;
       p.vx = knockX;
-      p.vy = 400;
+      p.vy = 500;
       this.bugHitCooldown = 2000;
 
-      navigator.vibrate?.([30, 20, 30]);
+      navigator.vibrate?.([50, 30, 50]);
       playBugHit();
 
-      this.camera.shake(250, 0.012);
-      this.camera.flash(150, 255, 80, 30);
+      this.camera.shake(300, 0.018);
+      this.camera.flash(200, 255, 46, 99); // Pink flash
 
-      // Мигание
-      p.alpha = 0.4;
+      // Усиленное мигание
+      p.alpha = 0.3;
       this.#blinkActive = true;
       this.#blinkTime = 0;
-      this.#blinkDuration = 600;
+      this.#blinkDuration = 800;
       this.#invulnTime = 1500;
 
-      // 0 сердец → неизбежная смерть (падение без возможности зацепиться)
       if (this.hearts <= 0) {
         this.#heartsDisabled = true;
       }
@@ -900,5 +948,48 @@ export class GameScene extends Scene {
 
     // ===== 14. Easter eggs (экранные координаты) =====
     this.eggs.draw(ctx, delta);
+  }
+
+  // ===== Shield методы =====
+
+  #createShieldButton() {
+    // Удалить старую кнопку если есть
+    if (this.#shieldBtn) {
+      this.#shieldBtn.remove();
+      this.#shieldBtn = null;
+    }
+    const btn = document.createElement('button');
+    btn.className = 'shield-btn';
+    btn.textContent = '\u{1F6E1}'; // 🛡
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.#activateShield();
+    });
+    document.body.appendChild(btn);
+    this.#shieldBtn = btn;
+    this.#updateShieldButton();
+  }
+
+  #updateShieldButton() {
+    if (!this.#shieldBtn) return;
+    const show = profile.hasShield && !this.#shieldActive && !this.isDead;
+    this.#shieldBtn.classList.toggle('shield-btn--visible', show);
+  }
+
+  #activateShield() {
+    if (!profile.hasShield || this.#shieldActive || this.isDead) return;
+    this.#shieldActive = true;
+    this.#shieldTimer = SHIELD_DURATION;
+    profile.useShield();
+    this.#updateShieldButton();
+    this.camera.flash(100, 0, 245, 212); // Cyan flash
+    navigator.vibrate?.([20, 10, 20]);
+  }
+
+  #destroyShieldButton() {
+    if (this.#shieldBtn) {
+      this.#shieldBtn.remove();
+      this.#shieldBtn = null;
+    }
   }
 }

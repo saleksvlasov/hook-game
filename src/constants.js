@@ -231,8 +231,11 @@ export const UPGRADES = {
   swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 80,  costScale: 1.60 },
   iron_heart:   { maxLevel: 3,  effect: 1,    costs: [300, 800, 1800] },
   quick_hook:   { maxLevel: 3,  effect: 0.10, baseCost: 150, costScale: 1.65 },  // -30% max
-  bug_armor:    { maxLevel: 5,  effect: 0.10, baseCost: 150, costScale: 1.65 },
   ember_magnet: { maxLevel: 5,  effect: 0.10, baseCost: 250, costScale: 1.65 },  // +50% max
 };
+
+export const SHIELD_COST = 300;
+export const SHIELD_DURATION = 40000; // 40 секунд
+export const SHIELD_RADIUS = 33; // радиус отталкивания жуков
 
 // Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()

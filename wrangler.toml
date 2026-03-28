@@ -1,0 +1,11 @@
+name = "thehook-invoice"
+main = "worker/worker-bundle.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "SCORES"
+id = "f5e5365838cb44feb195b23859f9f96d"
+
+[[kv_namespaces]]
+binding = "CHALLENGES"
+id = "89b66ffab7d44ed08c13e2fad5fa2770"

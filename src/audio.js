@@ -241,6 +241,26 @@ export function playTierUp() {
   } catch(e) { /* audio context closed or unavailable */ }
 }
 
+// Deflect — короткий высокий "ping" при отталкивании жука щитом
+export function playDeflect() {
+  if (!ctx) return;
+  try {
+    const c = getCtx();
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.exponentialRampToValueAtTime(2400, now + 0.05);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch(e) { /* audio context closed or unavailable */ }
+}
+
 export function destroyAudio() {
   if (ctx && ctx.state !== 'closed') {
     ctx.close().catch(() => {});

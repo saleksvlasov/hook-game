@@ -16,7 +16,6 @@ export class HUDManager {
   #heightStr = '0м';
   #recordStr = '';
   #hintStr = '';
-  #depthStr = '';
   #challengeStr = '';
   #hasChallengeWidget = false;
   #challengeMgr = null;
@@ -26,19 +25,23 @@ export class HUDManager {
   #hintScale = 1;
   #hintAlpha = 1;
   #hintPulseTime = 0;
+  #hintVisible = true;
 
   // Приватные поля — Hearts
   #hearts = 6;
   #maxHearts = 6;
   #heartBlink = false;
   #heartBlinkTime = 0;
-  #bonusTimer = 0; // ms оставшееся для 4-го сердца
+  #bonusTimer = 0;
 
   // Embers
   #embersEarned = 0;
 
   // Perk levels для отображения иконок
   #perkLevels = null;
+
+  // Shield timer (ms оставшееся)
+  #shieldTimer = 0;
 
   // Safe area отступ
   #safeTop;
@@ -54,10 +57,10 @@ export class HUDManager {
   create(challengeMgr) {
     this.#challengeMgr = challengeMgr || null;
     this.#hintStr = t('click_hook');
-    this.#depthStr = t('depth');
     this.#recordStr = `${t('record')}: 0${t('unit_m')}`;
+    this.#hintVisible = true;
+    this.#hintPulseTime = 0;
 
-    // Виджет еженедельного испытания — показываем всегда
     const ch = this.#challengeMgr ? this.#challengeMgr.getCurrentChallenge() : null;
     if (ch) {
       this.#hasChallengeWidget = true;
@@ -68,7 +71,6 @@ export class HUDManager {
   #updateChallengeStr(ch) {
     const weekNum = this.#challengeMgr.week;
     if (ch.completed) {
-      // Испытание выполнено
       this.#challengeStr = `🏆 WEEK ${weekNum}: ${t('challenge_completed')}`;
       return;
     }
@@ -87,7 +89,6 @@ export class HUDManager {
     this.#heightStr = `\u2191 ${currentHeight}${t('unit_m')}`;
     this.#recordStr = `${t('record')}: ${Math.max(maxHeight, sessionBest)}${t('unit_m')}`;
 
-    // Milestone каждые 50м — scale pop
     const milestone = Math.floor(currentHeight / 50) * 50;
     if (milestone > 0 && milestone > this.lastMilestone) {
       this.lastMilestone = milestone;
@@ -98,6 +99,8 @@ export class HUDManager {
   setHint(key) {
     this.#hintStr = t(key);
     this.#hintScale = 1.15;
+    this.#hintVisible = true;
+    this.#hintPulseTime = 0;
   }
 
   updateEmbers(count) {
@@ -106,6 +109,10 @@ export class HUDManager {
 
   setPerkLevels(perkLevels) {
     this.#perkLevels = perkLevels;
+  }
+
+  updateShieldTimer(ms) {
+    this.#shieldTimer = Math.max(0, ms);
   }
 
   updateHearts(hearts, maxHearts, bonusTimer) {
@@ -131,9 +138,10 @@ export class HUDManager {
   // Отрисовка HUD — вызывается в экранных координатах
   draw(ctx, delta) {
     const W = this.scene.W;
+    const H = this.scene.H;
     const safeTop = this.#safeTop;
 
-    // Убираем scale pop анимацию
+    // Scale pop анимация
     if (this.#heightScale > 1) {
       this.#heightScale = Math.max(1, this.#heightScale - delta * 0.005);
     }
@@ -141,23 +149,21 @@ export class HUDManager {
       this.#hintScale = Math.max(1, this.#hintScale - delta * 0.005);
     }
 
-    // Пульсация подсказки 0.5→1.0
+    // Скрыть подсказку через 5 сек
     this.#hintPulseTime += delta;
+    if (this.#hintPulseTime > 5000) this.#hintVisible = false;
     this.#hintAlpha = 0.5 + 0.5 * Math.sin(this.#hintPulseTime * 0.004);
 
-    // === Neon glass панель ===
+    // === Neon glass панель (компактная) ===
     ctx.globalAlpha = 0.7;
     ctx.fillStyle = NEON_BG;
-    const panelX = W / 2 - 76;
-    const panelY = safeTop + 10;
-    const panelW = 152;
-    const panelH = 52;
+    const panelW = 140;
+    const panelH = 46;
+    const panelX = W / 2 - panelW / 2;
+    const panelY = safeTop + 8;
     ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(panelX, panelY, panelW, panelH, 26);
-    } else {
-      ctx.rect(panelX, panelY, panelW, panelH);
-    }
+    if (ctx.roundRect) ctx.roundRect(panelX, panelY, panelW, panelH, 23);
+    else ctx.rect(panelX, panelY, panelW, panelH);
     ctx.fill();
 
     // Cyan рамка
@@ -165,81 +171,72 @@ export class HUDManager {
     ctx.strokeStyle = NEON_CYAN;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(panelX, panelY, panelW, panelH, 26);
-    } else {
-      ctx.rect(panelX, panelY, panelW, panelH);
-    }
+    if (ctx.roundRect) ctx.roundRect(panelX, panelY, panelW, panelH, 23);
+    else ctx.rect(panelX, panelY, panelW, panelH);
     ctx.stroke();
 
-    // Scanlines на панели
+    // Scanlines
     ctx.fillStyle = '#FFFFFF';
     ctx.globalAlpha = 0.03;
     for (let sy = panelY; sy < panelY + panelH; sy += 3) {
       ctx.fillRect(panelX, sy, panelW, 1);
     }
 
-    // === Label "ГЛУБИНА" ===
-    ctx.globalAlpha = 1;
-    ctx.font = `12px ${FONT_MONO}`;
-    ctx.fillStyle = NEON_STEEL;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(this.#depthStr, W / 2, safeTop + 14);
-
-    // === Высота — крупный amber ===
+    // === Высота — amber (без label ВЫСОТА) ===
     ctx.save();
-    ctx.translate(W / 2, safeTop + 18);
+    ctx.translate(W / 2, safeTop + 16);
     ctx.scale(this.#heightScale, this.#heightScale);
-    ctx.font = `bold 36px ${FONT_MONO}`;
+    ctx.font = `bold 32px ${FONT_MONO}`;
     ctx.fillStyle = NEON_AMBER;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    // Amber glow через shadow
+    ctx.globalAlpha = 1;
     ctx.shadowColor = NEON_AMBER;
     ctx.shadowBlur = 2;
     ctx.strokeStyle = NEON_BG;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 4;
     ctx.strokeText(this.#heightStr, 0, 0);
     ctx.fillText(this.#heightStr, 0, 0);
     ctx.shadowBlur = 0;
     ctx.restore();
 
     // === Рекорд — cyan ===
-    ctx.font = `bold 14px ${FONT_MONO}`;
+    ctx.font = `bold 13px ${FONT_MONO}`;
     ctx.fillStyle = NEON_CYAN;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
+    ctx.globalAlpha = 1;
     ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 2;
+    ctx.shadowBlur = 1;
     ctx.strokeStyle = NEON_BG;
     ctx.lineWidth = 2;
-    ctx.strokeText(this.#recordStr, W / 2, safeTop + 56);
-    ctx.fillText(this.#recordStr, W / 2, safeTop + 56);
+    ctx.strokeText(this.#recordStr, W / 2, safeTop + 52);
+    ctx.fillText(this.#recordStr, W / 2, safeTop + 52);
     ctx.shadowBlur = 0;
 
-    // === Подсказка ===
-    ctx.save();
-    ctx.translate(W / 2, safeTop + 78);
-    ctx.scale(this.#hintScale, this.#hintScale);
-    ctx.globalAlpha = this.#hintAlpha;
-    ctx.font = `bold italic 16px ${NEON_FONT}`;
-    ctx.fillStyle = NEON_CYAN;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.strokeStyle = NEON_BG;
-    ctx.lineWidth = 3;
-    ctx.strokeText(this.#hintStr, 0, 0);
-    ctx.fillText(this.#hintStr, 0, 0);
-    ctx.restore();
-    ctx.globalAlpha = 1;
+    // === Подсказка (скрывается через 5 сек) ===
+    if (this.#hintVisible && this.#hintStr) {
+      ctx.save();
+      ctx.translate(W / 2, safeTop + 72);
+      ctx.scale(this.#hintScale, this.#hintScale);
+      ctx.globalAlpha = this.#hintAlpha;
+      ctx.font = `bold italic 14px ${NEON_FONT}`;
+      ctx.fillStyle = NEON_CYAN;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 3;
+      ctx.strokeText(this.#hintStr, 0, 0);
+      ctx.fillText(this.#hintStr, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
 
     // === Сердца — правый верхний угол ===
-    const heartCount = Math.ceil(this.#maxHearts / 2); // 3 или 4
+    const heartCount = Math.ceil(this.#maxHearts / 2);
     const heartSize = 12;
     const heartGap = 6;
 
-    // Blink при ударе
     if (this.#heartBlink) {
       this.#heartBlinkTime += delta;
       if (this.#heartBlinkTime > 500) this.#heartBlink = false;
@@ -252,7 +249,6 @@ export class HUDManager {
         const hy = safeTop + 20;
         const halfHearts = this.#hearts - i * 2;
         const state = halfHearts >= 2 ? 'full' : halfHearts === 1 ? 'half' : 'empty';
-        // 4-е сердце (i=3) — бонусное, рисуем с пульсацией
         const isBonus = i === 3 && this.#maxHearts > 6;
         if (isBonus) {
           const pulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.006);
@@ -262,10 +258,9 @@ export class HUDManager {
         if (isBonus) ctx.globalAlpha = 1;
       }
 
-      // Таймер бонусного сердца — под сердцами
       if (this.#maxHearts > 6 && this.#bonusTimer > 0) {
         const secs = Math.ceil(this.#bonusTimer / 1000);
-        const timerX = W - 20 - 3 * (heartSize * 2 + heartGap); // Под 4-м сердцем
+        const timerX = W - 20 - 3 * (heartSize * 2 + heartGap);
         const timerY = safeTop + 36;
         ctx.font = `bold 12px ${NEON_FONT}`;
         ctx.fillStyle = '#FF2E63';
@@ -277,15 +272,14 @@ export class HUDManager {
       }
     }
 
-    // === Виджет еженедельного испытания (отступ от подсказки) ===
+    // === Виджет challenge ===
     if (this.#hasChallengeWidget) {
-      const chipY = safeTop + 114;
+      const chipY = safeTop + 95;
       ctx.globalAlpha = 0.85;
       ctx.font = `13px ${NEON_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Измеряем текст для chip-фона
       const tw = ctx.measureText(this.#challengeStr).width + 24;
       const th = 26;
       drawChip(ctx, W / 2, chipY, tw, th);
@@ -298,21 +292,21 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
-    // === Ember counter — левый верхний угол ===
+    // === Ember counter — НИЗУ слева ===
     if (this.#embersEarned > 0) {
       const ex = 16;
-      const ey = safeTop + 18;
+      const ey = H - 40;
       const label = `+${this.#embersEarned}`;
       ctx.font = `bold 13px ${FONT_MONO}`;
       const tw = ctx.measureText(label).width;
-      // Dark pill подложка
+      // Dark pill
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#0A0E1A';
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(ex - 10, ey - 10, tw + 28, 20, 10);
       else ctx.rect(ex - 10, ey - 10, tw + 28, 20);
       ctx.fill();
-      // Огонёк — увеличенная иконка
+      // Огонёк
       ctx.globalAlpha = 0.85;
       ctx.fillStyle = '#FF6B35';
       ctx.beginPath();
@@ -331,36 +325,50 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
-    // === Иконки активных перков ===
-    this.#drawPerkIcons(ctx, safeTop);
+    // === Перки — НИЗУ слева, под эмберами ===
+    this.#drawPerkIcons(ctx, H);
+
+    // === Shield timer — НИЗУ по центру (над кнопкой) ===
+    if (this.#shieldTimer > 0) {
+      const secs = Math.ceil(this.#shieldTimer / 1000);
+      ctx.font = `bold 14px ${FONT_MONO}`;
+      ctx.fillStyle = NEON_CYAN;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.globalAlpha = 0.9;
+      ctx.shadowColor = NEON_CYAN;
+      ctx.shadowBlur = 4;
+      ctx.fillText(`🛡 ${secs}s`, W / 2, H - 56);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
   }
 
-  // Иконки активных перков — под ember-счётчиком
-  #drawPerkIcons(ctx, safeTop) {
+  // Иконки перков — низ экрана слева
+  #drawPerkIcons(ctx, H) {
     if (!this.#perkLevels) return;
 
     const PERKS = [
-      { id: 'hook_range',   icon: '\u2197', color: '#00F5D4' },  // ↗
-      { id: 'swing_power',  icon: '\u26A1', color: '#FFB800' },  // ⚡
-      { id: 'iron_heart',   icon: '\u2665', color: '#FF2E63' },  // ♥
-      { id: 'quick_hook',   icon: '\u21BB', color: '#00F5D4' },  // ↻
-      { id: 'bug_armor',    icon: '\u25C8', color: '#00F5D4' },  // ◈
-      { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },  // ❂
+      { id: 'hook_range',   icon: '\u2197', color: '#00F5D4' },
+      { id: 'swing_power',  icon: '\u26A1', color: '#FFB800' },
+      { id: 'iron_heart',   icon: '\u2665', color: '#FF2E63' },
+      { id: 'quick_hook',   icon: '\u21BB', color: '#00F5D4' },
+      { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },
     ];
 
     let x = 8;
-    const y = safeTop + 44;
+    const y = H - 20;
 
     for (const perk of PERKS) {
       const lvl = this.#perkLevels[perk.id];
       if (!lvl) continue;
 
       const label = `${perk.icon}${lvl}`;
-      ctx.font = `bold 13px ${FONT_MONO}`;
-      const tw = ctx.measureText(label).width + 12;
-      const h = 20;
+      ctx.font = `bold 11px ${FONT_MONO}`;
+      const tw = ctx.measureText(label).width + 10;
+      const h = 16;
 
-      // Pill подложка
+      // Pill
       ctx.globalAlpha = 0.45;
       ctx.fillStyle = '#0A0E1A';
       ctx.beginPath();
@@ -395,7 +403,6 @@ export class HUDManager {
     ctx.translate(x, y);
     const s = size / 12;
 
-    // Bezier path сердца
     const heartPath = () => {
       ctx.beginPath();
       ctx.moveTo(0, 6 * s);
@@ -411,7 +418,6 @@ export class HUDManager {
       heartPath();
       ctx.fill();
     } else if (state === 'half') {
-      // Левая половина заполнена
       ctx.save();
       heartPath();
       ctx.clip();
@@ -422,14 +428,12 @@ export class HUDManager {
       ctx.fillStyle = '#FF2E63';
       ctx.fillRect(0, -16 * s, 14 * s, 24 * s);
       ctx.restore();
-      // Контур
       ctx.globalAlpha = 0.4;
       ctx.strokeStyle = '#FF2E63';
       ctx.lineWidth = 1;
       heartPath();
       ctx.stroke();
     } else {
-      // Empty — только контур
       ctx.globalAlpha = 0.25;
       ctx.strokeStyle = '#FF2E63';
       ctx.lineWidth = 1;
