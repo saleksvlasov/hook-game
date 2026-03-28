@@ -234,34 +234,36 @@ export const UPGRADES = {
 export const PERK_PICKUP_START_HEIGHT = 30;    // метры — начало спавна
 export const PERK_PICKUP_RADIUS = 40;          // px коллизии при подборе (было 26 → 40, легче подобрать)
 
+// Расчёт: 24 перка суммарно, максимум к ~5500м.
+// 4.17 якорей/100м → суммарный chance ~0.10 → ~0.4 пикапа/100м → ~4/1000м → 24/5850м
 export const PERK_PICKUPS = {
   hook_range: {
-    chance: 0.100,       // было 0.020 → x5
-    minDistance: 300,    // было 1200 → /4 (px между пикапами одного типа)
+    chance: 0.025,       // ~6 пикапов к 5500м (maxLevel 6)
+    minDistance: 800,    // px между пикапами одного типа (предотвращает кластеры)
     maxLevel: 6,
     effect: 0.04,      // +4% per level → max +24%
     color: '#00F5D4',  // Cyan
-    label: '\u2295',   // ⊕ CIRCLED PLUS — geometric, не emoji, всегда следует fillStyle
+    label: '\u2295',   // ⊕ CIRCLED PLUS — geometric, не emoji
   },
   swing_power: {
-    chance: 0.120,       // было 0.020 → x6
-    minDistance: 250,    // было 1000
+    chance: 0.042,       // ~10 пикапов к 5500м (maxLevel 10)
+    minDistance: 600,    // самый частый перк — расстояние поменьше
     maxLevel: 10,
     effect: 0.03,
     color: '#FF2E63',  // Pink
     label: '\u21AF',   // ↯ DOWNWARDS ZIGZAG ARROW — geometric, не emoji
   },
   quick_hook: {
-    chance: 0.040,       // было 0.0075 → x5
-    minDistance: 600,    // было 2000
+    chance: 0.012,       // ~3 пикапа к 5500м (maxLevel 3, редкий)
+    minDistance: 1500,   // большое расстояние — ценный перк
     maxLevel: 3,
     effect: 0.10,
     color: '#FFB800',  // Amber
     label: '◈',
   },
   ember_magnet: {
-    chance: 0.040,       // было 0.0075 → x5
-    minDistance: 600,    // было 2000
+    chance: 0.020,       // ~5 пикапов к 5500м (maxLevel 5)
+    minDistance: 1000,
     maxLevel: 5,
     effect: 0.10,
     color: '#FF6B35',  // Orange
