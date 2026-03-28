@@ -14,7 +14,6 @@ function hexCSS(hex) {
  */
 export class BiomeManager {
   // Приватные поля
-  #bgCanvases = [];
   #moonX = 0;
   #moonY = 0;
 
@@ -252,6 +251,5 @@ export class BiomeManager {
 
   destroy() {
     this.layers = [];
-    this.#bgCanvases = [];
   }
 }

@@ -185,7 +185,7 @@ export class HUDManager {
     ctx.fillStyle = NEON_STEEL;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(this.#depthStr, W / 2, safeTop + 4);
+    ctx.fillText(this.#depthStr, W / 2, safeTop + 14);
 
     // === Высота — крупный amber ===
     ctx.save();
@@ -195,8 +195,8 @@ export class HUDManager {
     ctx.fillStyle = NEON_AMBER;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    // Cyan glow через shadow
-    ctx.shadowColor = '#00F5D4';
+    // Amber glow через shadow
+    ctx.shadowColor = NEON_AMBER;
     ctx.shadowBlur = 2;
     ctx.strokeStyle = NEON_BG;
     ctx.lineWidth = 5;
@@ -349,16 +349,16 @@ export class HUDManager {
     ];
 
     let x = 8;
-    const y = safeTop + 42;
+    const y = safeTop + 44;
 
     for (const perk of PERKS) {
       const lvl = this.#perkLevels[perk.id];
       if (!lvl) continue;
 
       const label = `${perk.icon}${lvl}`;
-      ctx.font = `bold 11px ${FONT_MONO}`;
-      const tw = ctx.measureText(label).width + 10;
-      const h = 16;
+      ctx.font = `bold 13px ${FONT_MONO}`;
+      const tw = ctx.measureText(label).width + 12;
+      const h = 20;
 
       // Pill подложка
       ctx.globalAlpha = 0.45;

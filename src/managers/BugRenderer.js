@@ -75,11 +75,18 @@ export function drawSpider(ctx) {
   ctx.strokeStyle = '#00F5D4';
   ctx.lineWidth = 0.8;
   lineBetween(ctx, 0, -8, 0, -30);
-  // Тело — тёмный purple
+  // Тело — тёмный purple с cyan контуром для видимости
   ctx.globalAlpha = 0.9;
   ctx.fillStyle = '#1A0520';
   fillCircle(ctx, 0, 0, 8);
+  ctx.globalAlpha = 0.25;
+  ctx.strokeStyle = '#00F5D4';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, 8, 0, Math.PI * 2);
+  ctx.stroke();
   // Брюшко
+  ctx.globalAlpha = 0.9;
   ctx.fillStyle = '#120318';
   fillEllipse(ctx, 0, 8, 10, 12);
   // Узор на спине — neon pink крест

@@ -25,7 +25,6 @@ export class LeaderboardUI {
     closeBtn.textContent = '\u2715';
     closeBtn.classList.add('leaderboard__close');
     closeBtn.addEventListener('click', () => this.hide());
-    closeBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.hide(); });
     panel.appendChild(closeBtn);
 
     // Заголовок

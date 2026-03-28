@@ -69,6 +69,7 @@ export class GameScene extends Scene {
     this.hunter.destroy();
     this.anchorMgr.destroy();
     this.powerArc.destroy();
+    if (this.challengeMgr) this.challengeMgr.destroy();
     this.challengeMgr = null;
   }
 
@@ -515,6 +516,7 @@ export class GameScene extends Scene {
     this.biome.update(p.y);
 
     // Еженедельные испытания — обновить для нового рана
+    if (this.challengeMgr) this.challengeMgr.destroy();
     this.challengeMgr = new ChallengeManager();
     this.hud.create(this.challengeMgr);
     this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);

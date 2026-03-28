@@ -102,7 +102,7 @@ export class SwingPhysics {
 
     const angularAccel = (GRAVITY / ropeLen) * Math.cos(state.angle);
     let speed = state.speed + angularAccel * dt;
-    speed *= SWING_FRICTION;
+    speed *= Math.pow(SWING_FRICTION, dt * 60); // Нормализация к 60fps
 
     const angle = state.angle + speed * dt;
 

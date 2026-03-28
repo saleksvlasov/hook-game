@@ -129,7 +129,6 @@ export class UpgradeShopUI {
         this.#refresh();
       };
       btn.addEventListener('click', handleBuy);
-      btn.addEventListener('touchend', handleBuy);
     }
 
     card.appendChild(btn);

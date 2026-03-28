@@ -39,6 +39,7 @@ export class MenuScene extends Scene {
   #subtitleText;
   #subtitleChars = 0;
   #subtitleDelay = 0;
+  #safeTop;
 
   constructor(engine) {
     super(engine);
@@ -47,6 +48,10 @@ export class MenuScene extends Scene {
   create() {
     const W = this.W;
     const H = this.H;
+
+    // Кэш safe area top
+    const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
+    this.#safeTop = Math.max(envTop, 10);
 
     // Фоновый градиент — offscreen canvas
     this.#bgCanvas = document.createElement('canvas');
@@ -300,8 +305,7 @@ export class MenuScene extends Scene {
 
     // Кнопка языка
     const langX = W - 44;
-    const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
-    const langY = Math.max(envTop, 10) + 16;
+    const langY = this.#safeTop + 16;
     if (x >= langX - 23 && x <= langX + 23 && y >= langY - 13 && y <= langY + 13) {
       const newLang = getLang() === 'ru' ? 'en' : 'ru';
       profile.setLang(newLang);
@@ -606,8 +610,7 @@ export class MenuScene extends Scene {
 
     // === Языковая кнопка ===
     const langX = W - 44;
-    const envTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0', 10);
-    const langY = Math.max(envTop, 10) + 16;
+    const langY = this.#safeTop + 16;
     ctx.globalAlpha = 1;
     drawGlassButton(ctx, langX, langY, 46, 26);
     ctx.font = `bold 16px ${NEON_FONT}`;

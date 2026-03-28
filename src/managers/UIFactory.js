@@ -67,8 +67,6 @@ export function drawGlassButton(ctx, x, y, w, h, opts = {}) {
   ctx.globalAlpha = 1;
 }
 
-// Обратная совместимость
-export { drawGlassButton as drawOrnamentalButton };
 
 // Пунктирная линия — неоновые cyan чёрточки
 export function drawChainDecoration(ctx, x1, y1, x2, y2) {
@@ -100,17 +98,15 @@ export function drawChainDecoration(ctx, x1, y1, x2, y2) {
   ctx.globalAlpha = 1;
 }
 
-// Обратная совместимость
-export { drawChainDecoration as drawRopeDecoration };
 
 // Процедурные капли крови — неоновый pink
-export function drawBloodSplatter(ctx, x, y, radius, intensity = 0.7) {
+export function drawBloodSplatter(ctx, x, y, radius, intensity = 0.7, rng = Math.random) {
   // Центральное пятно
   for (let i = 0; i < 5; i++) {
-    const ox = (Math.random() - 0.5) * radius * 0.4;
-    const oy = (Math.random() - 0.5) * radius * 0.3;
-    const r = radius * (0.15 + Math.random() * 0.2);
-    ctx.globalAlpha = intensity * (0.5 + Math.random() * 0.3);
+    const ox = (rng() - 0.5) * radius * 0.4;
+    const oy = (rng() - 0.5) * radius * 0.3;
+    const r = radius * (0.15 + rng() * 0.2);
+    ctx.globalAlpha = intensity * (0.5 + rng() * 0.3);
     ctx.fillStyle = NEON_PINK_STR;
     ctx.beginPath();
     ctx.arc(x + ox, y + oy, r, 0, Math.PI * 2);
@@ -118,14 +114,14 @@ export function drawBloodSplatter(ctx, x, y, radius, intensity = 0.7) {
   }
 
   // Разлетающиеся капли
-  const dropCount = 8 + Math.floor(Math.random() * 5);
+  const dropCount = 8 + Math.floor(rng() * 5);
   for (let i = 0; i < dropCount; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = radius * (0.4 + Math.random() * 0.6);
+    const angle = rng() * Math.PI * 2;
+    const dist = radius * (0.4 + rng() * 0.6);
     const ddx = Math.cos(angle) * dist;
     const ddy = Math.sin(angle) * dist;
-    const r = 1 + Math.random() * 3;
-    ctx.globalAlpha = intensity * (0.25 + Math.random() * 0.3);
+    const r = 1 + rng() * 3;
+    ctx.globalAlpha = intensity * (0.25 + rng() * 0.3);
     ctx.fillStyle = NEON_PINK_STR;
     ctx.beginPath();
     ctx.arc(x + ddx, y + ddy, r, 0, Math.PI * 2);
@@ -134,8 +130,8 @@ export function drawBloodSplatter(ctx, x, y, radius, intensity = 0.7) {
 
   // Подтёки вниз
   for (let i = 0; i < 3; i++) {
-    const ox = (Math.random() - 0.5) * radius * 0.5;
-    const dripLen = 8 + Math.random() * 15;
+    const ox = (rng() - 0.5) * radius * 0.5;
+    const dripLen = 8 + rng() * 15;
     ctx.globalAlpha = intensity * 0.35;
     ctx.fillStyle = NEON_PINK_STR;
     ctx.fillRect(x + ox - 1, y + radius * 0.1, 2, dripLen);
@@ -166,8 +162,6 @@ export function drawSteelFrame(ctx, x, y, w, h) {
   ctx.globalAlpha = 1;
 }
 
-// Обратная совместимость
-export { drawSteelFrame as drawWantedPosterFrame };
 
 // MUI Chip — pill-shape с текстом, тёмное стекло + cyan рамка
 export function drawChip(ctx, x, y, w, h) {
@@ -259,5 +253,3 @@ export function updateAndDrawEmbers(ctx, particles, delta) {
   return particles;
 }
 
-// Ржавые края — no-op в новом дизайне
-export function drawRustedEdge() {}

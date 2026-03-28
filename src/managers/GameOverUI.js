@@ -174,7 +174,7 @@ export class GameOverUI {
     const skinAlreadyUnlocked = ch ? profile.isSkinUnlocked(ch.rewardSkin) : true;
     if (ch && ch.completed && !ch.claimed && !skinAlreadyUnlocked) {
       this.claimBtn = this.#createButton(t('challenge_claim'), 'claim');
-      this.claimBtn.classList.add('btn-neon--amber');
+      this.claimBtn.classList.add('btn-neon--amber', 'btn-neon--medium');
       this.claimBtn.addEventListener('click', () => {
         const skinId = challengeMgr.claimReward();
         if (skinId) {
@@ -287,16 +287,10 @@ export class GameOverUI {
     // Кровь
     if (this.#bloodAlpha > 0.01) {
       ctx.globalAlpha = this.#bloodAlpha;
-      // Используем сохранённый seed чтобы рисунок не прыгал
-      const savedRandom = Math.random;
+      // Seedable PRNG для стабильного рисунка крови
       let _seed = this.#bloodSeed;
-      // eslint-disable-next-line no-global-assign
-      Math.random = () => { _seed = (_seed * 16807) % 2147483647; return (_seed - 1) / 2147483646; };
-      try {
-        drawBloodSplatter(ctx, W / 2, H * 0.5, 120, 0.8);
-      } finally {
-        Math.random = savedRandom;
-      }
+      const seededRandom = () => { _seed = (_seed * 16807) % 2147483647; return (_seed - 1) / 2147483646; };
+      drawBloodSplatter(ctx, W / 2, H * 0.5, 120, 0.8, seededRandom);
     }
 
     // Poster рамка

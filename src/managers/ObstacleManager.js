@@ -254,7 +254,7 @@ export class ObstacleManager {
     const bot = cam.scrollY + this.scene.H + 50;
     const showShield = armorRadius > 0 && armorRadius < OBSTACLE_HIT_RADIUS;
     const shieldAlpha = showShield
-      ? 0.08 + 0.07 * Math.sin(performance.now() * 0.004)
+      ? 0.15 + 0.10 * Math.sin(performance.now() * 0.004)
       : 0;
     for (const obs of this.active) {
       if (obs.alpha <= 0) continue;
@@ -267,7 +267,7 @@ export class ObstacleManager {
       if (showShield && obs.type !== 4) {
         ctx.globalAlpha = shieldAlpha;
         ctx.strokeStyle = '#00F5D4';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(0, 0, armorRadius, 0, Math.PI * 2);
         ctx.stroke();

@@ -231,7 +231,7 @@ async function handleSaveChallenge(request, env) {
   };
 
   // Определить текущую неделю
-  const LAUNCH_DATE = 1773792000000; // 2025-03-25T00:00:00Z
+  const LAUNCH_DATE = 1773792000000; // 2026-03-18T00:00:00Z
   const currentWeek = Math.floor((Date.now() - LAUNCH_DATE) / (7 * 24 * 60 * 60 * 1000));
   const weekKey = `week${currentWeek}`;
 
@@ -648,8 +648,12 @@ async function handleTrackEvent(request, env) {
   return jsonResponse({ ok: true });
 }
 
-// GET /analytics?days=7 — сводка по дням
+// GET /analytics?days=7&key=ADMIN_KEY — сводка по дням
 async function handleAnalytics(url, env) {
+  const key = url.searchParams.get('key');
+  if (!key || key !== env.ADMIN_KEY) {
+    return jsonResponse({ error: 'Unauthorized' }, 403);
+  }
   if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
 
   const days = Math.min(parseInt(url.searchParams.get('days') || '7', 10), 90);

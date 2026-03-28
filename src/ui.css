@@ -116,7 +116,8 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  padding-top: 50%;
+  padding-top: 45%;
+  overflow-y: auto;
   opacity: 0;
   visibility: hidden; /* блокирует клики на детях даже с pointer-events:auto */
   transition: opacity 0.3s ease, visibility 0.3s;
@@ -246,9 +247,10 @@
 .forge-card__btn {
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 10px 14px;
   font-size: 12px;
   font-weight: 600;
+  min-height: 36px;
   cursor: pointer;
   font-family: 'Share Tech Mono', monospace;
   min-width: 70px;

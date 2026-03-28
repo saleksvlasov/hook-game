@@ -71,7 +71,7 @@ export const LANGS = {
     upgrade_bug_armor: 'Bug Armor',
     upgrade_bug_armor_desc: '-10% bug hit radius',
     upgrade_ember_magnet: 'Ember Magnet',
-    upgrade_ember_magnet_desc: '+15% ember gain',
+    upgrade_ember_magnet_desc: '+10% ember gain',
   },
   ru: {
     title_sub: 'Как высоко заберёшься?',
@@ -145,7 +145,7 @@ export const LANGS = {
     upgrade_bug_armor: 'Панцирь от жуков',
     upgrade_bug_armor_desc: '-10% радиус попадания',
     upgrade_ember_magnet: 'Магнит углей',
-    upgrade_ember_magnet_desc: '+15% сбор углей',
+    upgrade_ember_magnet_desc: '+10% сбор углей',
   },
 };
 
