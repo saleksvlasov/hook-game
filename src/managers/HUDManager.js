@@ -216,10 +216,10 @@ export class HUDManager {
     ctx.fillText(this.#recordStr, W / 2, safeTop + 52);
     ctx.shadowBlur = 0;
 
-    // === Подсказка (скрывается через 5 сек) ===
+    // === Подсказка (скрывается через 5 сек, ПОД challenge) ===
     if (this.#hintVisible && this.#hintStr) {
       ctx.save();
-      ctx.translate(W / 2, safeTop + 72);
+      ctx.translate(W / 2, safeTop + 100);
       ctx.scale(this.#hintScale, this.#hintScale);
       ctx.globalAlpha = this.#hintAlpha;
       ctx.font = `bold italic 14px ${NEON_FONT}`;
@@ -234,10 +234,10 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
-    // === Сердца — правый верхний угол ===
+    // === Сердца — правый верхний угол (адаптивный размер) ===
     const heartCount = Math.ceil(this.#maxHearts / 2);
-    const heartSize = 12;
-    const heartGap = 6;
+    const heartSize = heartCount > 4 ? 10 : 12;
+    const heartGap = heartCount > 4 ? 4 : 6;
 
     if (this.#heartBlink) {
       this.#heartBlinkTime += delta;

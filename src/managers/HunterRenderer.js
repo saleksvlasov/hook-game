@@ -93,7 +93,7 @@ export class HunterRenderer {
     ctx.restore();
   }
 
-  // Визуальные эффекты активных перков вокруг игрока
+  // Визуальные эффекты активных перков — яркие, сочные, как trail кометы
   drawPerkEffects(ctx, x, y, perkLevels, isHooked, swingSpeed) {
     if (!perkLevels) return;
     const now = performance.now();
@@ -101,86 +101,151 @@ export class HunterRenderer {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    // === hook_range: cyan кольцо-пульс дальности при свободном полёте ===
-    if (perkLevels.hook_range > 0 && !isHooked) {
+    // === hook_range: яркий cyan пульсирующий круг дальности ===
+    if (perkLevels.hook_range > 0) {
       const lvl = perkLevels.hook_range;
-      const pulse = 0.5 + 0.5 * Math.sin(now * 0.003);
-      ctx.globalAlpha = 0.04 + lvl * 0.008 + pulse * 0.02;
-      ctx.strokeStyle = '#00F5D4';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 8]);
-      ctx.lineDashOffset = -now * 0.02;
+      const pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
+      const r = 35 + lvl * 8;
+
+      // Glow заполнение
+      ctx.globalAlpha = 0.06 + lvl * 0.02 + pulse * 0.03;
+      const grad = ctx.createRadialGradient(x, y, r * 0.6, x, y, r);
+      grad.addColorStop(0, 'rgba(0,245,212,0)');
+      grad.addColorStop(0.7, `rgba(0,245,212,${0.05 + lvl * 0.02})`);
+      grad.addColorStop(1, 'rgba(0,245,212,0)');
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(x, y, 40 + lvl * 5, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Яркие бегущие сегменты
+      ctx.globalAlpha = 0.15 + lvl * 0.05;
+      ctx.strokeStyle = '#00F5D4';
+      ctx.lineWidth = 2;
+      const rot = now * 0.002;
+      for (let i = 0; i < 3; i++) {
+        const s = rot + i * Math.PI * 2 / 3;
+        ctx.beginPath();
+        ctx.arc(x, y, r, s, s + Math.PI / 4 + pulse * Math.PI / 6);
+        ctx.stroke();
+      }
     }
 
-    // === swing_power: amber огоньки на руках при качании ===
+    // === swing_power: amber/gold искры-пламя при качании ===
     if (perkLevels.swing_power > 0 && isHooked) {
       const lvl = perkLevels.swing_power;
-      const intensity = Math.min(Math.abs(swingSpeed || 0) / 3, 1);
-      if (intensity > 0.2) {
-        const sparkCount = Math.min(lvl, 6);
-        ctx.globalAlpha = intensity * 0.3;
+      const speed = Math.abs(swingSpeed || 0);
+      const intensity = Math.min(speed / 2.5, 1);
+      if (intensity > 0.1) {
+        const sparkCount = 3 + Math.min(lvl, 8);
         for (let i = 0; i < sparkCount; i++) {
-          const angle = now * 0.008 + i * 1.2;
-          const dist = 12 + Math.sin(now * 0.01 + i) * 4;
+          const angle = now * 0.01 + i * 0.9;
+          const flicker = Math.sin(now * 0.015 + i * 2.1) * 0.5 + 0.5;
+          const dist = 10 + flicker * 15 + intensity * 8;
           const sx = x + Math.cos(angle) * dist;
           const sy = y + Math.sin(angle) * dist;
-          const size = 1.5 + intensity * 1.5;
-          ctx.fillStyle = '#FFB800';
+          const size = (2 + intensity * 3 + flicker * 2) * (0.5 + lvl * 0.08);
+
+          // Ядро — яркий белый/жёлтый
+          ctx.globalAlpha = intensity * (0.3 + flicker * 0.4);
+          ctx.fillStyle = `rgb(255,${200 + Math.round(flicker * 55)},${50 + Math.round(flicker * 100)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, size, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Halo
+          ctx.globalAlpha = intensity * 0.15;
+          ctx.fillStyle = '#FFB800';
+          ctx.beginPath();
+          ctx.arc(sx, sy, size + 3, 0, Math.PI * 2);
           ctx.fill();
         }
       }
     }
 
-    // === iron_heart: pink glow вокруг игрока (сильнее с уровнем) ===
+    // === iron_heart: pink пульсирующий glow + сердечные частицы ===
     if (perkLevels.iron_heart > 0) {
       const lvl = perkLevels.iron_heart;
-      const pulse = 0.5 + 0.5 * Math.sin(now * 0.002);
-      ctx.globalAlpha = 0.03 + lvl * 0.015 + pulse * 0.01;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, 20 + lvl * 4);
-      grad.addColorStop(0, 'rgba(255, 46, 99, 0.15)');
-      grad.addColorStop(1, 'rgba(255, 46, 99, 0)');
+      const pulse = 0.5 + 0.5 * Math.sin(now * 0.003);
+      const r = 25 + lvl * 8;
+
+      // Большой мягкий glow
+      ctx.globalAlpha = 0.08 + lvl * 0.04 + pulse * 0.03;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, `rgba(255,46,99,${0.15 + lvl * 0.05})`);
+      grad.addColorStop(0.6, `rgba(255,46,99,${0.05 + lvl * 0.02})`);
+      grad.addColorStop(1, 'rgba(255,46,99,0)');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(x, y, 20 + lvl * 4, 0, Math.PI * 2);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
-    }
 
-    // === quick_hook: cyan вращающийся индикатор (2 быстрые дуги) ===
-    if (perkLevels.quick_hook > 0) {
-      const lvl = perkLevels.quick_hook;
-      const rot = now * (0.004 + lvl * 0.002);
-      ctx.globalAlpha = 0.12 + lvl * 0.04;
-      ctx.strokeStyle = '#00F5D4';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 2; i++) {
-        const start = rot + i * Math.PI;
+      // Мелкие pink искры на орбите
+      ctx.globalAlpha = 0.25 + lvl * 0.1;
+      for (let i = 0; i < lvl + 1; i++) {
+        const a = now * 0.003 + i * Math.PI * 2 / (lvl + 1);
+        const d = r * 0.7 + Math.sin(now * 0.005 + i) * 4;
+        ctx.fillStyle = '#FF2E63';
         ctx.beginPath();
-        ctx.arc(x, y, 16, start, start + Math.PI / 4);
-        ctx.stroke();
+        ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, 2, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
-    // === ember_magnet: оранжевые частицы стягиваются к игроку ===
+    // === quick_hook: быстрые cyan дуги + искры (ощущение скорости) ===
+    if (perkLevels.quick_hook > 0) {
+      const lvl = perkLevels.quick_hook;
+      const rot = now * (0.006 + lvl * 0.003);
+      const r = 20 + lvl * 3;
+
+      // Дуги — быстрые, яркие
+      ctx.strokeStyle = '#00F5D4';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.2 + lvl * 0.08;
+      for (let i = 0; i < 3; i++) {
+        const s = rot + i * Math.PI * 2 / 3;
+        ctx.beginPath();
+        ctx.arc(x, y, r, s, s + Math.PI / 5);
+        ctx.stroke();
+      }
+
+      // Искры на концах дуг
+      ctx.globalAlpha = 0.3 + lvl * 0.1;
+      for (let i = 0; i < 3; i++) {
+        const a = rot + i * Math.PI * 2 / 3 + Math.PI / 5;
+        ctx.fillStyle = '#00F5D4';
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // === ember_magnet: оранжевые огни стягиваются к игроку (больше, ярче) ===
     if (perkLevels.ember_magnet > 0) {
       const lvl = perkLevels.ember_magnet;
-      const count = Math.min(lvl + 1, 4);
-      ctx.globalAlpha = 0.2 + lvl * 0.04;
+      const count = 2 + lvl * 2;
+      const maxDist = 40 + lvl * 5;
+
       for (let i = 0; i < count; i++) {
-        const t = ((now * 0.001 + i * 1.7) % 2) / 2; // 0→1 цикл
-        const angle = i * Math.PI * 2 / count + now * 0.001;
-        const dist = 30 * (1 - t); // летят к центру
+        const t = ((now * 0.0008 + i * 1.3) % 2) / 2; // 0→1 цикл (летят к центру)
+        const angle = i * Math.PI * 2 / count + now * 0.0015;
+        const dist = maxDist * (1 - t);
         const px = x + Math.cos(angle) * dist;
         const py = y + Math.sin(angle) * dist;
-        const size = 1.5 * (1 - t * 0.5);
+        const size = (2 + lvl * 0.5) * (1 - t * 0.3);
+
+        // Ядро
+        ctx.globalAlpha = 0.3 + t * 0.4; // ярче ближе к центру
         ctx.fillStyle = '#FF6B35';
         ctx.beginPath();
         ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glow
+        ctx.globalAlpha = 0.1 + t * 0.15;
+        ctx.fillStyle = '#FFB800';
+        ctx.beginPath();
+        ctx.arc(px, py, size + 3, 0, Math.PI * 2);
         ctx.fill();
       }
     }
