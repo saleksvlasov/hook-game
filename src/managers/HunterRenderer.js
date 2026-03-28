@@ -220,33 +220,64 @@ export class HunterRenderer {
       }
     }
 
-    // === ember_magnet: оранжевые огни стягиваются к игроку (больше, ярче) ===
+    // === ember_magnet: вращающиеся магнитики + притягивающиеся искры ===
     if (perkLevels.ember_magnet > 0) {
       const lvl = perkLevels.ember_magnet;
-      const count = 2 + lvl * 2;
-      const maxDist = 40 + lvl * 5;
+      const magnetCount = Math.min(lvl + 1, 4); // 2-4 магнитика
+      const orbitR = 30 + lvl * 4;
+      const magnetRot = now * 0.002;
 
-      for (let i = 0; i < count; i++) {
-        const t = ((now * 0.0008 + i * 1.3) % 2) / 2; // 0→1 цикл (летят к центру)
-        const angle = i * Math.PI * 2 / count + now * 0.0015;
-        const dist = maxDist * (1 - t);
-        const px = x + Math.cos(angle) * dist;
-        const py = y + Math.sin(angle) * dist;
-        const size = (2 + lvl * 0.5) * (1 - t * 0.3);
+      // Вращающиеся магнитики
+      for (let i = 0; i < magnetCount; i++) {
+        const angle = magnetRot + i * Math.PI * 2 / magnetCount;
+        const wobble = Math.sin(now * 0.005 + i * 1.5) * 3;
+        const mx = x + Math.cos(angle) * (orbitR + wobble);
+        const my = y + Math.sin(angle) * (orbitR + wobble);
 
-        // Ядро
-        ctx.globalAlpha = 0.3 + t * 0.4; // ярче ближе к центру
-        ctx.fillStyle = '#FF6B35';
+        // Тело магнита — U-форма (две дуги)
+        ctx.globalAlpha = 0.5 + lvl * 0.1;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        const mSize = 5 + lvl;
+        const mAngle = angle + Math.PI / 2; // перпендикулярно орбите
+
+        // Красная половина
+        ctx.strokeStyle = '#FF2E63';
         ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.arc(mx, my, mSize, mAngle, mAngle + Math.PI);
+        ctx.stroke();
+
+        // Синяя/cyan половина
+        ctx.strokeStyle = '#00F5D4';
+        ctx.beginPath();
+        ctx.arc(mx, my, mSize, mAngle + Math.PI, mAngle + Math.PI * 2);
+        ctx.stroke();
+
+        // Яркий glow вокруг магнита
+        ctx.globalAlpha = 0.15 + lvl * 0.03;
+        const mGlow = ctx.createRadialGradient(mx, my, 0, mx, my, mSize + 6);
+        mGlow.addColorStop(0, 'rgba(255,107,53,0.3)');
+        mGlow.addColorStop(1, 'rgba(255,107,53,0)');
+        ctx.fillStyle = mGlow;
+        ctx.beginPath();
+        ctx.arc(mx, my, mSize + 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Glow
-        ctx.globalAlpha = 0.1 + t * 0.15;
-        ctx.fillStyle = '#FFB800';
-        ctx.beginPath();
-        ctx.arc(px, py, size + 3, 0, Math.PI * 2);
-        ctx.fill();
+        // Искры летят от магнита к игроку (3 на магнит)
+        for (let j = 0; j < 3; j++) {
+          const st = ((now * 0.002 + i * 0.7 + j * 0.5) % 1); // 0→1
+          const sparkAngle = angle + (Math.random() - 0.5) * 0.3;
+          const sparkDist = orbitR * (1 - st);
+          const sx = x + Math.cos(sparkAngle) * sparkDist;
+          const sy = y + Math.sin(sparkAngle) * sparkDist;
+          const sparkSize = 1.5 + st * 2;
+
+          ctx.globalAlpha = st * 0.6; // ярче к центру
+          ctx.fillStyle = '#FFB800';
+          ctx.beginPath();
+          ctx.arc(sx, sy, sparkSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     }
 
