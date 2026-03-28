@@ -1,11 +1,10 @@
 import { Scene } from '../engine/Scene.js';
 import { clamp, lerp } from '../engine/math.js';
-import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo, playTierUp, playDeflect } from '../audio.js';
+import { playHook, playAttach, playRelease, playDeath, playRecord, playBugHit, playHeartPickup, playCountdownTick, playCountdownGo, playTierUp, playDeflect, playSawActivate, playSawKill } from '../audio.js';
 import { profile } from '../data/index.js';
 import { trackGameEnd, shouldShowInterstitial, showInterstitial, showRewarded } from '../ads.js';
 import { isTelegram, purchaseContinue, trackEvent } from '../telegram.js';
-import { t } from '../i18n.js';
-import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES, EMBER_RATE, OBSTACLE_HIT_RADIUS, SHIELD_DURATION, SHIELD_RADIUS } from '../constants.js';
+import { GROUND_Y, SPAWN_Y, HEARTS_MAX, HEARTS_MAX_BONUS, HEART_BONUS_DURATION, EMBER_MILESTONES, EMBER_RATE, OBSTACLE_HIT_RADIUS, SHIELD_DURATION, SHIELD_RADIUS, SAW_DURATION, SAW_RADIUS, PERK_PICKUPS } from '../constants.js';
 import { getEffectiveConstants } from '../managers/UpgradeApplicator.js';
 
 import { AnchorManager } from '../managers/AnchorManager.js';
@@ -21,6 +20,7 @@ import { ObstacleManager } from '../managers/ObstacleManager.js';
 import { ChallengeManager } from '../managers/ChallengeManager.js';
 import { SwingPhysics } from '../managers/SwingPhysics.js';
 import { PowerArcManager } from '../managers/PowerArcManager.js';
+import { PerkPickupManager } from '../managers/PerkPickupManager.js';
 
 export class GameScene extends Scene {
   // Приватные поля
@@ -38,24 +38,26 @@ export class GameScene extends Scene {
   #countdown = 0;
   #countdownTime = 0;
   #lastPowerTier = -1;
-  // Quick Retry
-  #quickRetryActive = false;
-  #quickRetryTime = 0;
-  #swipeStartY = -1;
   #pendingInterstitial = false;
   #isNewBest = false;
-  #pendingQuickTap = false;
   // Embers
   #embersEarned = 0;
   #lastEmberHeight = 0;
   #emberFrac = 0;
   #milestonesClaimed = new Set();
   #effectiveConsts = null;
+  // Roguelite перки — сбрасываются при смерти
+  #roundPerkLevels = {};
   // Shield
   #shieldActive = false;
   #shieldTimer = 0;
   #shieldFlash = 0; // alpha flash при deflect
   #shieldBtn = null;
+  // Saw
+  #sawActive = false;
+  #sawTimer = 0;
+  #sawRotation = 0;
+  #sawBtn = null;
 
   constructor(engine) {
     super(engine);
@@ -67,6 +69,7 @@ export class GameScene extends Scene {
     this.gameOverUI.destroy();
     this.biome.destroy();
     this.obstacles.destroy();
+    if (this.perkPickups) this.perkPickups.destroy();
     this.trail.destroy();
     this.rope.destroy();
     this.swamp.destroy();
@@ -76,6 +79,7 @@ export class GameScene extends Scene {
     if (this.challengeMgr) this.challengeMgr.destroy();
     this.challengeMgr = null;
     this.#destroyShieldButton();
+    this.#destroySawButton();
   }
 
   create() {
@@ -105,8 +109,9 @@ export class GameScene extends Scene {
     this.lastReleaseTime = 0;
     this.bugHitCooldown = 0;
 
-    // Апгрейды — вычисляем эффективные константы
-    this.#effectiveConsts = getEffectiveConstants();
+    // Апгрейды — вычисляем эффективные константы (раундовые перки начинаются пустыми)
+    this.#roundPerkLevels = {};
+    this.#effectiveConsts = getEffectiveConstants(this.#roundPerkLevels);
 
     // Hearts / Lives (с учётом Iron Heart)
     this.hearts = this.#effectiveConsts.startHearts;
@@ -142,6 +147,9 @@ export class GameScene extends Scene {
     this.obstacles = new ObstacleManager(this);
     this.obstacles.create();
 
+    this.perkPickups = new PerkPickupManager(this);
+    this.perkPickups.create();
+
     this.swamp = new SwampManager(this);
     this.swamp.create();
 
@@ -156,6 +164,8 @@ export class GameScene extends Scene {
 
     // Shield кнопка (HTML)
     this.#createShieldButton();
+    // Saw кнопка (HTML)
+    this.#createSawButton();
 
     this.gameOverUI = new GameOverUI(this);
     this.gameOverUI.create({
@@ -229,15 +239,6 @@ export class GameScene extends Scene {
   // ===================== INPUT =====================
 
   handlePointerDown(pointer) {
-    // Quick retry: тап = instant restart, свайп вверх = full GameOver
-    if (this.#quickRetryActive) {
-      this.#swipeStartY = pointer?.y ?? -1;
-      if (this.#quickRetryTime > 200) {
-        // Не свайп — тап для restart (проверяем свайп в pointerup)
-        this.#pendingQuickTap = true;
-      }
-      return;
-    }
     if (this.isDead || this.#heartsDisabled) return;
     if (this.isHooked) {
       this.releaseHook();
@@ -247,16 +248,7 @@ export class GameScene extends Scene {
   }
 
   handlePointerUp(pointer) {
-    if (!this.#quickRetryActive || !this.#pendingQuickTap) return;
-    this.#pendingQuickTap = false;
-    const endY = pointer?.y ?? -1;
-    // Свайп вверх → полный GameOverUI
-    if (this.#swipeStartY >= 0 && endY >= 0 && this.#swipeStartY - endY > 60) {
-      this.#showFullGameOver();
-      return;
-    }
-    // Обычный тап → inline restart
-    this.#handleQuickRetryTap();
+    // No-op: quick retry removed
   }
 
   // ===================== HOOK MECHANICS =====================
@@ -359,10 +351,16 @@ export class GameScene extends Scene {
       profile.addEmbers(this.#embersEarned);
     }
 
-    // Quick retry window вместо немедленного GameOver
-    this.#quickRetryActive = true;
-    this.#quickRetryTime = 0;
-    this.#swipeStartY = -1;
+    this.#sawActive = false;
+    this.#sawTimer = 0;
+    this.#updateSawButton();
+
+    // Roguelite: сброс раундовых перков при смерти
+    this.#roundPerkLevels = {};
+    this.#effectiveConsts = getEffectiveConstants(this.#roundPerkLevels);
+    this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
+
+    this.#delayedCall(600, () => { if (this.isDead) this.#showFullGameOver(); });
 
     trackEvent('death', { height: this.maxHeight, gameTime });
     playDeath();
@@ -445,111 +443,8 @@ export class GameScene extends Scene {
 
   // ===================== QUICK RETRY =====================
 
-  #handleQuickRetryTap() {
-    this.#quickRetryActive = false;
-    trackGameEnd();
-
-    // Реклама: ставим флаг, покажем после рестарта
-    if (!isTelegram() && shouldShowInterstitial()) {
-      this.#pendingInterstitial = true;
-    }
-
-    this.#inlineRestart();
-  }
-
   #showFullGameOver() {
-    this.#quickRetryActive = false;
     this.gameOverUI.show(this.maxHeight, this.sessionBest, this.#isNewBest && this.maxHeight > 0, this.#embersEarned);
-  }
-
-  #inlineRestart() {
-    this.gameOverUI.hide();
-
-    // Сброс игрока
-    const p = this.player;
-    p.x = this.W / 2;
-    p.y = SPAWN_Y;
-    p.vx = 0;
-    p.vy = 0;
-    p.allowGravity = true;
-    p.alpha = 1;
-    p.rotation = 0;
-
-    // Сброс состояния
-    this.isHooked = false;
-    this.currentAnchor = null;
-    this.ropeLength = 0;
-    this.swingAngle = 0;
-    this.swingSpeed = 0;
-    this.maxHeight = 0;
-    this.isDead = false;
-    this.lastReleaseTime = 0;
-    this.bugHitCooldown = 0;
-    this.hitCount = 0;
-    this.gameStartTime = Date.now();
-    this.#heartsDisabled = false;
-    this.#isNewBest = false;
-    this.hearts = this.#effectiveConsts.startHearts;
-    this.maxHearts = this.#effectiveConsts.startHearts;
-    this.heartBonusTimer = 0;
-    this.#blinkActive = false;
-    this.#blinkTime = 0;
-    this.#delayedCalls.length = 0;
-    this.#countdownActive = false;
-    this.#pendingQuickTap = false;
-
-    // Ember reset
-    this.#embersEarned = 0;
-    this.#lastEmberHeight = 0;
-    this.#emberFrac = 0;
-    this.#milestonesClaimed.clear();
-    this.#effectiveConsts = getEffectiveConstants();
-
-    // Shield reset (не потрачен → сохраняется)
-    this.#shieldActive = false;
-    this.#shieldTimer = 0;
-    this.#shieldFlash = 0;
-    this.#updateShieldButton();
-
-    // Сброс менеджеров (soft reset — переиспользуем)
-    this.anchorMgr.reset();
-    this.obstacles.reset();
-    this.trail.reset();
-    this.rope.clear();
-    this.swamp.reset();
-    this.eggs.reset();
-    this.powerArc.reset();
-    this.#lastPowerTier = -1;
-    // Сброс визуалов на Novice tier
-    const noviceTier = this.powerArc.tierData;
-    this.rope.setTierParams(noviceTier);
-    this.trail.setTierParams(noviceTier);
-    this.hunter.setTierParams(noviceTier);
-    // Биом сбрасываем на начальную позицию
-    this.biome.update(p.y);
-
-    // Еженедельные испытания — обновить для нового рана
-    if (this.challengeMgr) this.challengeMgr.destroy();
-    this.challengeMgr = new ChallengeManager();
-    this.hud.create(this.challengeMgr);
-    this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
-
-    // Камера
-    this.camera.scrollX = 0;
-    this.camera.scrollY = p.y - this.H / 2;
-    this.camera.fadeIn(200, 13, 15, 18);
-
-    // HUD
-    this.hud.updateHearts(this.hearts, this.maxHearts, 0);
-    this.hud.updateHeight(0, 0, this.sessionBest);
-    this.hud.updateEmbers(0);
-    this.hud.setHint('click_hook');
-
-    // Показать interstitial если накопился
-    if (this.#pendingInterstitial) {
-      this.#pendingInterstitial = false;
-      showInterstitial().catch(() => {});
-    }
   }
 
   // Утилита: отложенный вызов
@@ -634,6 +529,9 @@ export class GameScene extends Scene {
     // 5.4 Крюки
     this.anchorMgr.draw(ctx);
 
+    // 5.4b Perk pickup предметы
+    this.perkPickups.draw(ctx);
+
     // 5.5 Trail частицы
     this.trail.draw(ctx);
 
@@ -703,6 +601,12 @@ export class GameScene extends Scene {
       this.hunter.drawShield(ctx, p.x, p.y, SHIELD_RADIUS, Math.max(0.15, this.#shieldFlash), this.#shieldTimer);
     }
 
+    // 5.9b Saw аура
+    if (this.#sawActive) {
+      this.#sawRotation += delta * 0.004;
+      this.hunter.drawSaw(ctx, p.x, p.y, 1.0, this.#sawTimer, this.#sawRotation);
+    }
+
     // 5.10 Жуки
     this.obstacles.draw(ctx);
 
@@ -736,46 +640,6 @@ export class GameScene extends Scene {
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       }
-      this.hud.draw(ctx, delta);
-      return;
-    }
-
-    // Quick Retry overlay
-    if (this.#quickRetryActive) {
-      this.#quickRetryTime += delta;
-      this.swamp.update(delta);
-
-      // Тёмный overlay
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = '#050810';
-      ctx.fillRect(0, 0, this.W, this.H);
-
-      // "TAP TO RETRY" пульсирующий текст с dark stroke
-      const pulse = 0.6 + 0.4 * Math.sin(this.#quickRetryTime * 0.008);
-      ctx.globalAlpha = this.#quickRetryTime > 200 ? pulse : 0;
-      ctx.font = `bold 28px 'Inter', sans-serif`;
-      ctx.fillStyle = '#00F5D4';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.strokeStyle = '#050810';
-      ctx.lineWidth = 4;
-      ctx.strokeText(t('tap_retry'), this.W / 2, this.H * 0.45);
-      ctx.fillText(t('tap_retry'), this.W / 2, this.H * 0.45);
-
-      // Хинт "↑ свайп для меню" с dark stroke
-      ctx.globalAlpha = 0.5;
-      ctx.font = `14px 'Inter', sans-serif`;
-      ctx.fillStyle = '#8090B0';
-      ctx.lineWidth = 3;
-      ctx.strokeText(t('swipe_for_menu'), this.W / 2, this.H * 0.55);
-      ctx.fillText(t('swipe_for_menu'), this.W / 2, this.H * 0.55);
-      ctx.globalAlpha = 1;
-
-      // Автопереход в полный GameOver после 1.5s
-      if (this.#quickRetryTime > 1500) {
-        this.#showFullGameOver();
-      }
-
       this.hud.draw(ctx, delta);
       return;
     }
@@ -840,6 +704,10 @@ export class GameScene extends Scene {
     this.obstacles.generateUpTo(p.y - 2000, this.anchorMgr.anchors);
     this.obstacles.update(delta, p.y, p.x);
 
+    // Perk pickups
+    this.perkPickups.generateUpTo(p.y - 2000, this.anchorMgr.anchors);
+    this.perkPickups.update(delta, p.y);
+
     // ===== 9. Shield deflect + Коллизия с жуками =====
 
     // Shield timer
@@ -850,6 +718,25 @@ export class GameScene extends Scene {
         this.#shieldActive = false;
         this.#shieldTimer = 0;
         this.hud.updateShieldTimer(0);
+      }
+    }
+
+    // Saw timer
+    if (this.#sawActive) {
+      this.#sawTimer -= delta;
+      this.hud.updateSawTimer(this.#sawTimer);
+      if (this.#sawTimer <= 0) {
+        this.#sawActive = false;
+        this.#sawTimer = 0;
+        this.hud.updateSawTimer(0);
+      }
+    }
+
+    // SAW уничтожение жуков
+    if (this.#sawActive && !this.isDead) {
+      if (this.obstacles.checkSaw(p.x, p.y, SAW_RADIUS)) {
+        playSawKill();
+        this.camera.shake(40, 0.002);
       }
     }
 
@@ -922,6 +809,23 @@ export class GameScene extends Scene {
     }
     if (this.bugHitCooldown > 0) this.bugHitCooldown -= delta;
 
+    // ===== 9.6 Подбор перков =====
+    if (!this.isDead && !this.#heartsDisabled) {
+      const pickedPerkId = this.perkPickups.checkPickup(p.x, p.y);
+      if (pickedPerkId) {
+        const cfg = PERK_PICKUPS[pickedPerkId];
+        const maxLvl = cfg.maxLevel;
+        const cur = this.#roundPerkLevels[pickedPerkId] || 0;
+        if (cur < maxLvl) {
+          this.#roundPerkLevels[pickedPerkId] = cur + 1;
+          this.#effectiveConsts = getEffectiveConstants(this.#roundPerkLevels);
+          this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
+          playHeartPickup(); // переиспользуем звук
+          navigator.vibrate?.(10);
+        }
+      }
+    }
+
     // Heart bonus timer — бонусное сердце временное
     const baseMax = this.#effectiveConsts.startHearts;
     if (this.maxHearts > baseMax && this.heartBonusTimer > 0) {
@@ -980,16 +884,17 @@ export class GameScene extends Scene {
 
   #updateShieldButton() {
     if (!this.#shieldBtn) return;
-    const show = profile.hasShield && !this.#shieldActive && !this.isDead;
+    const show = profile.hasShield && !this.#shieldActive && !this.isDead && !this.#sawActive;
     this.#shieldBtn.classList.toggle('shield-btn--visible', show);
   }
 
   #activateShield() {
-    if (!profile.hasShield || this.#shieldActive || this.isDead) return;
+    if (!profile.hasShield || this.#shieldActive || this.isDead || this.#sawActive) return;
     this.#shieldActive = true;
     this.#shieldTimer = SHIELD_DURATION;
     profile.useShield();
     this.#updateShieldButton();
+    this.#updateSawButton(); // Скрыть кнопку пилы пока щит активен
     this.camera.flash(100, 0, 245, 212); // Cyan flash
     navigator.vibrate?.([20, 10, 20]);
   }
@@ -999,5 +904,39 @@ export class GameScene extends Scene {
       this.#shieldBtn.remove();
       this.#shieldBtn = null;
     }
+  }
+
+  #createSawButton() {
+    if (this.#sawBtn) { this.#sawBtn.remove(); this.#sawBtn = null; }
+    const btn = document.createElement('button');
+    btn.className = 'saw-btn';
+    btn.textContent = '⚙️';
+    btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
+    btn.addEventListener('click', (e) => { e.stopPropagation(); this.#activateSaw(); });
+    document.body.appendChild(btn);
+    this.#sawBtn = btn;
+    this.#updateSawButton();
+  }
+
+  #updateSawButton() {
+    if (!this.#sawBtn) return;
+    const show = profile.hasSaw && !this.#sawActive && !this.isDead && !this.#shieldActive;
+    this.#sawBtn.classList.toggle('saw-btn--visible', show);
+  }
+
+  #activateSaw() {
+    if (!profile.hasSaw || this.#sawActive || this.isDead || this.#shieldActive) return;
+    this.#sawActive = true;
+    this.#sawTimer = SAW_DURATION;
+    profile.useSaw();
+    this.#updateSawButton();
+    this.#updateShieldButton(); // Скрыть кнопку щита пока пила активна
+    playSawActivate();
+    this.camera.flash(100, 255, 184, 0);
+    navigator.vibrate?.([20, 10, 20]);
+  }
+
+  #destroySawButton() {
+    if (this.#sawBtn) { this.#sawBtn.remove(); this.#sawBtn = null; }
   }
 }

@@ -51,9 +51,6 @@ export const LANGS = {
     sdk_error_retry: 'RETRY',
     server_error_title: 'SERVER UNAVAILABLE',
     server_error_msg: 'Could not connect to the server.\nCheck your connection and try again.',
-    // Quick Retry
-    tap_retry: 'TAP TO RETRY',
-    swipe_for_menu: '↑ swipe for menu',
     // Embers & Upgrades
     embers: 'EMBERS',
     embers_earned: '+{0} embers',
@@ -74,6 +71,11 @@ export const LANGS = {
     shield_desc: 'Block bugs for 40s',
     shield_owned: 'READY',
     shield_activate: 'Tap to activate shield',
+    saw_name: 'Saw Blade',
+    saw_desc: 'Destroy bugs for 60s',
+    saw_owned: 'READY',
+    saw_activate: 'Tap to activate saw',
+    perk_picked: '{0} Lv.{1}!',
   },
   ru: {
     title_sub: 'Как высоко заберёшься?',
@@ -127,9 +129,6 @@ export const LANGS = {
     sdk_error_retry: 'ПОВТОРИТЬ',
     server_error_title: 'СЕРВЕР НЕДОСТУПЕН',
     server_error_msg: 'Не удалось подключиться к серверу.\nПроверьте соединение и попробуйте снова.',
-    // Quick Retry
-    tap_retry: 'НАЖМИ ДЛЯ ПОВТОРА',
-    swipe_for_menu: '↑ свайп для меню',
     // Embers & Upgrades
     embers: 'УГЛИ',
     embers_earned: '+{0} углей',
@@ -150,6 +149,11 @@ export const LANGS = {
     shield_desc: 'Блокирует жуков на 40с',
     shield_owned: 'ГОТОВ',
     shield_activate: 'Нажми для активации щита',
+    saw_name: 'Пила',
+    saw_desc: 'Уничтожает жуков 60с',
+    saw_owned: 'ГОТОВА',
+    saw_activate: 'Нажми для активации пилы',
+    perk_picked: '{0} Ур.{1}!',
   },
 };
 

@@ -38,6 +38,7 @@ export class TelegramProvider {
       embers: server.embers || 0,
       upgrades: server.upgrades || {},
       hasShield: server.hasShield || false,
+      hasSaw: server.hasSaw || false,
     };
   }
 
@@ -95,6 +96,11 @@ export class TelegramProvider {
   // Покупка / использование щита
   async saveShield(use = false) {
     return this.#fetchServer('/save-shield', { use });
+  }
+
+  // Покупка / использование пилы
+  async saveSaw(use = false) {
+    return this.#fetchServer('/save-saw', { use });
   }
 
   isAuthorized() {

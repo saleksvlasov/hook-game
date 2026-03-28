@@ -77,6 +77,7 @@ export default {
       if (url.pathname === '/save-embers') return handleSaveEmbers(request, env);
       if (url.pathname === '/save-upgrade') return handleSaveUpgrade(request, env);
       if (url.pathname === '/save-shield') return handleSaveShield(request, env);
+      if (url.pathname === '/save-saw') return handleSaveSaw(request, env);
     }
 
     if (request.method === 'GET') {
@@ -442,6 +443,7 @@ async function handleSyncProfile(request, env) {
     embers: serverProfile.embers || 0,
     upgrades: serverProfile.upgrades || {},
     hasShield: serverProfile.hasShield || false,
+    hasSaw: serverProfile.hasSaw || false,
   });
 }
 
@@ -541,16 +543,12 @@ async function handleSaveEmbers(request, env) {
 
 // ---- Upgrades: покупка апгрейда ----
 
-const VALID_UPGRADES = ['hook_range', 'swing_power', 'iron_heart', 'quick_hook', 'ember_magnet'];
-const UPGRADE_MAX = { hook_range: 6, swing_power: 10, iron_heart: 3, quick_hook: 3, ember_magnet: 5 };
+const VALID_UPGRADES = ['iron_heart'];
+const UPGRADE_MAX = { iron_heart: 3 };
 
-// Серверный расчёт стоимости (зеркало клиентского UpgradeApplicator)
+// Серверный расчёт стоимости (только iron_heart — остальные перки теперь roguelite пикапы)
 const UPGRADE_COSTS = {
-  hook_range:   { baseCost: 80,  costScale: 1.60 },
-  swing_power:  { baseCost: 80,  costScale: 1.60 },
-  iron_heart:   { costs: [300, 800, 1800] },
-  quick_hook:   { baseCost: 150, costScale: 1.65 },
-  ember_magnet: { baseCost: 250, costScale: 1.65 },
+  iron_heart: { costs: [300, 800, 1800] },
 };
 
 function calcUpgradeCost(upgradeId, currentLevel) {
@@ -644,7 +642,44 @@ async function handleSaveShield(request, env) {
   return jsonResponse({ ok: true, embers: profile.embers, hasShield: true });
 }
 
-// ---- Analytics: трекинг событий монетизации ----
+// ---- Saw: покупка / использование одноразовой пилы ----
+
+const SAW_COST_WORKER = 600;
+
+async function handleSaveSaw(request, env) {
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'Invalid JSON' }, 400); }
+
+  const { initData, use = false } = body;
+  if (!initData) return jsonResponse({ error: 'Missing initData' }, 400);
+
+  const user = await verifyTelegramData(initData, env.BOT_TOKEN);
+  if (!user) return jsonResponse({ error: 'Invalid initData' }, 403);
+
+  const userId = String(user.id);
+  const profileData = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+
+  if (use) {
+    profileData.hasSaw = false;
+    await env.SCORES.put(`profile:${userId}`, JSON.stringify(profileData));
+    return jsonResponse({ ok: true, hasSaw: false });
+  }
+
+  // Покупка
+  if (profileData.hasSaw) {
+    return jsonResponse({ error: 'Already owned' }, 400);
+  }
+  if ((profileData.embers || 0) < SAW_COST_WORKER) {
+    return jsonResponse({ error: 'Insufficient embers' }, 400);
+  }
+  profileData.embers = (profileData.embers || 0) - SAW_COST_WORKER;
+  profileData.hasSaw = true;
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profileData));
+  return jsonResponse({ ok: true, embers: profileData.embers, hasSaw: true });
+}
+
+/ ---- Analytics: трекинг событий монетизации ----
 
 // События: death, ad_shown, ad_completed, ad_skipped, stars_attempt, stars_success, stars_fail
 // KV ключ: analytics:YYYY-MM-DD — агрегация по дням

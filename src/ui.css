@@ -350,3 +350,34 @@
 }
 .shield-btn--visible { display: flex; align-items: center; justify-content: center; }
 .shield-btn:active { transform: translateX(-50%) scale(0.9); background: rgba(255, 107, 53, 0.4); box-shadow: 0 0 20px rgba(255, 184, 0, 0.6); }
+
+/* === Saw button (in-game) === */
+
+.saw-btn {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: 80px;
+  width: 64px;
+  height: 64px;
+  background: rgba(10, 14, 26, 0.85);
+  border: 2px solid #FFB800;
+  border-radius: 50%;
+  color: #FFB800;
+  font-size: 28px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 0 12px #FFB80055;
+  z-index: 90;
+  transition: opacity 0.2s;
+}
+
+.saw-btn--visible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saw-btn:active {
+  transform: scale(0.92);
+}

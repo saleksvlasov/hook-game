@@ -43,6 +43,9 @@ export class HUDManager {
   // Shield timer (ms оставшееся)
   #shieldTimer = 0;
 
+  // Saw timer (ms оставшееся)
+  #sawTimer = 0;
+
   // Safe area отступ
   #safeTop;
 
@@ -113,6 +116,10 @@ export class HUDManager {
 
   updateShieldTimer(ms) {
     this.#shieldTimer = Math.max(0, ms);
+  }
+
+  updateSawTimer(ms) {
+    this.#sawTimer = Math.max(0, ms);
   }
 
   updateHearts(hearts, maxHearts, bonusTimer) {
@@ -333,6 +340,9 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
+    // === Saw timer — НИЗУ по центру (чуть выше shield) ===
+    this.#drawSawTimer(ctx);
+
     // === Shield timer — НИЗУ по центру (над кнопкой) ===
     if (this.#shieldTimer > 0) {
       const secs = Math.ceil(this.#shieldTimer / 1000);
@@ -465,6 +475,29 @@ export class HUDManager {
       ctx.stroke();
     }
 
+    ctx.restore();
+  }
+
+  #drawSawTimer(ctx) {
+    if (this.#sawTimer <= 0) return;
+    const H = this.scene.H;
+    const W = this.scene.W;
+    const secs = Math.ceil(this.#sawTimer / 1000);
+    const isExpiring = this.#sawTimer < 5000;
+    const pulse = isExpiring
+      ? 0.3 + 0.7 * Math.abs(Math.sin(performance.now() * 0.001 * (8 + (5 - this.#sawTimer / 1000) * 3)))
+      : 1;
+
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.font = `bold 13px ${NEON_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFB800';
+    ctx.shadowColor = '#FFB800';
+    ctx.shadowBlur = 8;
+    ctx.fillText(`\u2699 ${secs}s`, W / 2, H - 60);
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 

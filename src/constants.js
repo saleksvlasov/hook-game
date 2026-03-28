@@ -227,15 +227,54 @@ export const EMBER_MILESTONES = [
 ];
 
 export const UPGRADES = {
-  hook_range:   { maxLevel: 6,  effect: 0.05, baseCost: 80,  costScale: 1.60 },  // +30% max
-  swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 80,  costScale: 1.60 },
-  iron_heart:   { maxLevel: 3,  effect: 1,    costs: [300, 800, 1800] },
-  quick_hook:   { maxLevel: 3,  effect: 0.10, baseCost: 150, costScale: 1.65 },  // -30% max
-  ember_magnet: { maxLevel: 5,  effect: 0.10, baseCost: 250, costScale: 1.65 },  // +50% max
+  iron_heart: { maxLevel: 3, effect: 1, costs: [300, 800, 1800] },
+};
+
+// ===== ROGUELITE PERK PICKUPS =====
+export const PERK_PICKUP_START_HEIGHT = 30;    // метры — начало спавна
+export const PERK_PICKUP_RADIUS = 26;          // px коллизии при подборе
+
+export const PERK_PICKUPS = {
+  hook_range: {
+    chance: 0.020,
+    minDistance: 1200, // px
+    maxLevel: 6,
+    effect: 0.04,      // +4% per level → max +24%
+    color: '#00F5D4',  // Cyan
+    label: '⚓',
+  },
+  swing_power: {
+    chance: 0.020,
+    minDistance: 1000,
+    maxLevel: 10,
+    effect: 0.03,
+    color: '#FF2E63',  // Pink
+    label: '⚡',
+  },
+  quick_hook: {
+    chance: 0.0075,
+    minDistance: 2000,
+    maxLevel: 3,
+    effect: 0.10,
+    color: '#FFB800',  // Amber
+    label: '◈',
+  },
+  ember_magnet: {
+    chance: 0.0075,
+    minDistance: 2000,
+    maxLevel: 5,
+    effect: 0.10,
+    color: '#FF6B35',  // Orange
+    label: '◉',
+  },
 };
 
 export const SHIELD_COST = 300;
 export const SHIELD_DURATION = 40000; // 40 секунд
 export const SHIELD_RADIUS = 33; // радиус отталкивания жуков
+
+export const SAW_COST = 600;
+export const SAW_DURATION = 60000; // 60 секунд
+export const SAW_RADIUS = 45; // радиус уничтожения жуков
 
 // Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()
