@@ -10,6 +10,7 @@ import { MenuHunter } from '../managers/MenuHunter.js';
 import { LeaderboardUI } from '../managers/LeaderboardUI.js';
 import { UpgradeShopUI } from '../managers/UpgradeShopUI.js';
 import { PerkGuideUI } from '../managers/PerkGuideUI.js';
+import { MenuKebabUI } from '../managers/MenuKebabUI.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN_STR = '#00F5D4';
@@ -28,6 +29,7 @@ export class MenuScene extends Scene {
   #leaderboardUI;
   #upgradeShop;
   #guideUI;
+  #kebabMenu;
   #onPointerDown;
   #konamiHandler;
   #profileUnsub;
@@ -124,24 +126,25 @@ export class MenuScene extends Scene {
     this.#upgradeShop = new UpgradeShopUI();
     this.#guideUI = new PerkGuideUI();
 
+    // --- Kebab меню (≡ + bottom sheet) ---
+    this.#kebabMenu = new MenuKebabUI({
+      onSkins:  () => this.#skinCarousel.toggle(),
+      onForge:  () => this.#upgradeShop.show(),
+      onTop:    () => this.#leaderboardUI.show(),
+      onGuide:  () => this.#guideUI.show(),
+    });
+
     // --- UI элементы как state ---
     const titleY = H * 0.19;
-    const btnY = H * 0.62;
-    const recordY = H * 0.71;
-    const moonY = recordY + 20;        // мелкий текст сразу под рекордом
-    const skinsY = H * 0.80;
-    const forgeY = skinsY + 36;
-    const topY = forgeY + 36;
-    const guideY = topY + 36;
+    const btnY   = H * 0.60;          // CLIMB чуть выше — освободили место от 4 кнопок
+    const recordY = H * 0.72;
+    const moonY = recordY + 22;
     const best = profile.bestScore;
 
     this._ui = {
       titleY,
       btnY,
       recordY,
-      skinsY,
-      forgeY,
-      topY,
       best,
       // Анимации через tweens
       titleAlpha: 0,
@@ -156,19 +159,6 @@ export class MenuScene extends Scene {
       recordChipAlpha: 0,
       recordTextAlpha: 0,
       recordTextY: recordY + 20,
-      skinsGfxAlpha: 0,
-      skinsTextAlpha: 0,
-      skinsTextY: skinsY + 20,
-      forgeGfxAlpha: 0,
-      forgeTextAlpha: 0,
-      forgeTextY: forgeY + 20,
-      topGfxAlpha: 0,
-      topTextAlpha: 0,
-      topTextY: topY + 20,
-      guideY,
-      guideGfxAlpha: 0,
-      guideTextAlpha: 0,
-      guideTextY: guideY + 20,
       hintAlpha: 0,
       hintY: H - 24 + 20,
       moonTextAlpha: 0,
@@ -197,18 +187,6 @@ export class MenuScene extends Scene {
     if (profile.moonReached) {
       this.tweens.add({ targets: this._ui, moonTextAlpha: 1, moonTextY: moonY, duration: 250, delay: 700, ease: 'Cubic.easeOut' });
     }
-    // Skins
-    this.tweens.add({ targets: this._ui, skinsGfxAlpha: 1, duration: 250, delay: 750, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: this._ui, skinsTextAlpha: 1, skinsTextY: skinsY, duration: 250, delay: 750, ease: 'Cubic.easeOut' });
-    // Forge
-    this.tweens.add({ targets: this._ui, forgeGfxAlpha: 1, duration: 250, delay: 780, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: this._ui, forgeTextAlpha: 1, forgeTextY: forgeY, duration: 250, delay: 780, ease: 'Cubic.easeOut' });
-    // Top
-    this.tweens.add({ targets: this._ui, topGfxAlpha: 1, duration: 250, delay: 830, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: this._ui, topTextAlpha: 1, topTextY: topY, duration: 250, delay: 830, ease: 'Cubic.easeOut' });
-    // Guide
-    this.tweens.add({ targets: this._ui, guideGfxAlpha: 1, duration: 250, delay: 860, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: this._ui, guideTextAlpha: 1, guideTextY: guideY, duration: 250, delay: 860, ease: 'Cubic.easeOut' });
     // Hint
     this.tweens.add({ targets: this._ui, hintAlpha: 1, hintY: H - 24, duration: 250, delay: 800, ease: 'Cubic.easeOut' });
 
@@ -271,6 +249,9 @@ export class MenuScene extends Scene {
   #handlePointerDown(e) {
     if (this.#transitioning) return;
 
+    // Если sheet открыт — любой тап на canvas его закрывает
+    if (this.#kebabMenu?.isOpen) { this.#kebabMenu.close(); return; }
+
     const x = e.x;
     const y = e.y;
     const W = this.W;
@@ -296,30 +277,6 @@ export class MenuScene extends Scene {
       return;
     }
 
-    // Кнопка SKINS
-    if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.skinsY - 22 && y <= ui.skinsY + 22) {
-      this.#skinCarousel.toggle();
-      return;
-    }
-
-    // Кнопка FORGE
-    if (x >= W / 2 - 70 && x <= W / 2 + 70 && y >= ui.forgeY - 22 && y <= ui.forgeY + 22) {
-      this.#upgradeShop.show();
-      return;
-    }
-
-    // Кнопка TOP
-    if (x >= W / 2 - 80 && x <= W / 2 + 80 && y >= ui.topY - 22 && y <= ui.topY + 22) {
-      this.#leaderboardUI.show();
-      return;
-    }
-
-    // Кнопка GUIDE
-    if (x >= W / 2 - 70 && x <= W / 2 + 70 && y >= ui.guideY - 22 && y <= ui.guideY + 22) {
-      this.#guideUI.show();
-      return;
-    }
-
     // Кнопка языка
     const langX = W - 44;
     const langY = this.#safeTop + 16;
@@ -334,6 +291,7 @@ export class MenuScene extends Scene {
   #startTransition() {
     this.#transitioning = true;
     this.#transitionAlpha = 0;
+    this.#kebabMenu?.hide(); // убрать кнопку до fade-out
     // Fade to black, then switch scene
     // Используем объект-обёртку для tween (приватные поля не анимируются напрямую)
     this._transitionState = { alpha: 0 };
@@ -574,55 +532,6 @@ export class MenuScene extends Scene {
       ctx.fillText(t('moon_reached'), W / 2, ui.moonTextY);
     }
 
-    // === Кнопка SKINS ===
-    if (ui.skinsGfxAlpha > 0.01) {
-      ctx.globalAlpha = ui.skinsGfxAlpha;
-      drawGlassButton(ctx, W / 2, ui.skinsY, 120, 32);
-    }
-    ctx.globalAlpha = ui.skinsTextAlpha;
-    ctx.font = `bold 14px ${NEON_FONT}`;
-    ctx.fillStyle = NEON_CYAN_STR;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(t('skins_title'), W / 2, ui.skinsTextY);
-
-    // === Кнопка FORGE ===
-    if (ui.forgeGfxAlpha > 0.01) {
-      ctx.globalAlpha = ui.forgeGfxAlpha;
-      drawGlassButton(ctx, W / 2, ui.forgeY, 120, 32);
-    }
-    ctx.globalAlpha = ui.forgeTextAlpha;
-    ctx.font = `bold 14px ${NEON_FONT}`;
-    ctx.fillStyle = '#FF6B35';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const forgeLabel = `${t('forge')} (${profile.embers})`;
-    ctx.fillText(forgeLabel, W / 2, ui.forgeTextY);
-
-    // === Кнопка TOP ===
-    if (ui.topGfxAlpha > 0.01) {
-      ctx.globalAlpha = ui.topGfxAlpha;
-      drawGlassButton(ctx, W / 2, ui.topY, 120, 32);
-    }
-    ctx.globalAlpha = ui.topTextAlpha;
-    ctx.font = `bold 14px ${NEON_FONT}`;
-    ctx.fillStyle = NEON_CYAN_STR;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(t('top_button'), W / 2, ui.topTextY);
-
-    // === Кнопка GUIDE ===
-    if (ui.guideGfxAlpha > 0.01) {
-      ctx.globalAlpha = ui.guideGfxAlpha;
-      drawGlassButton(ctx, W / 2, ui.guideY, 120, 32);
-    }
-    ctx.globalAlpha = ui.guideTextAlpha;
-    ctx.font = `bold 14px ${NEON_FONT}`;
-    ctx.fillStyle = NEON_AMBER_STR; // Amber — ярко, читаемо, отличается от SKINS/TOP (cyan)
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(t('guide_button'), W / 2, ui.guideTextY);
-
     // === Skin Carousel ===
     this.#skinCarousel.draw(ctx);
 
@@ -683,6 +592,7 @@ export class MenuScene extends Scene {
     if (this.#leaderboardUI) { this.#leaderboardUI.destroy(); this.#leaderboardUI = null; }
     if (this.#upgradeShop) { this.#upgradeShop.destroy(); this.#upgradeShop = null; }
     if (this.#guideUI) { this.#guideUI.destroy(); this.#guideUI = null; }
+    if (this.#kebabMenu) { this.#kebabMenu.destroy(); this.#kebabMenu = null; }
     if (this.menuHunterObj) this.menuHunterObj.destroy();
   }
 }
