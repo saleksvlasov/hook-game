@@ -33,7 +33,6 @@ export class GameScene extends Scene {
   #blinkActive = false;
   #blinkTime = 0;
   #blinkDuration = 0;
-  #invulnTime = 0;
   #delayedCalls = [];
   #countdownActive = false;
   #countdown = 0;
@@ -210,7 +209,6 @@ export class GameScene extends Scene {
     this.#blinkActive = false;
     this.#blinkTime = 0;
     this.#blinkDuration = 0;
-    this.#invulnTime = 0;
 
     // Delayed calls (замена this.time.delayedCall)
     this.#delayedCalls = [];
@@ -495,7 +493,6 @@ export class GameScene extends Scene {
     this.heartBonusTimer = 0;
     this.#blinkActive = false;
     this.#blinkTime = 0;
-    this.#invulnTime = 0;
     this.#delayedCalls.length = 0;
     this.#countdownActive = false;
     this.#pendingQuickTap = false;
@@ -840,7 +837,7 @@ export class GameScene extends Scene {
 
     // Shield timer
     if (this.#shieldActive) {
-      this.#shieldTimer -= delta * 1000;
+      this.#shieldTimer -= delta; // delta уже в ms
       this.hud.updateShieldTimer(this.#shieldTimer);
       if (this.#shieldTimer <= 0) {
         this.#shieldActive = false;
@@ -851,7 +848,7 @@ export class GameScene extends Scene {
 
     // Shield flash decay
     if (this.#shieldFlash > 0) {
-      this.#shieldFlash = Math.max(0, this.#shieldFlash - delta * 0.005);
+      this.#shieldFlash = Math.max(0, this.#shieldFlash - delta * 0.002); // Плавное затухание ~200ms
     }
 
     // Deflect жуков щитом (без урона)
@@ -890,7 +887,6 @@ export class GameScene extends Scene {
       this.#blinkActive = true;
       this.#blinkTime = 0;
       this.#blinkDuration = 800;
-      this.#invulnTime = 1500;
 
       if (this.hearts <= 0) {
         this.#heartsDisabled = true;

@@ -1,6 +1,7 @@
 import { TelegramProvider, getCurrentWeek } from './TelegramProvider.js';
 import { DevProvider } from './DevProvider.js';
 import { setLang } from '../i18n.js';
+import { SHIELD_COST } from '../constants.js';
 
 // Единая точка входа к данным пользователя
 // Telegram → сервер (единственный источник правды)
@@ -150,14 +151,17 @@ class UserProfile {
   }
 
   async purchaseShield() {
+    if ((this.#data.embers || 0) < SHIELD_COST) return false;
     // Оптимистичное обновление
     this.#data.hasShield = true;
+    this.#data.embers -= SHIELD_COST;
     this.#notify();
 
     const result = await this.#provider.saveShield(false);
     if (result?.error) {
       // Откат
       this.#data.hasShield = false;
+      this.#data.embers += SHIELD_COST;
       this.#notify();
       return false;
     }

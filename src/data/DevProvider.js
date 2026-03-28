@@ -1,3 +1,5 @@
+import { SHIELD_COST } from '../constants.js';
+
 // Dev-провайдер — мок для локальной разработки без Telegram
 // Данные хранятся в памяти, сбрасываются при перезагрузке
 // Используется автоматически когда нет Telegram initData
@@ -59,7 +61,6 @@ export class DevProvider {
       this.#data.hasShield = false;
       return { ok: true, hasShield: false };
     }
-    const SHIELD_COST = 300;
     if (this.#data.embers < SHIELD_COST) return { error: 'Insufficient embers' };
     if (this.#data.hasShield) return { error: 'Already owned' };
     this.#data.hasShield = true;

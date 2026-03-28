@@ -205,9 +205,10 @@ export class ObstacleManager {
 
       // Deflect velocity — отталкивание щитом
       if (obs.deflectTime > 0) {
-        obs.x += obs.deflectVx * delta;
-        obs.y += obs.deflectVy * delta;
-        obs.deflectTime -= delta * 1000;
+        const dt = delta / 16.667; // Нормализация к 60fps как в Steering
+        obs.x += obs.deflectVx * dt;
+        obs.y += obs.deflectVy * dt;
+        obs.deflectTime -= delta; // delta уже в ms
         if (obs.deflectTime <= 0) {
           obs.deflectVx = 0;
           obs.deflectVy = 0;
@@ -230,7 +231,7 @@ export class ObstacleManager {
   // Проверка коллизии с жуками (skip type 4 = сердца)
   checkCollision(playerX, playerY, hitRadius = OBSTACLE_HIT_RADIUS) {
     for (const obs of this.active) {
-      if (obs.hit || obs.type === 4) continue;
+      if (obs.hit || obs.type === 4 || obs.deflectTime > 0) continue;
       const dist = distance(playerX, playerY, obs.x, obs.y);
       if (dist < hitRadius) {
         obs.hit = true;
@@ -254,10 +255,10 @@ export class ObstacleManager {
         // Отталкиваем жука от игрока
         const nx = dx / dist;
         const ny = dy / dist;
-        const force = 200; // px/s
+        const force = 8; // px/кадр (нормализуется через dt в update)
         obs.deflectVx = nx * force;
         obs.deflectVy = ny * force;
-        obs.deflectTime = 300; // ms анимации отталкивания
+        obs.deflectTime = 400; // ms анимации отталкивания
         deflected = true;
       }
     }
