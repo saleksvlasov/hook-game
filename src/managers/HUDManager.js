@@ -154,10 +154,12 @@ export class HUDManager {
     if (this.#hintPulseTime > 5000) this.#hintVisible = false;
     this.#hintAlpha = 0.5 + 0.5 * Math.sin(this.#hintPulseTime * 0.004);
 
-    // === Neon glass панель (компактная) ===
+    // === Neon glass панель (динамическая ширина) ===
+    ctx.font = `bold 32px ${FONT_MONO}`;
+    const heightTextW = ctx.measureText(this.#heightStr).width;
     ctx.globalAlpha = 0.7;
     ctx.fillStyle = NEON_BG;
-    const panelW = 140;
+    const panelW = Math.max(140, heightTextW + 32);
     const panelH = 46;
     const panelX = W / 2 - panelW / 2;
     const panelY = safeTop + 8;

@@ -52,6 +52,7 @@
   outline: none;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   text-transform: uppercase;
   letter-spacing: 3px;
   font-weight: bold;
@@ -96,6 +97,7 @@
 .btn-neon--small {
   font-size: 14px;
   padding: 10px 20px;
+  min-height: 44px;
 }
 
 /* Средние кнопки (continue) */
@@ -122,7 +124,8 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  padding-top: 45%;
+  padding-top: min(45%, 260px);
+  padding-bottom: 20px;
   overflow-y: auto;
   opacity: 0;
   visibility: hidden; /* блокирует клики на детях даже с pointer-events:auto */
@@ -176,7 +179,7 @@
 
 .leaderboard__close {
   position: absolute;
-  top: 12px; right: 16px;
+  top: 8px; right: 8px;
   background: none;
   border: none;
   color: #4A5580;
@@ -184,6 +187,12 @@
   cursor: pointer;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* === Forge (Кузница) === */
@@ -332,7 +341,7 @@
   color: #FFB800;
   font-size: 28px;
   cursor: pointer;
-  z-index: 100;
+  z-index: 90;
   display: none;
   -webkit-tap-highlight-color: transparent;
   transition: all 0.2s ease;
