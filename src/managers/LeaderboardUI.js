@@ -22,14 +22,15 @@ export class LeaderboardUI {
 
     // Кнопка закрытия
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = '\u2715';
+    closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" style="width:16px;height:16px"><line x1="4" y1="4" x2="16" y2="16" stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/></svg>';
+    closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.classList.add('leaderboard__close');
     closeBtn.addEventListener('click', () => this.hide());
     panel.appendChild(closeBtn);
 
     // Заголовок
     const title = document.createElement('div');
-    title.textContent = `\uD83C\uDFC6 ${t('leaderboard')}`;
+    title.textContent = t('leaderboard');
     title.classList.add('leaderboard__title');
     panel.appendChild(title);
 
@@ -57,7 +58,7 @@ export class LeaderboardUI {
 
   #showLoading() {
     this.#list.innerHTML = `<div class="leaderboard__row" style="justify-content:center;font-size:24px;color:#4A5580;padding:40px 0">
-      <span style="display:inline-block;animation:spin 1s linear infinite">\u23F3</span>
+      <span style="display:inline-block;animation:spin 1s linear infinite;font-size:16px">\u25CE</span>
       <span style="margin-left:8px;font-size:16px">${t('loading')}</span>
     </div>`;
     // Добавляем CSS анимацию если ещё нет
@@ -115,12 +116,12 @@ export class LeaderboardUI {
         row.classList.add('leaderboard__row');
         if (isMe) row.classList.add('leaderboard__row--me');
 
-        const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
-        const rank = medal || `${i + 1}`;
+        const medalColor = i === 0 ? '#FFB800' : i === 1 ? '#7A8AB0' : i === 2 ? '#FF6B35' : '';
+        const rank = `${i + 1}`;
 
         // Ранг
         const rankEl = document.createElement('span');
-        rankEl.style.cssText = `width:36px;text-align:center;font-size:${medal ? '20px' : '15px'};color:#4A5580`;
+        rankEl.style.cssText = `width:36px;text-align:center;font-size:15px;font-weight:700;color:${medalColor || '#4A5580'}`;
         rankEl.textContent = rank;
         row.appendChild(rankEl);
 
