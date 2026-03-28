@@ -284,7 +284,7 @@ export class HunterRenderer {
     ctx.restore();
   }
 
-  // Рисовать огненный щит (additive blend для яркого горения)
+  // Орбитальные мини-щиты вокруг игрока (аналог drawSaw)
   drawShield(ctx, x, y, radius, shieldAlpha = 0, timerMs = 40000) {
     if (shieldAlpha <= 0) return;
 
@@ -292,117 +292,72 @@ export class HunterRenderer {
     const expiring = timerMs <= 5000;
     const expired01 = expiring ? 1 - timerMs / 5000 : 0;
 
-    // Пульсации на разных частотах
-    const p1 = 0.5 + 0.5 * Math.sin(now * (expiring ? 0.012 + expired01 * 0.02 : 0.005));
-    const p2 = 0.5 + 0.5 * Math.sin(now * 0.007 + 1.5);
-    const p3 = 0.5 + 0.5 * Math.sin(now * 0.003 + 3.0);
-
-    // Мерцание при истечении
     let dim = 1;
     if (expiring) {
       const rate = 200 - expired01 * 130;
       dim = Math.floor(now / rate) % 2 === 0 ? 1 : 0.35;
     }
 
-    const alpha = Math.max(0.25 + p1 * 0.15, shieldAlpha) * dim;
-
-    // Цвета: Orange core + Amber glow → Pink при истечении
-    const cr = 255, cg = Math.round(107 - expired01 * 61), cb = Math.round(53 + expired01 * 46);
-    const gr = 255, gg = Math.round(184 - expired01 * 138), gb = Math.round(expired01 * 99);
+    const drawAlpha = Math.max(0.3, shieldAlpha) * dim;
+    const rot = now * 0.0015;
+    const SHIELDS = 6;
+    const R_ORBIT = 36;
+    const SZ = 8;
 
     ctx.save();
-
-    // === ADDITIVE BLEND — ключ к яркому горению ===
     ctx.globalCompositeOperation = 'lighter';
 
-    // 1. Широкое огненное свечение
-    const glowSize = radius + 15 + p1 * 8;
-    ctx.globalAlpha = alpha * 0.5;
-    const glow = ctx.createRadialGradient(x, y, radius * 0.4, x, y, glowSize);
-    glow.addColorStop(0, `rgba(${gr},${gg},${gb},${alpha * 0.25})`);
-    glow.addColorStop(0.5, `rgba(${cr},${cg},${cb},${alpha * 0.15})`);
-    glow.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-    ctx.fillStyle = glow;
+    // 1. Glow
+    ctx.globalAlpha = drawAlpha * 0.15;
+    ctx.fillStyle = '#FF6B35';
     ctx.beginPath();
-    ctx.arc(x, y, glowSize, 0, Math.PI * 2);
+    ctx.arc(x, y, R_ORBIT + 12, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Яркое кольцо пламени
-    ctx.globalAlpha = alpha * 0.6;
-    const ring = ctx.createRadialGradient(x, y, radius - 6, x, y, radius + 4);
-    ring.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
-    ring.addColorStop(0.3, `rgba(${gr},${gg},${gb},${alpha * 0.4})`);
-    ring.addColorStop(0.6, `rgba(${cr},${cg},${cb},${alpha * 0.6})`);
-    ring.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-    ctx.fillStyle = ring;
+    // 2. Пунктирная орбита
+    ctx.globalAlpha = drawAlpha * 0.25;
+    ctx.strokeStyle = '#FF6B35';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 6]);
     ctx.beginPath();
-    ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(x, y, R_ORBIT, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
 
-    // 3. Вращающиеся огненные дуги (3 быстрые + 2 медленные)
-    const rot = now * 0.003;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = alpha * 0.9;
-    ctx.strokeStyle = `rgb(${gr},${gg},${gb})`;
-    for (let i = 0; i < 3; i++) {
-      const s = rot + i * Math.PI * 2 / 3;
+    // 3. Мини-щиты на орбите
+    ctx.globalAlpha = drawAlpha * 0.85;
+    for (let i = 0; i < SHIELDS; i++) {
+      const angle = rot + (i * Math.PI * 2) / SHIELDS;
+      const sx = x + Math.cos(angle) * R_ORBIT;
+      const sy = y + Math.sin(angle) * R_ORBIT;
+
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(angle + Math.PI / 2);
+
+      // Форма щита: плоский верх → заострённый низ
       ctx.beginPath();
-      ctx.arc(x, y, radius, s, s + Math.PI / 3 + p1 * Math.PI / 5);
+      ctx.moveTo(0, -SZ);
+      ctx.lineTo(SZ * 0.75, -SZ * 0.6);
+      ctx.lineTo(SZ * 0.75, SZ * 0.2);
+      ctx.quadraticCurveTo(SZ * 0.75, SZ * 0.7, 0, SZ);
+      ctx.quadraticCurveTo(-SZ * 0.75, SZ * 0.7, -SZ * 0.75, SZ * 0.2);
+      ctx.lineTo(-SZ * 0.75, -SZ * 0.6);
+      ctx.closePath();
+
+      ctx.fillStyle = 'rgba(255, 107, 53, 0.35)';
+      ctx.fill();
+      ctx.strokeStyle = '#FF6B35';
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor = '#FF6B35';
+      ctx.shadowBlur = 6;
       ctx.stroke();
-    }
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = alpha * 0.7;
-    ctx.strokeStyle = `rgb(${cr},${cg},${cb})`;
-    for (let i = 0; i < 2; i++) {
-      const s = -now * 0.002 + i * Math.PI;
-      ctx.beginPath();
-      ctx.arc(x, y, radius + 3, s, s + Math.PI / 4 + p2 * Math.PI / 4);
-      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
     }
 
-    // 4. Огненные языки пламени (12 штук, пляшут по контуру)
-    const flameCount = 12;
-    for (let i = 0; i < flameCount; i++) {
-      const angle = rot * 1.5 + i * (Math.PI * 2 / flameCount);
-      const flicker = Math.sin(now * 0.01 + i * 1.7) * 0.5 + 0.5;
-      const wobble = Math.sin(now * 0.008 + i * 2.3) * 5;
-      const fr = radius + wobble;
-      const fx = x + Math.cos(angle) * fr;
-      const fy = y + Math.sin(angle) * fr;
-
-      // Ядро пламени — белый/жёлтый (additive = яркий!)
-      const coreSize = 2 + flicker * 2;
-      ctx.globalAlpha = alpha * (0.5 + flicker * 0.5);
-      ctx.fillStyle = `rgb(255,${220 + Math.round(flicker * 35)},${100 + Math.round(flicker * 80)})`;
-      ctx.beginPath();
-      ctx.arc(fx, fy, coreSize, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Glow вокруг ядра
-      ctx.globalAlpha = alpha * 0.3;
-      ctx.fillStyle = `rgb(${cr},${cg},${cb})`;
-      ctx.beginPath();
-      ctx.arc(fx, fy, coreSize + 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // 5. Яркие всполохи (4 больших, медленные, дают ощущение мощи)
-    ctx.globalAlpha = alpha * 0.35;
-    for (let i = 0; i < 4; i++) {
-      const angle = now * 0.001 + i * Math.PI / 2;
-      const burstR = radius + 6 + p3 * 8;
-      const bx = x + Math.cos(angle) * burstR;
-      const by = y + Math.sin(angle) * burstR;
-      const bGrad = ctx.createRadialGradient(bx, by, 0, bx, by, 6 + p1 * 4);
-      bGrad.addColorStop(0, `rgba(255,255,200,${alpha * 0.5})`);
-      bGrad.addColorStop(1, `rgba(${gr},${gg},${gb},0)`);
-      ctx.fillStyle = bGrad;
-      ctx.beginPath();
-      ctx.arc(bx, by, 6 + p1 * 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore(); // Восстанавливает globalCompositeOperation
+    ctx.restore();
   }
 
   // Вращающаяся пила вокруг игрока

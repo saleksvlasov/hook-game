@@ -58,6 +58,8 @@ export class GameScene extends Scene {
   #sawTimer = 0;
   #sawRotation = 0;
   #sawBtn = null;
+  // Buff bar container
+  #buffBar = null;
   // Float texts — краткие всплывающие надписи в мировых координатах
   #floatTexts = [];
 
@@ -82,6 +84,7 @@ export class GameScene extends Scene {
     this.challengeMgr = null;
     this.#destroyShieldButton();
     this.#destroySawButton();
+    if (this.#buffBar) { this.#buffBar.remove(); this.#buffBar = null; }
   }
 
   create() {
@@ -938,25 +941,24 @@ export class GameScene extends Scene {
 
   // ===== Shield методы =====
 
+  #createBuffBar() {
+    if (this.#buffBar) { this.#buffBar.remove(); }
+    const bar = document.createElement('div');
+    bar.className = 'buff-bar';
+    document.body.appendChild(bar);
+    this.#buffBar = bar;
+    return bar;
+  }
+
   #createShieldButton() {
-    // Удалить старую кнопку если есть
-    if (this.#shieldBtn) {
-      this.#shieldBtn.remove();
-      this.#shieldBtn = null;
-    }
+    if (this.#shieldBtn) { this.#shieldBtn.remove(); this.#shieldBtn = null; }
+    if (!this.#buffBar) this.#createBuffBar();
     const btn = document.createElement('button');
-    btn.className = 'shield-btn';
-    btn.textContent = '\u{1F6E1}'; // 🛡
-    // Перехватываем pointerdown чтобы не дошёл до canvas (иначе отцепит от крюка)
-    btn.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-    });
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.#activateShield();
-    });
-    document.body.appendChild(btn);
+    btn.className = 'buff-btn shield-btn';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none"><path d="M10 2 L17.5 5 L17.5 11 Q17.5 17 10 19 Q2.5 17 2.5 11 L2.5 5 Z" fill="#1A2040" stroke="#FF6B35" stroke-width="1.3"/><path d="M10 5.5 L14.5 7.5 L14.5 11.5 Q14.5 15 10 16.5 Q5.5 15 5.5 11.5 L5.5 7.5 Z" stroke="#FFB800" stroke-width="0.8" fill="none"/></svg>';
+    btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
+    btn.addEventListener('click', (e) => { e.stopPropagation(); this.#activateShield(); });
+    this.#buffBar.appendChild(btn);
     this.#shieldBtn = btn;
     this.#updateShieldButton();
   }
@@ -964,7 +966,7 @@ export class GameScene extends Scene {
   #updateShieldButton() {
     if (!this.#shieldBtn) return;
     const show = profile.hasShield && !this.#shieldActive && !this.isDead && !this.#sawActive;
-    this.#shieldBtn.classList.toggle('shield-btn--visible', show);
+    this.#shieldBtn.classList.toggle('buff-btn--visible', show);
   }
 
   #activateShield() {
@@ -987,12 +989,13 @@ export class GameScene extends Scene {
 
   #createSawButton() {
     if (this.#sawBtn) { this.#sawBtn.remove(); this.#sawBtn = null; }
+    if (!this.#buffBar) this.#createBuffBar();
     const btn = document.createElement('button');
-    btn.className = 'saw-btn';
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" style="width:28px;height:28px"><polygon points="18.5,10 15.1,12.1 16,16 12.1,15.1 10,18.5 7.9,15.1 4,16 4.9,12.1 1.5,10 4.9,7.9 4,4 7.9,4.9 10,1.5 12.1,4.9 16,4 15.1,7.9" fill="#4A5580" stroke="#7A8AB0" stroke-width="0.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="5" fill="#1A2040" stroke="#7A8AB0" stroke-width="1"/><circle cx="10" cy="10" r="2.5" fill="#2A3050" stroke="#7A8AB0" stroke-width="0.7"/><circle cx="10" cy="10" r="1" fill="#7A8AB0"/></svg>';
+    btn.className = 'buff-btn saw-btn';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none"><polygon points="18.5,10 15.1,12.1 16,16 12.1,15.1 10,18.5 7.9,15.1 4,16 4.9,12.1 1.5,10 4.9,7.9 4,4 7.9,4.9 10,1.5 12.1,4.9 16,4 15.1,7.9" fill="#4A5580" stroke="#7A8AB0" stroke-width="0.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="5" fill="#1A2040" stroke="#7A8AB0" stroke-width="1"/><circle cx="10" cy="10" r="2.5" fill="#2A3050" stroke="#7A8AB0" stroke-width="0.7"/><circle cx="10" cy="10" r="1" fill="#7A8AB0"/></svg>';
     btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
     btn.addEventListener('click', (e) => { e.stopPropagation(); this.#activateSaw(); });
-    document.body.appendChild(btn);
+    this.#buffBar.appendChild(btn);
     this.#sawBtn = btn;
     this.#updateSawButton();
   }
@@ -1000,7 +1003,7 @@ export class GameScene extends Scene {
   #updateSawButton() {
     if (!this.#sawBtn) return;
     const show = profile.hasSaw && !this.#sawActive && !this.isDead && !this.#shieldActive;
-    this.#sawBtn.classList.toggle('saw-btn--visible', show);
+    this.#sawBtn.classList.toggle('buff-btn--visible', show);
   }
 
   #activateSaw() {
