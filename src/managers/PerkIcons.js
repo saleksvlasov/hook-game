@@ -1,8 +1,25 @@
 /**
  * PerkIcons — кастомные inline SVG иконки для перков.
  * viewBox 0 0 20 20, все цвета захардкожены (не зависят от CSS currentColor).
- * Используются в PerkGuideUI через badge.innerHTML.
+ * Используются в PerkGuideUI (HTML innerHTML) и на canvas (через getPerkImage).
  */
+
+// ── SVG → Canvas Image cache ────────────────────────────────────────────────
+const _imageCache = {};
+
+/**
+ * Возвращает Image объект для отрисовки SVG перка на canvas через drawImage.
+ * Ленивая загрузка + кэш. Fallback: null если id не найден.
+ */
+export function getPerkImage(id) {
+  if (_imageCache[id]) return _imageCache[id];
+  const svg = PERK_ICONS[id];
+  if (!svg) return null;
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  _imageCache[id] = img;
+  return img;
+}
 
 export const PERK_ICONS = {
 

@@ -3,6 +3,7 @@ import {
   GROUND_Y, SPAWN_Y, ANCHOR_SPACING_Y,
   PERK_PICKUPS, PERK_PICKUP_START_HEIGHT, PERK_PICKUP_RADIUS,
 } from '../constants.js';
+import { getPerkImage } from './PerkIcons.js';
 
 // Roguelite пикапы перков — спавнятся рядом с крюками, подбираются на раунд
 // При смерти — сброс всех раундовых уровней
@@ -147,12 +148,17 @@ export class PerkPickupManager {
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Icon label
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillStyle = cfg.color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(cfg.label, 0, 0);
+      // Icon — SVG image (fallback: text label)
+      const img = getPerkImage(p.id);
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, -8, -8, 16, 16);
+      } else {
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillStyle = cfg.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(cfg.label, 0, 0);
+      }
 
       ctx.restore();
     }
