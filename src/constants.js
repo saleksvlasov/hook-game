@@ -232,36 +232,36 @@ export const UPGRADES = {
 
 // ===== ROGUELITE PERK PICKUPS =====
 export const PERK_PICKUP_START_HEIGHT = 30;    // метры — начало спавна
-export const PERK_PICKUP_RADIUS = 26;          // px коллизии при подборе
+export const PERK_PICKUP_RADIUS = 40;          // px коллизии при подборе (было 26 → 40, легче подобрать)
 
 export const PERK_PICKUPS = {
   hook_range: {
-    chance: 0.020,
-    minDistance: 1200, // px
+    chance: 0.100,       // было 0.020 → x5
+    minDistance: 300,    // было 1200 → /4 (px между пикапами одного типа)
     maxLevel: 6,
     effect: 0.04,      // +4% per level → max +24%
     color: '#00F5D4',  // Cyan
     label: '⚓',
   },
   swing_power: {
-    chance: 0.020,
-    minDistance: 1000,
+    chance: 0.120,       // было 0.020 → x6
+    minDistance: 250,    // было 1000
     maxLevel: 10,
     effect: 0.03,
     color: '#FF2E63',  // Pink
     label: '⚡',
   },
   quick_hook: {
-    chance: 0.0075,
-    minDistance: 2000,
+    chance: 0.040,       // было 0.0075 → x5
+    minDistance: 600,    // было 2000
     maxLevel: 3,
     effect: 0.10,
     color: '#FFB800',  // Amber
     label: '◈',
   },
   ember_magnet: {
-    chance: 0.0075,
-    minDistance: 2000,
+    chance: 0.040,       // было 0.0075 → x5
+    minDistance: 600,    // было 2000
     maxLevel: 5,
     effect: 0.10,
     color: '#FF6B35',  // Orange

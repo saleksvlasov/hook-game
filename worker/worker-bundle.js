@@ -679,7 +679,7 @@ async function handleSaveSaw(request, env) {
   return jsonResponse({ ok: true, embers: profileData.embers, hasSaw: true });
 }
 
-/ ---- Analytics: трекинг событий монетизации ----
+// ---- Analytics: трекинг событий монетизации ----
 
 // События: death, ad_shown, ad_completed, ad_skipped, stars_attempt, stars_success, stars_fail
 // KV ключ: analytics:YYYY-MM-DD — агрегация по дням

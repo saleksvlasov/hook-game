@@ -381,3 +381,131 @@
 .saw-btn:active {
   transform: scale(0.92);
 }
+
+/* ===== Perk Guide ===== */
+.perk-guide {
+  padding: 40px 16px 20px;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.perk-guide__title {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #FFB800;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.perk-guide__scroll {
+  overflow-y: auto;
+  max-height: calc(100vh - 130px);
+  padding: 0 4px 20px;
+  width: 100%;
+  max-width: 360px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.perk-guide__section-label {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #4A5580;
+  margin-bottom: 4px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+.perk-guide__hint {
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  font-size: 12px;
+  font-style: italic;
+  color: #4A5580;
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+
+.perk-guide__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 4px;
+}
+
+.perk-guide__divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(74,85,128,0.5) 20%, rgba(74,85,128,0.5) 80%, transparent);
+  margin: 14px 0;
+}
+
+.perk-guide__card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(42,48,80,0.45);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.perk-guide__card[data-color="cyan"]   { border: 1px solid rgba(0,245,212,0.25); }
+.perk-guide__card[data-color="pink"]   { border: 1px solid rgba(255,46,99,0.25); }
+.perk-guide__card[data-color="amber"]  { border: 1px solid rgba(255,184,0,0.25); }
+.perk-guide__card[data-color="orange"] { border: 1px solid rgba(255,107,53,0.25); }
+.perk-guide__card[data-color="steel"]  { border: 1px solid rgba(74,85,128,0.25); }
+
+.perk-guide__badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #4A5580;
+  background: rgba(74,85,128,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.perk-guide__badge[data-color="cyan"]   { border-color: #00F5D4; background: rgba(0,245,212,0.12); box-shadow: 0 0 8px rgba(0,245,212,0.3); }
+.perk-guide__badge[data-color="pink"]   { border-color: #FF2E63; background: rgba(255,46,99,0.12);  box-shadow: 0 0 8px rgba(255,46,99,0.3); }
+.perk-guide__badge[data-color="amber"]  { border-color: #FFB800; background: rgba(255,184,0,0.12);  box-shadow: 0 0 8px rgba(255,184,0,0.3); }
+.perk-guide__badge[data-color="orange"] { border-color: #FF6B35; background: rgba(255,107,53,0.12); box-shadow: 0 0 8px rgba(255,107,53,0.3); }
+.perk-guide__badge[data-color="steel"]  { border-color: #4A5580; background: rgba(74,85,128,0.18); }
+
+.perk-guide__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.perk-guide__name {
+  color: #E0F0FF;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+}
+
+.perk-guide__desc {
+  color: #7888A8;
+  font-size: 13px;
+  margin-top: 3px;
+  line-height: 1.4;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+}
+
+.perk-guide__max {
+  color: #4A5580;
+  font-size: 11px;
+  font-family: 'Share Tech Mono', monospace;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
