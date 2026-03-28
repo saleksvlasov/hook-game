@@ -788,6 +788,15 @@ export class GameScene extends Scene {
         && this.obstacles.checkCollision(p.x, p.y, OBSTACLE_HIT_RADIUS)) {
       this.hitCount++;
       this.hearts = Math.max(0, this.hearts - 1);
+
+      // Если бонусное сердце потрачено — отменить таймер и убрать слот
+      const baseMax = this.#effectiveConsts.startHearts;
+      if (this.heartBonusTimer > 0 && this.hearts <= baseMax) {
+        this.heartBonusTimer = 0;
+        this.maxHearts = baseMax;
+        this.hearts = Math.min(this.hearts, baseMax);
+      }
+
       this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
 
       if (this.isHooked) this.releaseHook();
