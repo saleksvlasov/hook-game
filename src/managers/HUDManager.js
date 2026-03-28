@@ -1,6 +1,7 @@
 import { FONT_MONO } from '../constants.js';
 import { t, tf } from '../i18n.js';
 import { drawChip } from '../managers/UIFactory.js';
+import { getPerkImage } from './PerkIcons.js';
 
 // ===== NEON WESTERN ПАЛИТРА =====
 const NEON_CYAN = '#00F5D4';
@@ -377,56 +378,74 @@ export class HUDManager {
     }
   }
 
-  // Иконки перков — низ экрана, горизонтальная полоска
+  // Иконки перков — низ экрана, горизонтальная полоска (SVG + level)
   #drawPerkIcons(ctx, W, H) {
     if (!this.#perkLevels) return;
 
+    // Цвета совпадают с PERK_PICKUPS в constants.js и PerkIcons.js
     const PERKS = [
-      { id: 'hook_range',   icon: '\u2295', color: '#00F5D4' }, // ⊕ (совпадает с canvas label и PerkGuideUI)
-      { id: 'swing_power',  icon: '\u21AF', color: '#FFB800' }, // ↯ zigzag (не emoji, следует fillStyle)
-      { id: 'iron_heart',   icon: '\u2665', color: '#FF2E63' },
-      { id: 'quick_hook',   icon: '\u21BB', color: '#00F5D4' },
-      { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },
+      { id: 'hook_range',   color: '#00F5D4' },
+      { id: 'swing_power',  color: '#FF2E63' },
+      { id: 'iron_heart',   color: '#FF2E63' },
+      { id: 'quick_hook',   color: '#FFB800' },
+      { id: 'ember_magnet', color: '#FF6B35' },
     ];
+
+    const ICON_SZ = 12;                  // px — SVG icon size
+    const h = 20;
+    const gap = 4;
+    const padL = 4, padR = 6, iconGap = 3;
 
     let x = 8;
     const y = H - 16;
-    const h = 18;
-    const gap = 4;
+
+    ctx.font = `bold 11px ${FONT_MONO}`;
 
     for (const perk of PERKS) {
       const lvl = this.#perkLevels[perk.id];
       if (!lvl) continue;
 
-      const label = `${perk.icon}${lvl}`;
-      ctx.font = `bold 12px ${FONT_MONO}`;
-      const tw = ctx.measureText(label).width + 10;
+      const lvlStr = `${lvl}`;
+      const txtW = ctx.measureText(lvlStr).width;
+      const pillW = padL + ICON_SZ + iconGap + txtW + padR;
 
       // Pill подложка
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha = 0.55;
       ctx.fillStyle = '#0A0E1A';
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y - h / 2, tw, h, h / 2);
-      else ctx.rect(x, y - h / 2, tw, h);
+      if (ctx.roundRect) ctx.roundRect(x, y - h / 2, pillW, h, h / 2);
+      else ctx.rect(x, y - h / 2, pillW, h);
       ctx.fill();
 
       // Рамка
-      ctx.globalAlpha = 0.25;
+      ctx.globalAlpha = 0.3;
       ctx.strokeStyle = perk.color;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x, y - h / 2, tw, h, h / 2);
-      else ctx.rect(x, y - h / 2, tw, h);
+      if (ctx.roundRect) ctx.roundRect(x, y - h / 2, pillW, h, h / 2);
+      else ctx.rect(x, y - h / 2, pillW, h);
       ctx.stroke();
 
-      // Текст
-      ctx.globalAlpha = 0.85;
+      // SVG icon (fallback: colored dot)
+      ctx.globalAlpha = 0.9;
+      const img = getPerkImage(perk.id);
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, x + padL, y - ICON_SZ / 2, ICON_SZ, ICON_SZ);
+      } else {
+        ctx.fillStyle = perk.color;
+        ctx.beginPath();
+        ctx.arc(x + padL + ICON_SZ / 2, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Level number
+      ctx.globalAlpha = 0.9;
       ctx.fillStyle = perk.color;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, x + 5, y);
+      ctx.fillText(lvlStr, x + padL + ICON_SZ + iconGap, y);
 
-      x += tw + gap;
+      x += pillW + gap;
     }
     ctx.globalAlpha = 1;
   }

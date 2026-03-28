@@ -516,6 +516,17 @@
   letter-spacing: 1px;
 }
 
+.perk-guide__howto {
+  padding: 4px 0 2px;
+}
+.perk-guide__howto-line {
+  color: #8898B8;
+  font-size: 14px;
+  line-height: 2;
+  font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  padding-left: 4px;
+}
+
 /* ═══════════════════════════════════════════════════════════
    KEBAB MENU — кнопка + bottom sheet
    ═══════════════════════════════════════════════════════════ */

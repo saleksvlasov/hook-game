@@ -74,6 +74,11 @@ export const LANGS = {
     // Guide
     guide_button: '? GUIDE',
     guide_title: 'PERKS',
+    guide_section_howto: 'HOW TO PLAY',
+    guide_howto_1: 'TAP to hook — TAP to release',
+    guide_howto_2: 'Collect glowing perks to power up',
+    guide_howto_3: 'Avoid bugs — they steal hearts',
+    guide_howto_4: 'Climb higher — beat your record',
     guide_section_round: '◈ ROUND PERKS',
     guide_section_forge: '◉ FORGE',
     guide_hint_round: 'Collect mid-run — reset on death',
@@ -168,6 +173,11 @@ export const LANGS = {
     // Guide
     guide_button: '? ГАЙД',
     guide_title: 'ПЕРКИ',
+    guide_section_howto: 'КАК ИГРАТЬ',
+    guide_howto_1: 'ТАП = зацепиться — ТАП = отпустить',
+    guide_howto_2: 'Подбирай светящиеся перки для усиления',
+    guide_howto_3: 'Избегай жуков — они крадут сердца',
+    guide_howto_4: 'Лезь выше — бей свой рекорд',
     guide_section_round: '◈ ПЕРКИ РАУНДА',
     guide_section_forge: '◉ КУЗНИЦА',
     guide_hint_round: 'Собирай в раунде — при смерти сбрасываются',

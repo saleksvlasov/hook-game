@@ -33,6 +33,24 @@ export class PerkGuideUI {
     scroll.classList.add('perk-guide__scroll');
     panel.appendChild(scroll);
 
+    // === Секция КАК ИГРАТЬ ===
+    scroll.appendChild(this.#makeSection(t('guide_section_howto'), null));
+
+    const howto = document.createElement('div');
+    howto.classList.add('perk-guide__howto');
+    for (let i = 1; i <= 4; i++) {
+      const line = document.createElement('div');
+      line.classList.add('perk-guide__howto-line');
+      line.textContent = t(`guide_howto_${i}`);
+      howto.appendChild(line);
+    }
+    scroll.appendChild(howto);
+
+    // Разделитель
+    const divTop = document.createElement('div');
+    divTop.classList.add('perk-guide__divider');
+    scroll.appendChild(divTop);
+
     // === Секция ПЕРКИ РАУНДА ===
     scroll.appendChild(this.#makeSection(t('guide_section_round'), t('guide_hint_round')));
 
