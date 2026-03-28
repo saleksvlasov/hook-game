@@ -88,7 +88,7 @@ export class UpgradeShopUI {
 
     // Левая часть: название + эффект
     const info = document.createElement('div');
-    info.style.cssText = 'flex:1;min-width:0';
+    info.classList.add('forge-card__info');
 
     const name = document.createElement('div');
     name.classList.add('forge-card__name');
@@ -146,7 +146,7 @@ export class UpgradeShopUI {
 
     // Левая часть: название + описание
     const info = document.createElement('div');
-    info.style.cssText = 'flex:1;min-width:0';
+    info.classList.add('forge-card__info');
 
     const name = document.createElement('div');
     name.classList.add('forge-card__name');
