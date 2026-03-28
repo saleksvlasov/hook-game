@@ -93,7 +93,7 @@ export class HunterRenderer {
     ctx.restore();
   }
 
-  // Рисовать огненный щит-ауру вокруг игрока
+  // Рисовать огненный щит (additive blend для яркого горения)
   drawShield(ctx, x, y, radius, shieldAlpha = 0, timerMs = 40000) {
     if (shieldAlpha <= 0) return;
 
@@ -101,120 +101,117 @@ export class HunterRenderer {
     const expiring = timerMs <= 5000;
     const expired01 = expiring ? 1 - timerMs / 5000 : 0;
 
-    // Пульсация — ускоряется при истечении
-    const pulseSpeed = expiring ? 0.012 + expired01 * 0.02 : 0.004;
-    const pulse = 0.5 + 0.5 * Math.sin(now * pulseSpeed);
-    const pulse2 = 0.5 + 0.5 * Math.sin(now * 0.007 + 1.5);
+    // Пульсации на разных частотах
+    const p1 = 0.5 + 0.5 * Math.sin(now * (expiring ? 0.012 + expired01 * 0.02 : 0.005));
+    const p2 = 0.5 + 0.5 * Math.sin(now * 0.007 + 1.5);
+    const p3 = 0.5 + 0.5 * Math.sin(now * 0.003 + 3.0);
 
-    // При истечении — мерцание
-    let dimmer = 1;
+    // Мерцание при истечении
+    let dim = 1;
     if (expiring) {
-      const rate = 180 - expired01 * 100;
-      dimmer = Math.floor(now / rate) % 2 === 0 ? 1 : 0.3;
+      const rate = 200 - expired01 * 130;
+      dim = Math.floor(now / rate) % 2 === 0 ? 1 : 0.35;
     }
 
-    const alpha = Math.max(0.15 + pulse * 0.1, shieldAlpha) * dimmer;
+    const alpha = Math.max(0.25 + p1 * 0.15, shieldAlpha) * dim;
 
-    // Палитра: Ember Orange → Amber → при истечении Pink
-    const coreR = expiring ? Math.round(255) : 255;
-    const coreG = expiring ? Math.round(107 - expired01 * 61) : 107; // FF6B35 → FF2E63
-    const coreB = expiring ? Math.round(53 + expired01 * 46) : 53;
-    const glowR = 255;
-    const glowG = expiring ? Math.round(184 - expired01 * 138) : 184; // FFB800
-    const glowB = expiring ? Math.round(0 + expired01 * 99) : 0;
+    // Цвета: Orange core + Amber glow → Pink при истечении
+    const cr = 255, cg = Math.round(107 - expired01 * 61), cb = Math.round(53 + expired01 * 46);
+    const gr = 255, gg = Math.round(184 - expired01 * 138), gb = Math.round(expired01 * 99);
 
     ctx.save();
 
-    // 1. Огненное свечение (широкий glow)
-    const glowR2 = radius + 12 + pulse * 6;
-    ctx.globalAlpha = alpha * 0.35;
-    const glowGrad = ctx.createRadialGradient(x, y, radius * 0.6, x, y, glowR2);
-    glowGrad.addColorStop(0, `rgba(${glowR},${glowG},${glowB},${alpha * 0.3})`);
-    glowGrad.addColorStop(0.6, `rgba(${coreR},${coreG},${coreB},${alpha * 0.15})`);
-    glowGrad.addColorStop(1, `rgba(${coreR},${coreG},${coreB},0)`);
-    ctx.fillStyle = glowGrad;
+    // === ADDITIVE BLEND — ключ к яркому горению ===
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 1. Широкое огненное свечение
+    const glowSize = radius + 15 + p1 * 8;
+    ctx.globalAlpha = alpha * 0.5;
+    const glow = ctx.createRadialGradient(x, y, radius * 0.4, x, y, glowSize);
+    glow.addColorStop(0, `rgba(${gr},${gg},${gb},${alpha * 0.25})`);
+    glow.addColorStop(0.5, `rgba(${cr},${cg},${cb},${alpha * 0.15})`);
+    glow.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y, glowR2, 0, Math.PI * 2);
+    ctx.arc(x, y, glowSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Внутренняя заливка — тёплый gradient
-    ctx.globalAlpha = alpha * 0.7;
-    const innerGrad = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    innerGrad.addColorStop(0, `rgba(${glowR},${glowG},${glowB},0)`);
-    innerGrad.addColorStop(0.5, `rgba(${coreR},${coreG},${coreB},${alpha * 0.1})`);
-    innerGrad.addColorStop(0.85, `rgba(${coreR},${coreG},${coreB},${alpha * 0.35})`);
-    innerGrad.addColorStop(1, `rgba(${glowR},${glowG},${glowB},${alpha * 0.5})`);
-    ctx.fillStyle = innerGrad;
+    // 2. Яркое кольцо пламени
+    ctx.globalAlpha = alpha * 0.6;
+    const ring = ctx.createRadialGradient(x, y, radius - 6, x, y, radius + 4);
+    ring.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+    ring.addColorStop(0.3, `rgba(${gr},${gg},${gb},${alpha * 0.4})`);
+    ring.addColorStop(0.6, `rgba(${cr},${cg},${cb},${alpha * 0.6})`);
+    ring.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+    ctx.fillStyle = ring;
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Вращающиеся огненные дуги (3 сегмента разной скорости)
-    const rot1 = now * 0.003;
-    const rot2 = -now * 0.002;
-    ctx.lineWidth = 2.5;
-    ctx.globalAlpha = alpha * 1.0;
-
-    // Amber дуги — быстрые
-    ctx.strokeStyle = `rgb(${glowR},${glowG},${glowB})`;
+    // 3. Вращающиеся огненные дуги (3 быстрые + 2 медленные)
+    const rot = now * 0.003;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.strokeStyle = `rgb(${gr},${gg},${gb})`;
     for (let i = 0; i < 3; i++) {
-      const start = rot1 + i * Math.PI * 2 / 3;
-      const len = Math.PI / 3 + pulse * Math.PI / 6;
+      const s = rot + i * Math.PI * 2 / 3;
       ctx.beginPath();
-      ctx.arc(x, y, radius - 1, start, start + len);
+      ctx.arc(x, y, radius, s, s + Math.PI / 3 + p1 * Math.PI / 5);
       ctx.stroke();
     }
-
-    // Orange дуги — медленные, противоход
-    ctx.strokeStyle = `rgb(${coreR},${coreG},${coreB})`;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = alpha * 0.8;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.strokeStyle = `rgb(${cr},${cg},${cb})`;
     for (let i = 0; i < 2; i++) {
-      const start = rot2 + i * Math.PI;
-      const len = Math.PI / 4 + pulse2 * Math.PI / 5;
+      const s = -now * 0.002 + i * Math.PI;
       ctx.beginPath();
-      ctx.arc(x, y, radius + 2, start, start + len);
+      ctx.arc(x, y, radius + 3, s, s + Math.PI / 4 + p2 * Math.PI / 4);
       ctx.stroke();
     }
 
-    // 4. Огненные частицы-искры (8 штук, вращаются + пляшут)
-    ctx.globalAlpha = alpha * 1.3;
-    const sparkCount = 8;
-    for (let i = 0; i < sparkCount; i++) {
-      const baseAngle = rot1 * 1.8 + i * (Math.PI * 2 / sparkCount);
-      const wobble = Math.sin(now * 0.008 + i * 2.3) * 4;
-      const sparkR = radius + wobble;
-      const sx = x + Math.cos(baseAngle) * sparkR;
-      const sy = y + Math.sin(baseAngle) * sparkR;
+    // 4. Огненные языки пламени (12 штук, пляшут по контуру)
+    const flameCount = 12;
+    for (let i = 0; i < flameCount; i++) {
+      const angle = rot * 1.5 + i * (Math.PI * 2 / flameCount);
+      const flicker = Math.sin(now * 0.01 + i * 1.7) * 0.5 + 0.5;
+      const wobble = Math.sin(now * 0.008 + i * 2.3) * 5;
+      const fr = radius + wobble;
+      const fx = x + Math.cos(angle) * fr;
+      const fy = y + Math.sin(angle) * fr;
 
-      // Ядро искры — яркий amber
-      const size = 2 + pulse * 1.5;
-      ctx.fillStyle = `rgb(${glowR},${glowG},${glowB})`;
+      // Ядро пламени — белый/жёлтый (additive = яркий!)
+      const coreSize = 2 + flicker * 2;
+      ctx.globalAlpha = alpha * (0.5 + flicker * 0.5);
+      ctx.fillStyle = `rgb(255,${220 + Math.round(flicker * 35)},${100 + Math.round(flicker * 80)})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, size, 0, Math.PI * 2);
+      ctx.arc(fx, fy, coreSize, 0, Math.PI * 2);
       ctx.fill();
 
-      // Хвост искры — мягкий glow
-      ctx.globalAlpha = alpha * 0.4;
-      ctx.fillStyle = `rgb(${coreR},${coreG},${coreB})`;
+      // Glow вокруг ядра
+      ctx.globalAlpha = alpha * 0.3;
+      ctx.fillStyle = `rgb(${cr},${cg},${cb})`;
       ctx.beginPath();
-      ctx.arc(sx, sy, size + 2, 0, Math.PI * 2);
+      ctx.arc(fx, fy, coreSize + 3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = alpha * 1.3;
     }
 
-    // 5. Пунктирное внешнее кольцо — бегущие штрихи
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = alpha * 0.4;
-    ctx.strokeStyle = `rgb(${glowR},${glowG},${glowB})`;
-    ctx.setLineDash([3, 7]);
-    ctx.lineDashOffset = -now * 0.04;
-    ctx.beginPath();
-    ctx.arc(x, y, radius + 5 + pulse * 2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // 5. Яркие всполохи (4 больших, медленные, дают ощущение мощи)
+    ctx.globalAlpha = alpha * 0.35;
+    for (let i = 0; i < 4; i++) {
+      const angle = now * 0.001 + i * Math.PI / 2;
+      const burstR = radius + 6 + p3 * 8;
+      const bx = x + Math.cos(angle) * burstR;
+      const by = y + Math.sin(angle) * burstR;
+      const bGrad = ctx.createRadialGradient(bx, by, 0, bx, by, 6 + p1 * 4);
+      bGrad.addColorStop(0, `rgba(255,255,200,${alpha * 0.5})`);
+      bGrad.addColorStop(1, `rgba(${gr},${gg},${gb},0)`);
+      ctx.fillStyle = bGrad;
+      ctx.beginPath();
+      ctx.arc(bx, by, 6 + p1 * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    ctx.restore();
+    ctx.restore(); // Восстанавливает globalCompositeOperation
   }
 
   // Рисовать ghost (клон для wrap-around)

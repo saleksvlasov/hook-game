@@ -292,10 +292,10 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
-    // === Ember counter — НИЗУ слева ===
+    // === Ember counter — ВЕРХ слева ===
     if (this.#embersEarned > 0) {
       const ex = 16;
-      const ey = H - 40;
+      const ey = safeTop + 22;
       const label = `+${this.#embersEarned}`;
       ctx.font = `bold 13px ${FONT_MONO}`;
       const tw = ctx.measureText(label).width;
@@ -325,8 +325,8 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
-    // === Перки — НИЗУ слева, под эмберами ===
-    this.#drawPerkIcons(ctx, H);
+    // === Перки — ВЕРХ слева, под эмберами ===
+    this.#drawPerkIcons(ctx, safeTop);
 
     // === Shield timer — НИЗУ по центру (над кнопкой) ===
     if (this.#shieldTimer > 0) {
@@ -362,8 +362,8 @@ export class HUDManager {
     }
   }
 
-  // Иконки перков — низ экрана слева
-  #drawPerkIcons(ctx, H) {
+  // Иконки перков — левый верхний угол, вертикальный столбик
+  #drawPerkIcons(ctx, safeTop) {
     if (!this.#perkLevels) return;
 
     const PERKS = [
@@ -374,28 +374,29 @@ export class HUDManager {
       { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },
     ];
 
-    let x = 8;
-    const y = H - 20;
+    const x = 8;
+    let y = safeTop + 46; // Под ember counter
+    const h = 20;
+    const gap = 4;
 
     for (const perk of PERKS) {
       const lvl = this.#perkLevels[perk.id];
       if (!lvl) continue;
 
       const label = `${perk.icon}${lvl}`;
-      ctx.font = `bold 11px ${FONT_MONO}`;
-      const tw = ctx.measureText(label).width + 10;
-      const h = 16;
+      ctx.font = `bold 13px ${FONT_MONO}`;
+      const tw = ctx.measureText(label).width + 12;
 
-      // Pill
-      ctx.globalAlpha = 0.45;
+      // Pill подложка
+      ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#0A0E1A';
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x, y - h / 2, tw, h, h / 2);
       else ctx.rect(x, y - h / 2, tw, h);
       ctx.fill();
 
-      // Рамка
-      ctx.globalAlpha = 0.2;
+      // Цветная рамка
+      ctx.globalAlpha = 0.25;
       ctx.strokeStyle = perk.color;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -404,13 +405,13 @@ export class HUDManager {
       ctx.stroke();
 
       // Текст
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.9;
       ctx.fillStyle = perk.color;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, x + 5, y);
+      ctx.fillText(label, x + 6, y);
 
-      x += tw + 4;
+      y += h + gap; // Вертикально вниз
     }
     ctx.globalAlpha = 1;
   }

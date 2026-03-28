@@ -957,6 +957,11 @@ export class GameScene extends Scene {
     const btn = document.createElement('button');
     btn.className = 'shield-btn';
     btn.textContent = '\u{1F6E1}'; // 🛡
+    // Перехватываем pointerdown чтобы не дошёл до canvas (иначе отцепит от крюка)
+    btn.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    });
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.#activateShield();

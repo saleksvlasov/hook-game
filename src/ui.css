@@ -300,21 +300,23 @@
 
 .shield-btn {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  border: 2px solid #00F5D4;
-  background: rgba(0, 245, 212, 0.15);
-  color: #00F5D4;
-  font-size: 22px;
+  border: 2px solid #FF6B35;
+  background: rgba(255, 107, 53, 0.2);
+  color: #FFB800;
+  font-size: 28px;
   cursor: pointer;
-  z-index: 90;
+  z-index: 100;
   display: none;
   -webkit-tap-highlight-color: transparent;
   transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(255, 107, 53, 0.4), inset 0 0 8px rgba(255, 184, 0, 0.2);
+  touch-action: manipulation;
 }
 .shield-btn--visible { display: flex; align-items: center; justify-content: center; }
-.shield-btn:active { transform: translateX(-50%) scale(0.9); background: rgba(0, 245, 212, 0.3); }
+.shield-btn:active { transform: translateX(-50%) scale(0.9); background: rgba(255, 107, 53, 0.4); box-shadow: 0 0 20px rgba(255, 184, 0, 0.6); }
