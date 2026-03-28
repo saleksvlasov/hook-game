@@ -88,6 +88,11 @@ export default {
       return handleResetLeaderboard(url, env);
     }
 
+    // Admin: сброс апгрейдов (POST /admin/reset-upgrades?key=SECRET&user=ID)
+    if (request.method === 'POST' && url.pathname === '/admin/reset-upgrades') {
+      return handleResetUpgrades(url, env);
+    }
+
     return new Response('Not found', { status: 404 });
   },
 };
@@ -736,6 +741,40 @@ async function handleResetLeaderboard(url, env) {
       profiles: profilesDeleted,
     },
   });
+}
+
+// Admin: сброс апгрейдов игрока (POST /admin/reset-upgrades?key=SECRET&user=ID)
+async function handleResetUpgrades(url, env) {
+  const key = url.searchParams.get('key');
+  if (!key || key !== env.ADMIN_KEY) {
+    return jsonResponse({ error: 'Unauthorized' }, 403);
+  }
+
+  if (!env.SCORES) return jsonResponse({ error: 'KV not configured' }, 500);
+
+  const userId = url.searchParams.get('user');
+  if (!userId) return jsonResponse({ error: 'Missing user param' }, 400);
+
+  const profile = (await env.SCORES.get(`profile:${userId}`, 'json')) || {};
+
+  // Возвращаем потраченные эмберы
+  let refunded = 0;
+  if (profile.upgrades) {
+    for (const [id, level] of Object.entries(profile.upgrades)) {
+      const def = UPGRADE_COSTS[id];
+      if (!def) continue;
+      for (let i = 0; i < level; i++) {
+        refunded += def.costs ? (def.costs[i] || 0) : Math.floor(def.baseCost * Math.pow(def.costScale, i));
+      }
+    }
+  }
+
+  profile.upgrades = {};
+  profile.embers = (profile.embers || 0) + refunded;
+
+  await env.SCORES.put(`profile:${userId}`, JSON.stringify(profile));
+
+  return jsonResponse({ ok: true, refunded, embers: profile.embers });
 }
 
 // ---- Helpers ----
