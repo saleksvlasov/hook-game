@@ -1,5 +1,5 @@
 import { t } from '../i18n.js';
-import { PERK_PICKUPS } from '../constants.js';
+import { PERK_ICONS } from './PerkIcons.js';
 
 export class PerkGuideUI {
   #panel = null;
@@ -38,10 +38,10 @@ export class PerkGuideUI {
     const roundCards = document.createElement('div');
     roundCards.classList.add('perk-guide__cards');
     const roundPerks = [
-      { id: 'hook_range',   color: 'cyan',   label: '\u2295', nameKey: 'perk_hook_range',   descKey: 'perk_hook_range_desc',   maxLvl: 6  }, // ⊕
-      { id: 'swing_power',  color: 'pink',   label: '\u21AF', nameKey: 'perk_swing_power',  descKey: 'perk_swing_power_desc',  maxLvl: 10 }, // ↯
-      { id: 'quick_hook',   color: 'amber',  label: '◈', nameKey: 'perk_quick_hook',   descKey: 'perk_quick_hook_desc',   maxLvl: 3  },
-      { id: 'ember_magnet', color: 'orange', label: '◉', nameKey: 'perk_ember_magnet', descKey: 'perk_ember_magnet_desc', maxLvl: 5  },
+      { id: 'hook_range',   color: 'cyan',   label: PERK_ICONS.hook_range,   nameKey: 'perk_hook_range',   descKey: 'perk_hook_range_desc',   maxLvl: 6  },
+      { id: 'swing_power',  color: 'pink',   label: PERK_ICONS.swing_power,  nameKey: 'perk_swing_power',  descKey: 'perk_swing_power_desc',  maxLvl: 10 },
+      { id: 'quick_hook',   color: 'amber',  label: PERK_ICONS.quick_hook,   nameKey: 'perk_quick_hook',   descKey: 'perk_quick_hook_desc',   maxLvl: 3  },
+      { id: 'ember_magnet', color: 'orange', label: PERK_ICONS.ember_magnet, nameKey: 'perk_ember_magnet', descKey: 'perk_ember_magnet_desc', maxLvl: 5  },
     ];
     for (const p of roundPerks) {
       roundCards.appendChild(this.#makeCard(p.label, p.color, t(p.nameKey), t(p.descKey), `${t('perk_max_level')} ${p.maxLvl}`));
@@ -59,10 +59,9 @@ export class PerkGuideUI {
     const forgeCards = document.createElement('div');
     forgeCards.classList.add('perk-guide__cards');
     const forgeItems = [
-      { label: '\u2665', color: 'steel', nameKey: 'upgrade_iron_heart', descKey: 'upgrade_iron_heart_desc' }, // ♥ (text, не emoji)
-      { label: '\u25EF', color: 'steel', nameKey: 'shield_name',        descKey: 'shield_desc'             }, // ◯ (large circle)
-      { label: '\u2731', color: 'steel', nameKey: 'saw_name',            descKey: 'saw_desc'               }, // ✱ (heavy asterisk)
-
+      { label: PERK_ICONS.iron_heart, color: 'steel', nameKey: 'upgrade_iron_heart', descKey: 'upgrade_iron_heart_desc' },
+      { label: PERK_ICONS.shield,     color: 'steel', nameKey: 'shield_name',        descKey: 'shield_desc'             },
+      { label: PERK_ICONS.saw,        color: 'steel', nameKey: 'saw_name',           descKey: 'saw_desc'               },
     ];
     for (const item of forgeItems) {
       forgeCards.appendChild(this.#makeCard(item.label, item.color, t(item.nameKey), t(item.descKey), null));
@@ -87,7 +86,7 @@ export class PerkGuideUI {
     return wrap;
   }
 
-  #makeCard(iconText, colorKey, name, desc, maxText) {
+  #makeCard(iconSvg, colorKey, name, desc, maxText) {
     const card = document.createElement('div');
     card.classList.add('perk-guide__card');
     card.dataset.color = colorKey;
@@ -95,7 +94,7 @@ export class PerkGuideUI {
     const badge = document.createElement('div');
     badge.classList.add('perk-guide__badge');
     badge.dataset.color = colorKey;
-    badge.textContent = iconText;
+    badge.innerHTML = iconSvg || '';
     card.appendChild(badge);
 
     const info = document.createElement('div');
