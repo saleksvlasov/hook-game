@@ -251,7 +251,8 @@ export class HUDManager {
         const hy = safeTop + 20;
         const halfHearts = this.#hearts - i * 2;
         const state = halfHearts >= 2 ? 'full' : halfHearts === 1 ? 'half' : 'empty';
-        const isBonus = i === 3 && this.#maxHearts > 6;
+        // Бонусное = последнее сердце, только при активном таймере
+        const isBonus = this.#bonusTimer > 0 && i === heartCount - 1;
         if (isBonus) {
           const pulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.006);
           ctx.globalAlpha = pulse;
@@ -260,9 +261,9 @@ export class HUDManager {
         if (isBonus) ctx.globalAlpha = 1;
       }
 
-      if (this.#maxHearts > 6 && this.#bonusTimer > 0) {
+      if (this.#bonusTimer > 0) {
         const secs = Math.ceil(this.#bonusTimer / 1000);
-        const timerX = W - 20 - 3 * (heartSize * 2 + heartGap);
+        const timerX = W - 20 - (heartCount - 1) * (heartSize * 2 + heartGap);
         const timerY = safeTop + 36;
         ctx.font = `bold 12px ${NEON_FONT}`;
         ctx.fillStyle = '#FF2E63';
@@ -272,26 +273,6 @@ export class HUDManager {
         ctx.fillText(`${secs}s`, timerX, timerY);
         ctx.globalAlpha = 1;
       }
-    }
-
-    // === Виджет challenge ===
-    if (this.#hasChallengeWidget) {
-      const chipY = safeTop + 95;
-      ctx.globalAlpha = 0.85;
-      ctx.font = `13px ${NEON_FONT}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const tw = ctx.measureText(this.#challengeStr).width + 24;
-      const th = 26;
-      drawChip(ctx, W / 2, chipY, tw, th);
-
-      ctx.fillStyle = NEON_AMBER;
-      ctx.strokeStyle = NEON_BG;
-      ctx.lineWidth = 2;
-      ctx.strokeText(this.#challengeStr, W / 2, chipY);
-      ctx.fillText(this.#challengeStr, W / 2, chipY);
-      ctx.globalAlpha = 1;
     }
 
     // === Ember counter — ВЕРХ слева ===
@@ -328,7 +309,29 @@ export class HUDManager {
     }
 
     // === Перки — ВЕРХ слева, под эмберами ===
-    this.#drawPerkIcons(ctx, safeTop);
+    const perksBottomY = this.#drawPerkIcons(ctx, safeTop);
+
+    // === Виджет challenge (под перками, не перекрывает) ===
+    if (this.#hasChallengeWidget) {
+      const chipY = Math.max(safeTop + 95, perksBottomY + 16);
+      ctx.globalAlpha = 0.85;
+      ctx.font = `12px ${NEON_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Ограничиваем ширину chip
+      const rawW = ctx.measureText(this.#challengeStr).width + 24;
+      const tw = Math.min(rawW, W - 32);
+      const th = 26;
+      drawChip(ctx, W / 2, chipY, tw, th);
+
+      ctx.fillStyle = NEON_AMBER;
+      ctx.strokeStyle = NEON_BG;
+      ctx.lineWidth = 2;
+      ctx.strokeText(this.#challengeStr, W / 2, chipY);
+      ctx.fillText(this.#challengeStr, W / 2, chipY);
+      ctx.globalAlpha = 1;
+    }
 
     // === Shield timer — НИЗУ по центру (над кнопкой) ===
     if (this.#shieldTimer > 0) {
@@ -365,8 +368,9 @@ export class HUDManager {
   }
 
   // Иконки перков — левый верхний угол, вертикальный столбик
+  // Возвращает нижнюю Y-координату для размещения следующих элементов
   #drawPerkIcons(ctx, safeTop) {
-    if (!this.#perkLevels) return;
+    if (!this.#perkLevels) return safeTop + 46;
 
     const PERKS = [
       { id: 'hook_range',   icon: '\u2197', color: '#00F5D4' },
@@ -377,9 +381,9 @@ export class HUDManager {
     ];
 
     const x = 8;
-    let y = safeTop + 46; // Под ember counter
-    const h = 20;
-    const gap = 4;
+    let y = safeTop + 46;
+    const h = 18;
+    const gap = 3;
 
     for (const perk of PERKS) {
       const lvl = this.#perkLevels[perk.id];
@@ -416,6 +420,7 @@ export class HUDManager {
       y += h + gap; // Вертикально вниз
     }
     ctx.globalAlpha = 1;
+    return y; // Нижняя граница для размещения следующих элементов
   }
 
   // Рисование одного HUD-сердца (full/half/empty)
