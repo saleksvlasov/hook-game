@@ -328,11 +328,11 @@
 
 /* === Shield button (in-game) === */
 
+/* Shield + Saw рядом по центру снизу: shield слева, saw справа, gap 12px */
 .shield-btn {
   position: fixed;
   bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50% - 70px); /* 64px + 6px gap */
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -349,15 +349,15 @@
   touch-action: manipulation;
 }
 .shield-btn--visible { display: flex; align-items: center; justify-content: center; }
-.shield-btn:active { transform: translateX(-50%) scale(0.9); background: rgba(255, 107, 53, 0.4); box-shadow: 0 0 20px rgba(255, 184, 0, 0.6); }
+.shield-btn:active { transform: scale(0.9); background: rgba(255, 107, 53, 0.4); box-shadow: 0 0 20px rgba(255, 184, 0, 0.6); }
 
 /* === Saw button (in-game) === */
 
 .saw-btn {
   display: none;
   position: fixed;
-  right: 16px;
-  bottom: 80px;
+  bottom: 24px;
+  left: calc(50% + 6px); /* 6px gap от центра, рядом со shield */
   width: 64px;
   height: 64px;
   background: rgba(10, 14, 26, 0.85);
