@@ -855,8 +855,8 @@ export class GameScene extends Scene {
     if (this.#shieldActive && !this.isDead) {
       if (this.obstacles.checkDeflect(p.x, p.y, SHIELD_RADIUS)) {
         this.#shieldFlash = 0.4;
-        this.camera.shake(100, 0.005);
-        this.camera.flash(80, 0, 245, 212);
+        this.camera.shake(80, 0.004);
+        this.camera.flash(60, 0, 245, 212, 0.15); // Мягкий cyan flash
         playDeflect();
         navigator.vibrate?.(15);
       }
@@ -879,8 +879,8 @@ export class GameScene extends Scene {
       navigator.vibrate?.([50, 30, 50]);
       playBugHit();
 
-      this.camera.shake(300, 0.018);
-      this.camera.flash(200, 255, 46, 99); // Pink flash
+      this.camera.shake(200, 0.012);
+      this.camera.flash(80, 255, 46, 99, 0.25); // Мягкий pink flash (короче, прозрачнее)
 
       // Усиленное мигание
       p.alpha = 0.3;
