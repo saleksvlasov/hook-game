@@ -331,16 +331,34 @@ export class HUDManager {
     // === Shield timer — НИЗУ по центру (над кнопкой) ===
     if (this.#shieldTimer > 0) {
       const secs = Math.ceil(this.#shieldTimer / 1000);
-      ctx.font = `bold 14px ${FONT_MONO}`;
-      ctx.fillStyle = NEON_CYAN;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.globalAlpha = 0.9;
-      ctx.shadowColor = NEON_CYAN;
-      ctx.shadowBlur = 4;
-      ctx.fillText(`🛡 ${secs}s`, W / 2, H - 56);
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
+      const expiring = this.#shieldTimer <= 5000;
+      const expired01 = expiring ? 1 - this.#shieldTimer / 5000 : 0;
+
+      // Цвет: cyan → pink при истечении
+      const timerColor = expiring ? '#FF2E63' : NEON_CYAN;
+
+      // Мигание последние 5 сек
+      let show = true;
+      if (expiring) {
+        const rate = 200 - expired01 * 120;
+        show = Math.floor(Date.now() / rate) % 2 === 0;
+      }
+
+      if (show) {
+        ctx.font = `bold ${expiring ? 16 : 14}px ${FONT_MONO}`;
+        ctx.fillStyle = timerColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.globalAlpha = 0.95;
+        ctx.shadowColor = timerColor;
+        ctx.shadowBlur = expiring ? 6 : 4;
+        ctx.strokeStyle = NEON_BG;
+        ctx.lineWidth = 3;
+        ctx.strokeText(`\u{1F6E1} ${secs}s`, W / 2, H - 56);
+        ctx.fillText(`\u{1F6E1} ${secs}s`, W / 2, H - 56);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
     }
   }
 

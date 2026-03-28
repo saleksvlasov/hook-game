@@ -693,7 +693,7 @@ export class GameScene extends Scene {
 
     // 5.9 Shield аура (перед жуками, за игроком)
     if (this.#shieldActive) {
-      this.hunter.drawShield(ctx, p.x, p.y, SHIELD_RADIUS, Math.max(0.15, this.#shieldFlash));
+      this.hunter.drawShield(ctx, p.x, p.y, SHIELD_RADIUS, Math.max(0.15, this.#shieldFlash), this.#shieldTimer);
     }
 
     // 5.10 Жуки

@@ -94,33 +94,96 @@ export class HunterRenderer {
   }
 
   // Рисовать щит-ауру вокруг игрока
-  drawShield(ctx, x, y, radius, shieldAlpha = 0) {
+  drawShield(ctx, x, y, radius, shieldAlpha = 0, timerMs = 40000) {
     if (shieldAlpha <= 0) return;
 
-    // Пульсирующий cyan circle
-    const baseAlpha = 0.08 + 0.05 * Math.sin(performance.now() * 0.005);
-    const alpha = Math.max(baseAlpha, shieldAlpha); // shieldAlpha > 0 при deflect flash
+    const now = performance.now();
+    const expiring = timerMs <= 5000; // Последние 5 секунд
+    const expired01 = expiring ? 1 - timerMs / 5000 : 0; // 0→1 по мере истечения
+
+    // Пульсация — ускоряется при истечении
+    const pulseSpeed = expiring ? 0.015 + expired01 * 0.025 : 0.005;
+    const basePulse = 0.5 + 0.5 * Math.sin(now * pulseSpeed);
+
+    // Мигание при истечении (вкл/выкл каждые 200-80ms)
+    let blinkOn = true;
+    if (expiring) {
+      const blinkRate = 200 - expired01 * 120; // 200ms → 80ms
+      blinkOn = Math.floor(now / blinkRate) % 2 === 0;
+    }
+
+    const baseAlpha = expiring
+      ? (blinkOn ? 0.12 + basePulse * 0.15 : 0.04)
+      : 0.08 + basePulse * 0.07;
+    const alpha = Math.max(baseAlpha, shieldAlpha);
+
+    // Цвет: cyan → pink при истечении
+    const r = Math.round(0 + expired01 * 255);
+    const g = Math.round(245 - expired01 * 199);
+    const b = Math.round(212 - expired01 * 113);
+    const color = `rgb(${r},${g},${b})`;
+    const colorA = (a) => `rgba(${r},${g},${b},${a})`;
 
     ctx.save();
-    ctx.globalAlpha = alpha;
 
-    // Gradient aura
-    const grad = ctx.createRadialGradient(x, y, radius * 0.7, x, y, radius);
-    grad.addColorStop(0, 'rgba(0, 245, 212, 0)');
-    grad.addColorStop(0.7, `rgba(0, 245, 212, ${alpha * 0.3})`);
-    grad.addColorStop(1, `rgba(0, 245, 212, ${alpha})`);
+    // 1. Внешнее свечение (glow)
+    ctx.globalAlpha = alpha * 0.4;
+    const glowGrad = ctx.createRadialGradient(x, y, radius, x, y, radius + 8 + basePulse * 4);
+    glowGrad.addColorStop(0, colorA(alpha * 0.3));
+    glowGrad.addColorStop(1, colorA(0));
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 8 + basePulse * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Основная заливка (gradient aura)
+    ctx.globalAlpha = alpha;
+    const grad = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius);
+    grad.addColorStop(0, colorA(0));
+    grad.addColorStop(0.6, colorA(alpha * 0.2));
+    grad.addColorStop(1, colorA(alpha * 0.6));
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Контур
-    ctx.strokeStyle = '#00F5D4';
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = alpha * 1.5;
+    // 3. Вращающиеся сегменты (4 дуги)
+    const rotation = now * 0.002;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = alpha * 1.2;
+    for (let i = 0; i < 4; i++) {
+      const segStart = rotation + i * Math.PI / 2;
+      const segLen = Math.PI / 4 + basePulse * Math.PI / 8;
+      ctx.beginPath();
+      ctx.arc(x, y, radius - 1, segStart, segStart + segLen);
+      ctx.stroke();
+    }
+
+    // 4. Внешний контур (тонкий, пульсирующий)
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.setLineDash([4, 6]);
+    ctx.lineDashOffset = -now * 0.03;
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.arc(x, y, radius + 2, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 5. Искры на контуре (6 точек вращающихся)
+    ctx.globalAlpha = alpha * 1.5;
+    const sparkCount = 6;
+    for (let i = 0; i < sparkCount; i++) {
+      const angle = rotation * 1.5 + i * (Math.PI * 2 / sparkCount);
+      const sparkR = radius + basePulse * 3;
+      const sx = x + Math.cos(angle) * sparkR;
+      const sy = y + Math.sin(angle) * sparkR;
+      const size = 1.5 + basePulse;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(sx, sy, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
