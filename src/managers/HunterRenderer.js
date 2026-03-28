@@ -405,6 +405,79 @@ export class HunterRenderer {
     ctx.restore(); // Восстанавливает globalCompositeOperation
   }
 
+  // Вращающаяся пила вокруг игрока
+  drawSaw(ctx, x, y, alpha, timerMs, rotAngle) {
+    if (alpha <= 0) return;
+    const t = performance.now() * 0.001;
+
+    // Expiring (< 5 sec): мигание нарастающей частотой
+    let drawAlpha = alpha;
+    if (timerMs < 5000) {
+      const freq = 8 + (5 - timerMs / 1000) * 3;
+      drawAlpha = alpha * (0.3 + 0.7 * Math.abs(Math.sin(t * freq)));
+    }
+
+    ctx.save();
+    ctx.globalAlpha = drawAlpha;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.translate(x, y);
+
+    const R_INNER = 22;
+    const R_OUTER = 33;
+    const TEETH = 12;
+
+    // Внутреннее кольцо — orange
+    ctx.save();
+    ctx.rotate(rotAngle);
+    ctx.beginPath();
+    ctx.arc(0, 0, R_INNER, 0, Math.PI * 2);
+    ctx.strokeStyle = '#FF6B35';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#FF6B35';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Зубья — 12 треугольников
+    ctx.fillStyle = '#FFB800';
+    ctx.shadowColor = '#FFB800';
+    ctx.shadowBlur = 6;
+    for (let i = 0; i < TEETH; i++) {
+      const θ = (i / TEETH) * Math.PI * 2;
+      const p0x = Math.cos(θ - 0.17) * R_INNER;
+      const p0y = Math.sin(θ - 0.17) * R_INNER;
+      const p1x = Math.cos(θ + 0.22) * R_OUTER;
+      const p1y = Math.sin(θ + 0.22) * R_OUTER;
+      const p2x = Math.cos(θ + 0.17) * R_INNER;
+      const p2y = Math.sin(θ + 0.17) * R_INNER;
+      ctx.beginPath();
+      ctx.moveTo(p0x, p0y);
+      ctx.lineTo(p1x, p1y);
+      ctx.lineTo(p2x, p2y);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Пунктирное внешнее кольцо — вращается в обратную сторону
+    ctx.save();
+    ctx.rotate(-rotAngle * 0.43);
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.strokeStyle = '#FFB800';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = drawAlpha * 0.4;
+    ctx.setLineDash([4, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+
   // Рисовать ghost (клон для wrap-around)
   drawGhost(ctx, x, y) {
     this.draw(ctx, x, y);

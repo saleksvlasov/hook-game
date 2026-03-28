@@ -1,6 +1,6 @@
 import { t } from '../i18n.js';
 import { profile } from '../data/index.js';
-import { UPGRADES, SHIELD_COST } from '../constants.js';
+import { UPGRADES, SHIELD_COST, SAW_COST } from '../constants.js';
 import { getUpgradeCost } from './UpgradeApplicator.js';
 
 // Магазин апгрейдов "КУЗНИЦА" — HTML overlay в #game-ui
@@ -74,6 +74,8 @@ export class UpgradeShopUI {
     }
     // Карточка Shield — одноразовый предмет, не апгрейд
     this.#cardsContainer.appendChild(this.#createShieldCard());
+    // Карточка Saw — одноразовый предмет
+    this.#cardsContainer.appendChild(this.#createSawCard());
   }
 
   #createCard(upgradeId) {
@@ -181,6 +183,57 @@ export class UpgradeShopUI {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         await profile.purchaseShield();
+        this.#refresh();
+      };
+      btn.addEventListener('click', handleBuy);
+    }
+
+    card.appendChild(btn);
+    return card;
+  }
+
+  #createSawCard() {
+    const owned = profile.hasSaw;
+    const canAfford = profile.embers >= SAW_COST;
+
+    const card = document.createElement('div');
+    card.classList.add('forge-card');
+
+    const info = document.createElement('div');
+    info.classList.add('forge-card__info');
+
+    const name = document.createElement('div');
+    name.classList.add('forge-card__name');
+    name.textContent = t('saw_name');
+    info.appendChild(name);
+
+    const desc = document.createElement('div');
+    desc.classList.add('forge-card__desc');
+    desc.textContent = t('saw_desc');
+    info.appendChild(desc);
+
+    card.appendChild(info);
+
+    const btn = document.createElement('button');
+    btn.classList.add('forge-card__btn');
+
+    if (owned) {
+      btn.textContent = t('saw_owned');
+      btn.classList.add('forge-card__btn--max');
+      btn.disabled = true;
+    } else if (!canAfford) {
+      btn.textContent = `${SAW_COST}`;
+      btn.classList.add('forge-card__btn--locked');
+      btn.disabled = true;
+    } else {
+      btn.textContent = `${SAW_COST}`;
+      btn.classList.add('forge-card__btn--buy');
+      const handleBuy = async (e) => {
+        e.preventDefault();
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        await profile.purchaseSaw();
         this.#refresh();
       };
       btn.addEventListener('click', handleBuy);

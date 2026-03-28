@@ -281,6 +281,24 @@ export class ObstacleManager {
     return false;
   }
 
+  // Уничтожение жуков пилой (мгновенно, без knockback)
+  checkSaw(playerX, playerY, sawRadius) {
+    let killed = false;
+    for (const obs of this.active) {
+      if (obs.hit || obs.fadeOut || obs.type === 4) continue;
+      const dist = Math.sqrt(
+        (obs.x - playerX) ** 2 + (obs.y - playerY) ** 2
+      );
+      if (dist < sawRadius) {
+        obs.hit = true;
+        obs.fadeOut = true;
+        obs.fadeLife = 200;
+        killed = true;
+      }
+    }
+    return killed;
+  }
+
   // Отрисовка — только видимые
   draw(ctx) {
     const cam = this.scene.camera;

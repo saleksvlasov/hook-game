@@ -261,6 +261,39 @@ export function playDeflect() {
   } catch(e) { /* audio context closed or unavailable */ }
 }
 
+export function playSawActivate() {
+  try {
+    const c = getCtx();
+    const now = c.currentTime;
+    // Grinding noise: noise burst through bandpass filter
+    const bufferSize = c.sampleRate * 0.25;
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1800;
+    filter.Q.value = 2;
+    filter.frequency.linearRampToValueAtTime(800, now + 0.25);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.4, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    src.connect(filter).connect(g).connect(c.destination);
+    src.start(now);
+    src.stop(now + 0.25);
+    // Короткий свист поверх
+    osc('sawtooth', 2400, 0.12, 0.15, 400);
+  } catch(e) {}
+}
+
+export function playSawKill() {
+  // Короткий crunch при уничтожении жука
+  osc('square', 220, 0.05, 0.3, 80);
+  osc('sawtooth', 180, 0.04, 0.2, 60);
+}
+
 export function destroyAudio() {
   if (ctx && ctx.state !== 'closed') {
     ctx.close().catch(() => {});

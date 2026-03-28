@@ -1,7 +1,7 @@
 import { TelegramProvider, getCurrentWeek } from './TelegramProvider.js';
 import { DevProvider } from './DevProvider.js';
 import { setLang } from '../i18n.js';
-import { SHIELD_COST } from '../constants.js';
+import { SHIELD_COST, SAW_COST } from '../constants.js';
 
 // Единая точка входа к данным пользователя
 // Telegram → сервер (единственный источник правды)
@@ -53,6 +53,7 @@ class UserProfile {
   get embers() { return this.#data?.embers || 0; }
   get upgrades() { return this.#data?.upgrades || {}; }
   get hasShield() { return this.#data?.hasShield || false; }
+  get hasSaw() { return this.#data?.hasSaw || false; }
   get isAuthorized() { return this.#provider?.isAuthorized() || false; }
   get currentWeek() { return getCurrentWeek(); }
 
@@ -177,6 +178,29 @@ class UserProfile {
     this.#data.hasShield = false;
     this.#notify();
     this.#provider.saveShield(true).catch(() => {});
+  }
+
+  async purchaseSaw() {
+    if ((this.#data.embers || 0) < SAW_COST) return false;
+    this.#data.hasSaw = true;
+    this.#data.embers -= SAW_COST;
+    this.#notify();
+    const result = await this.#provider.saveSaw(false);
+    if (result?.error) {
+      this.#data.hasSaw = false;
+      this.#data.embers += SAW_COST;
+      this.#notify();
+      return false;
+    }
+    if (result?.embers !== undefined) this.#data.embers = result.embers;
+    this.#notify();
+    return true;
+  }
+
+  useSaw() {
+    this.#data.hasSaw = false;
+    this.#notify();
+    this.#provider.saveSaw(true).catch(() => {});
   }
 
   // --- Async операции ---

@@ -1,4 +1,4 @@
-import { SHIELD_COST } from '../constants.js';
+import { SHIELD_COST, SAW_COST } from '../constants.js';
 
 // Dev-провайдер — мок для локальной разработки без Telegram
 // Данные хранятся в памяти, сбрасываются при перезагрузке
@@ -16,12 +16,14 @@ export class DevProvider {
     embers: 500, // dev: стартовый баланс для тестирования
     upgrades: {},
     hasShield: false,
+    hasSaw: false,
   };
 
   async loadProfile() {
     return {
       ...this.#data,
       gamesCount: 0,
+      hasSaw: this.#data.hasSaw,
     };
   }
 
@@ -66,6 +68,18 @@ export class DevProvider {
     this.#data.hasShield = true;
     this.#data.embers -= SHIELD_COST;
     return { ok: true, embers: this.#data.embers, hasShield: true };
+  }
+
+  async saveSaw(use = false) {
+    if (use) {
+      this.#data.hasSaw = false;
+      return { ok: true, hasSaw: false };
+    }
+    if (this.#data.embers < SAW_COST) return { error: 'Insufficient embers' };
+    if (this.#data.hasSaw) return { error: 'Already owned' };
+    this.#data.hasSaw = true;
+    this.#data.embers -= SAW_COST;
+    return { ok: true, embers: this.#data.embers, hasSaw: true };
   }
 
   isAuthorized() {
