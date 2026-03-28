@@ -58,6 +58,8 @@ export class GameScene extends Scene {
   #sawTimer = 0;
   #sawRotation = 0;
   #sawBtn = null;
+  // Float texts — краткие всплывающие надписи в мировых координатах
+  #floatTexts = [];
 
   constructor(engine) {
     super(engine);
@@ -359,6 +361,7 @@ export class GameScene extends Scene {
     this.#roundPerkLevels = {};
     this.#effectiveConsts = getEffectiveConstants(this.#roundPerkLevels);
     this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
+    this.#floatTexts.length = 0;
 
     this.#delayedCall(600, () => { if (this.isDead) this.#showFullGameOver(); });
 
@@ -531,6 +534,29 @@ export class GameScene extends Scene {
 
     // 5.4b Perk pickup предметы
     this.perkPickups.draw(ctx);
+
+    // 5.4c Float texts (конвертация MAX перка, итп.) — мировые координаты
+    if (this.#floatTexts.length > 0) {
+      ctx.save();
+      ctx.font = 'bold 15px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = this.#floatTexts.length - 1; i >= 0; i--) {
+        const ft = this.#floatTexts[i];
+        ft.life -= delta;
+        ft.y += ft.vy * (delta / 1000);
+        if (ft.life <= 0) { this.#floatTexts.splice(i, 1); continue; }
+        const a = Math.max(0, ft.life / ft.maxLife);
+        ctx.globalAlpha = a;
+        // Обводка для читаемости на любом фоне
+        ctx.strokeStyle = '#0A0E1A';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = '#FF6B35'; // Ember orange
+        ctx.fillText(ft.text, ft.x, ft.y);
+      }
+      ctx.restore();
+    }
 
     // 5.5 Trail частицы
     this.trail.draw(ctx);
@@ -817,11 +843,26 @@ export class GameScene extends Scene {
         const maxLvl = cfg.maxLevel;
         const cur = this.#roundPerkLevels[pickedPerkId] || 0;
         if (cur < maxLvl) {
+          // Обычный подбор — повысить уровень перка
           this.#roundPerkLevels[pickedPerkId] = cur + 1;
           this.#effectiveConsts = getEffectiveConstants(this.#roundPerkLevels);
           this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
           playHeartPickup(); // переиспользуем звук
           navigator.vibrate?.(10);
+        } else {
+          // MAX перк → конвертация в 20 эмберов
+          const bonus = 20;
+          this.#embersEarned += bonus;
+          this.hud.updateEmbers(this.#embersEarned);
+          this.#floatTexts.push({
+            text: `+${bonus}`,
+            x: p.x,
+            y: p.y - 40,
+            vy: -55,       // px/s вверх в мировых координатах
+            life: 1000,
+            maxLife: 1000,
+          });
+          navigator.vibrate?.(6);
         }
       }
     }

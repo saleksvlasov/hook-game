@@ -241,7 +241,7 @@ export const PERK_PICKUPS = {
     maxLevel: 6,
     effect: 0.04,      // +4% per level → max +24%
     color: '#00F5D4',  // Cyan
-    label: '⚓',
+    label: '\u2295',   // ⊕ CIRCLED PLUS — geometric, не emoji, всегда следует fillStyle
   },
   swing_power: {
     chance: 0.120,       // было 0.020 → x6
@@ -249,7 +249,7 @@ export const PERK_PICKUPS = {
     maxLevel: 10,
     effect: 0.03,
     color: '#FF2E63',  // Pink
-    label: '⚡',
+    label: '\u21AF',   // ↯ DOWNWARDS ZIGZAG ARROW — geometric, не emoji
   },
   quick_hook: {
     chance: 0.040,       // было 0.0075 → x5
