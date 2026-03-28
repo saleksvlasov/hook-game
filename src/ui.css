@@ -326,61 +326,53 @@
   font-family: monospace;
 }
 
-/* === Shield button (in-game) === */
-
-/* Shield + Saw рядом по центру снизу: shield слева, saw справа, gap 12px */
-.shield-btn {
+/* === Buff bar — flex контейнер для shield + saw кнопок === */
+.buff-bar {
   position: fixed;
-  bottom: 24px;
-  left: calc(50% - 70px); /* 64px + 6px gap */
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 2px solid #FF6B35;
-  background: rgba(255, 107, 53, 0.2);
-  color: #FFB800;
-  font-size: 28px;
-  cursor: pointer;
-  z-index: 90;
-  display: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 12px rgba(255, 107, 53, 0.4), inset 0 0 8px rgba(255, 184, 0, 0.2);
-  touch-action: manipulation;
-}
-.shield-btn--visible { display: flex; align-items: center; justify-content: center; }
-.shield-btn:active { transform: scale(0.9); background: rgba(255, 107, 53, 0.4); box-shadow: 0 0 20px rgba(255, 184, 0, 0.6); }
-
-/* === Saw button (in-game) === */
-
-.saw-btn {
-  display: none;
-  position: fixed;
-  bottom: 24px;
-  left: calc(50% + 6px); /* 6px gap от центра, рядом со shield */
-  width: 64px;
-  height: 64px;
-  background: rgba(10, 14, 26, 0.85);
-  border: 2px solid #FFB800;
-  border-radius: 50%;
-  color: #FFB800;
-  font-size: 28px;
-  cursor: pointer;
-  touch-action: manipulation;
-  box-shadow: 0 0 12px #FFB80055;
-  z-index: 90;
-  transition: opacity 0.2s;
-}
-
-.saw-btn--visible {
+  bottom: max(env(safe-area-inset-bottom, 16px), 20px);
+  left: 0;
+  right: 0;
   display: flex;
+  justify-content: center;
+  gap: 8px;
+  z-index: 90;
+  pointer-events: none;
+}
+
+/* Общие стили для buff-кнопок */
+.buff-btn {
+  display: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.15s ease-out;
+  padding: 0;
   align-items: center;
   justify-content: center;
 }
+.buff-btn--visible { display: flex; }
+.buff-btn:active { transform: scale(0.88); }
+.buff-btn svg { width: 34px; height: 34px; }
 
-.saw-btn:active {
-  transform: scale(0.92);
+/* Shield */
+.shield-btn {
+  border: 2px solid #FF6B35;
+  background: rgba(255, 107, 53, 0.2);
+  box-shadow: 0 0 14px rgba(255, 107, 53, 0.4), inset 0 0 8px rgba(255, 184, 0, 0.15);
 }
+.shield-btn:active { background: rgba(255, 107, 53, 0.4); box-shadow: 0 0 22px rgba(255, 184, 0, 0.6); }
+
+/* Saw */
+.saw-btn {
+  background: rgba(10, 14, 26, 0.85);
+  border: 2px solid #FFB800;
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.3);
+}
+.saw-btn:active { background: rgba(42, 48, 80, 0.7); }
 
 /* ===== Perk Guide ===== */
 .perk-guide {
