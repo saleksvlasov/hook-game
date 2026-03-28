@@ -46,7 +46,7 @@ export class GameScene extends Scene {
   #emberFrac = 0;
   #milestonesClaimed = new Set();
   #effectiveConsts = null;
-  // Roguelite перки — сбрасываются при смерти
+  // Roguelite перки — сбрасываются в create() при новой игре, НЕ при воскрешении
   #roundPerkLevels = {};
   // Shield
   #shieldActive = false;
@@ -357,10 +357,9 @@ export class GameScene extends Scene {
     this.#sawTimer = 0;
     this.#updateSawButton();
 
-    // Roguelite: сброс раундовых перков при смерти
-    this.#roundPerkLevels = {};
-    this.#effectiveConsts = getEffectiveConstants(this.#roundPerkLevels);
-    this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
+    // Roguelite: НЕ сбрасываем #roundPerkLevels здесь —
+    // при воскрешении (реклама/звёзды) перки сохраняются.
+    // Сброс происходит в create() при новой игре.
     this.#floatTexts.length = 0;
 
     this.#delayedCall(600, () => { if (this.isDead) this.#showFullGameOver(); });
@@ -402,6 +401,8 @@ export class GameScene extends Scene {
     this.heartBonusTimer = 0;
     this.#heartsDisabled = false;
     this.hud.updateHearts(this.hearts, this.maxHearts, 0);
+    // Восстановить HUD-плашки перков (они были скрыты вместе с Game Over UI)
+    this.hud.setPerkLevels(this.#effectiveConsts.perkLevels);
 
     const targetHeight = this.maxHeight > 0 ? this.maxHeight : 20;
     const targetY = GROUND_Y - targetHeight * 10;
