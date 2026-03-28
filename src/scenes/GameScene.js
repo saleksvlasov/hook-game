@@ -353,9 +353,9 @@ export class GameScene extends Scene {
       profile.addEmbers(this.#embersEarned);
     }
 
-    this.#sawActive = false;
-    this.#sawTimer = 0;
-    this.#updateSawButton();
+    // Saw/Shield НЕ сбрасываем — при воскрешении состояние сохраняется.
+    // Таймеры паузятся через !this.isDead guard в update().
+    // Сброс происходит в create() при новой игре.
 
     // Roguelite: НЕ сбрасываем #roundPerkLevels здесь —
     // при воскрешении (реклама/звёзды) перки сохраняются.
@@ -434,6 +434,9 @@ export class GameScene extends Scene {
     this.player.vy = -300;
     this.player.allowGravity = true;
     this.hud.setHint('click_hook');
+    // Восстановить видимость кнопок (зависят от !this.isDead)
+    this.#updateShieldButton();
+    this.#updateSawButton();
   }
 
   async handleRestart() {
@@ -741,27 +744,27 @@ export class GameScene extends Scene {
 
     // ===== 9. Shield deflect + Коллизия с жуками =====
 
-    // Shield timer
-    if (this.#shieldActive) {
-      this.#shieldTimer -= delta; // delta уже в ms
+    // Shield timer — паузится при isDead (воскрешение сохраняет состояние)
+    if (this.#shieldActive && !this.isDead) {
+      this.#shieldTimer -= delta;
       this.hud.updateShieldTimer(this.#shieldTimer);
       if (this.#shieldTimer <= 0) {
         this.#shieldActive = false;
         this.#shieldTimer = 0;
         this.hud.updateShieldTimer(0);
-        this.#updateSawButton();       // пила может стать доступна когда щит кончился
+        this.#updateSawButton();
       }
     }
 
-    // Saw timer
-    if (this.#sawActive) {
+    // Saw timer — паузится при isDead
+    if (this.#sawActive && !this.isDead) {
       this.#sawTimer -= delta;
       this.hud.updateSawTimer(this.#sawTimer);
       if (this.#sawTimer <= 0) {
         this.#sawActive = false;
         this.#sawTimer = 0;
         this.hud.updateSawTimer(0);
-        this.#updateShieldButton();    // щит может стать доступен когда пила кончилась
+        this.#updateShieldButton();
       }
     }
 
