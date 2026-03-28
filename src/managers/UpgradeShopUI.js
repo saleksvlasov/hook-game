@@ -26,7 +26,8 @@ export class UpgradeShopUI {
 
     // Кнопка закрытия
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = '\u2715';
+    closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" style="width:16px;height:16px"><line x1="4" y1="4" x2="16" y2="16" stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="4" x2="4" y2="16" stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/></svg>';
+    closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.classList.add('leaderboard__close');
     closeBtn.addEventListener('click', () => this.hide());
     closeBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.hide(); });

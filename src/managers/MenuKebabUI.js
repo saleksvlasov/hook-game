@@ -7,42 +7,39 @@ import { profile } from '../data/index.js';
 
 // ── SVG иконки для пунктов меню ─────────────────────────────────────────────
 
-const ICON_SKINS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <path d="M12 2C10.3 2 9 3.3 9 5H6C4.9 5 4 5.9 4 7V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V7C20 5.9 19.1 5 18 5H15C15 3.3 13.7 2 12 2Z"
-    stroke="#00F5D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="12" cy="5" r="1.2" fill="#00F5D4"/>
-  <line x1="8" y1="12" x2="16" y2="12" stroke="#00F5D4" stroke-width="1.4" stroke-linecap="round" opacity="0.5"/>
-  <line x1="8" y1="15.5" x2="14" y2="15.5" stroke="#00F5D4" stroke-width="1.4" stroke-linecap="round" opacity="0.3"/>
+const ICON_SKINS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+  <path d="M10 1.7C8.6 1.7 7.5 2.8 7.5 4.2H5C4.1 4.2 3.3 4.9 3.3 5.8V16.7C3.3 17.6 4.1 18.3 5 18.3H15C15.9 18.3 16.7 17.6 16.7 16.7V5.8C16.7 4.9 15.9 4.2 15 4.2H12.5C12.5 2.8 11.4 1.7 10 1.7Z"
+    stroke="#00F5D4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="4.2" r="1" fill="#00F5D4"/>
+  <line x1="6.7" y1="10" x2="13.3" y2="10" stroke="#00F5D4" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="6.7" y1="13" x2="11.7" y2="13" stroke="#00F5D4" stroke-width="1.3" stroke-linecap="round" opacity="0.3"/>
 </svg>`;
 
-const ICON_FORGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <path d="M15 4L20 9L11 18H4V11L15 4Z" stroke="#FF6B35" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="13" y1="6" x2="18" y2="11" stroke="#FF6B35" stroke-width="1.4" stroke-linecap="round"/>
-  <circle cx="5.5" cy="18.5" r="1.5" fill="#FF6B35" opacity="0.7"/>
+const ICON_FORGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+  <path d="M12.5 3.3L16.7 7.5L9.2 15H3.3V9.2L12.5 3.3Z" stroke="#FF6B35" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="10.8" y1="5" x2="15" y2="9.2" stroke="#FF6B35" stroke-width="1.3" stroke-linecap="round"/>
+  <circle cx="4.6" cy="15.4" r="1.2" fill="#FF6B35" opacity="0.7"/>
 </svg>`;
 
-const ICON_TOP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <path d="M6 9H3L6 4H18L21 9H18C18 12.3 15.3 15 12 15C8.7 15 6 12.3 6 9Z"
-    stroke="#FFB800" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="12" y1="15" x2="12" y2="19" stroke="#FFB800" stroke-width="1.6" stroke-linecap="round"/>
-  <line x1="8" y1="19" x2="16" y2="19" stroke="#FFB800" stroke-width="1.6" stroke-linecap="round"/>
-  <line x1="9" y1="9" x2="9" y2="12" stroke="#FFB800" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
-  <line x1="12" y1="9" x2="12" y2="13" stroke="#FFB800" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
-  <line x1="15" y1="9" x2="15" y2="11" stroke="#FFB800" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+const ICON_TOP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+  <path d="M5 7.5H2.5L5 3.3H15L17.5 7.5H15C15 10.3 12.8 12.5 10 12.5C7.2 12.5 5 10.3 5 7.5Z"
+    stroke="#FFB800" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="10" y1="12.5" x2="10" y2="15.8" stroke="#FFB800" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="6.7" y1="15.8" x2="13.3" y2="15.8" stroke="#FFB800" stroke-width="1.4" stroke-linecap="round"/>
 </svg>`;
 
-const ICON_GUIDE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <circle cx="12" cy="12" r="9" stroke="#FF2E63" stroke-width="1.6"/>
-  <path d="M9.5 9C9.5 7.6 10.6 6.5 12 6.5C13.4 6.5 14.5 7.6 14.5 9C14.5 10.4 13.4 11 12 12V13.5"
-    stroke="#FF2E63" stroke-width="1.6" stroke-linecap="round"/>
-  <circle cx="12" cy="16.5" r="1" fill="#FF2E63"/>
+const ICON_GUIDE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+  <circle cx="10" cy="10" r="7.5" stroke="#FF2E63" stroke-width="1.4"/>
+  <path d="M7.9 7.5C7.9 6.3 8.8 5.4 10 5.4C11.2 5.4 12.1 6.3 12.1 7.5C12.1 8.7 11.2 9.2 10 10V11.2"
+    stroke="#FF2E63" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="10" cy="13.7" r="0.8" fill="#FF2E63"/>
 </svg>`;
 
 // SVG для кнопки-триггера (три горизонтальные линии)
-const ICON_HAMBURGER = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <line x1="4" y1="7"  x2="20" y2="7"  stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/>
-  <line x1="4" y1="12" x2="20" y2="12" stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/>
-  <line x1="4" y1="17" x2="20" y2="17" stroke="#7A8AB0" stroke-width="2" stroke-linecap="round"/>
+const ICON_HAMBURGER = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+  <line x1="3" y1="5.8"  x2="17" y2="5.8"  stroke="#7A8AB0" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="3" y1="10"   x2="17" y2="10"   stroke="#7A8AB0" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="3" y1="14.2" x2="17" y2="14.2" stroke="#7A8AB0" stroke-width="1.8" stroke-linecap="round"/>
 </svg>`;
 
 export class MenuKebabUI {
@@ -102,7 +99,7 @@ export class MenuKebabUI {
           <span class="menu-sheet__icon menu-sheet__icon--orange">${ICON_FORGE}</span>
           <span class="menu-sheet__text">
             <span class="menu-sheet__label">${t('forge')}</span>
-            <span class="menu-sheet__sub" id="menu-forge-embers">🔥 ${emberCount}</span>
+            <span class="menu-sheet__sub" id="menu-forge-embers"><span style="color:#FF6B35">\u25CF</span> ${emberCount}</span>
           </span>
           <span class="menu-sheet__chevron" aria-hidden="true">›</span>
         </button>
@@ -158,7 +155,7 @@ export class MenuKebabUI {
     this.#isOpen = true;
     // Обновить счётчик эмберов перед показом
     const el = this.#sheet?.querySelector('#menu-forge-embers');
-    if (el) el.textContent = `🔥 ${profile.embers ?? 0}`;
+    if (el) el.innerHTML = `<span style="color:#FF6B35">\u25CF</span> ${profile.embers ?? 0}`;
     this.#sheet?.classList.add('menu-sheet--visible');
   }
 

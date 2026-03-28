@@ -248,7 +248,7 @@
 }
 
 .forge-card__name {
-  color: #E0F0FF;
+  color: #E0E8FF;
   font-size: 16px;
   font-weight: 700;
   overflow: hidden;
@@ -257,7 +257,7 @@
 }
 
 .forge-card__desc {
-  color: #A0B0C8;
+  color: #8898B8;
   font-size: 13px;
   margin-top: 2px;
 }
@@ -309,7 +309,7 @@
 
 .forge-card__btn--max {
   background: #2A3050;
-  color: #6070A0;
+  color: #4A5580;
 }
 
 /* === Ad overlay заглушки === */
@@ -450,7 +450,7 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: rgba(42,48,80,0.45);
   border-radius: 10px;
   margin-bottom: 8px;
@@ -493,7 +493,7 @@
 }
 
 .perk-guide__name {
-  color: #E0F0FF;
+  color: #E0E8FF;
   font-size: 15px;
   font-weight: 700;
   line-height: 1.2;
@@ -501,7 +501,7 @@
 }
 
 .perk-guide__desc {
-  color: #7888A8;
+  color: #8898B8;
   font-size: 13px;
   margin-top: 3px;
   line-height: 1.4;
@@ -534,7 +534,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 110;
+  z-index: 95; /* ниже overlays (110), чтобы не перекрывал модалы */
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   touch-action: manipulation;
@@ -555,7 +555,7 @@
 .menu-sheet {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 150; /* выше overlays (110), ниже ad (200) */
   pointer-events: none;
 }
 .menu-sheet--visible {
