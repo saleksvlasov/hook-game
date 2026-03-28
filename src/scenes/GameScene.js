@@ -536,24 +536,28 @@ export class GameScene extends Scene {
     // 5.4b Perk pickup предметы
     this.perkPickups.draw(ctx);
 
-    // 5.4c Float texts (конвертация MAX перка, итп.) — мировые координаты
+    // 5.4c Float texts (конвертация MAX перка, blood splatter) — мировые координаты
     if (this.#floatTexts.length > 0) {
       ctx.save();
-      ctx.font = 'bold 15px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (let i = this.#floatTexts.length - 1; i >= 0; i--) {
         const ft = this.#floatTexts[i];
         ft.life -= delta;
-        ft.y += ft.vy * (delta / 1000);
+        const dt = delta / 1000;
+        ft.y += ft.vy * dt;
+        if (ft.vx) ft.x += ft.vx * dt;
         if (ft.life <= 0) { this.#floatTexts.splice(i, 1); continue; }
         const a = Math.max(0, ft.life / ft.maxLife);
         ctx.globalAlpha = a;
-        // Обводка для читаемости на любом фоне
-        ctx.strokeStyle = '#0A0E1A';
-        ctx.lineWidth = 3;
-        ctx.strokeText(ft.text, ft.x, ft.y);
-        ctx.fillStyle = '#FF6B35'; // Ember orange
+        ctx.font = `bold ${ft.fontSize || 15}px Inter, sans-serif`;
+        ctx.fillStyle = ft.color || '#FF6B35';
+        if (!ft.fontSize || ft.fontSize >= 10) {
+          // Обводка только для больших текстов (не для splatter частиц)
+          ctx.strokeStyle = '#0A0E1A';
+          ctx.lineWidth = 3;
+          ctx.strokeText(ft.text, ft.x, ft.y);
+        }
         ctx.fillText(ft.text, ft.x, ft.y);
       }
       ctx.restore();
@@ -745,6 +749,7 @@ export class GameScene extends Scene {
         this.#shieldActive = false;
         this.#shieldTimer = 0;
         this.hud.updateShieldTimer(0);
+        this.#updateSawButton();       // пила может стать доступна когда щит кончился
       }
     }
 
@@ -756,14 +761,34 @@ export class GameScene extends Scene {
         this.#sawActive = false;
         this.#sawTimer = 0;
         this.hud.updateSawTimer(0);
+        this.#updateShieldButton();    // щит может стать доступен когда пила кончилась
       }
     }
 
     // SAW уничтожение жуков
     if (this.#sawActive && !this.isDead) {
-      if (this.obstacles.checkSaw(p.x, p.y, SAW_RADIUS)) {
+      const sawHits = this.obstacles.checkSaw(p.x, p.y, SAW_RADIUS);
+      if (sawHits.length > 0) {
         playSawKill();
         this.camera.shake(40, 0.002);
+        // Blood splatter на месте каждого убитого жука
+        for (const hit of sawHits) {
+          for (let i = 0; i < 6; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 30 + Math.random() * 60;
+            this.#floatTexts.push({
+              text: '\u25CF',  // ● — маленькая кровь-капля
+              x: hit.x + (Math.random() - 0.5) * 8,
+              y: hit.y + (Math.random() - 0.5) * 8,
+              vy: Math.sin(angle) * speed,
+              vx: Math.cos(angle) * speed,
+              life: 400 + Math.random() * 200,
+              maxLife: 600,
+              color: Math.random() > 0.3 ? '#FF2E63' : '#FF6B35',
+              fontSize: 4 + Math.random() * 4,
+            });
+          }
+        }
       }
     }
 
@@ -961,7 +986,7 @@ export class GameScene extends Scene {
     if (this.#sawBtn) { this.#sawBtn.remove(); this.#sawBtn = null; }
     const btn = document.createElement('button');
     btn.className = 'saw-btn';
-    btn.textContent = '⚙️';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" style="width:28px;height:28px"><polygon points="18.5,10 15.1,12.1 16,16 12.1,15.1 10,18.5 7.9,15.1 4,16 4.9,12.1 1.5,10 4.9,7.9 4,4 7.9,4.9 10,1.5 12.1,4.9 16,4 15.1,7.9" fill="#4A5580" stroke="#7A8AB0" stroke-width="0.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="5" fill="#1A2040" stroke="#7A8AB0" stroke-width="1"/><circle cx="10" cy="10" r="2.5" fill="#2A3050" stroke="#7A8AB0" stroke-width="0.7"/><circle cx="10" cy="10" r="1" fill="#7A8AB0"/></svg>';
     btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); });
     btn.addEventListener('click', (e) => { e.stopPropagation(); this.#activateSaw(); });
     document.body.appendChild(btn);
