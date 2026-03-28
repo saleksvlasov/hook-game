@@ -275,10 +275,10 @@ export class HUDManager {
       }
     }
 
-    // === Ember counter — ВЕРХ слева ===
+    // === Ember counter — ВЕРХ слева (компактный) ===
     if (this.#embersEarned > 0) {
       const ex = 16;
-      const ey = safeTop + 22;
+      const ey = safeTop + 20;
       const label = `+${this.#embersEarned}`;
       ctx.font = `bold 13px ${FONT_MONO}`;
       const tw = ctx.measureText(label).width;
@@ -308,12 +308,12 @@ export class HUDManager {
       ctx.globalAlpha = 1;
     }
 
-    // === Перки — ВЕРХ слева, под эмберами ===
-    const perksBottomY = this.#drawPerkIcons(ctx, safeTop);
+    // === Перки — НИЗ слева (горизонтальная полоска) ===
+    this.#drawPerkIcons(ctx, W, H);
 
-    // === Виджет challenge (под перками, не перекрывает) ===
+    // === Виджет challenge ===
     if (this.#hasChallengeWidget) {
-      const chipY = Math.max(safeTop + 95, perksBottomY + 16);
+      const chipY = safeTop + 75;
       ctx.globalAlpha = 0.85;
       ctx.font = `12px ${NEON_FONT}`;
       ctx.textAlign = 'center';
@@ -367,10 +367,9 @@ export class HUDManager {
     }
   }
 
-  // Иконки перков — левый верхний угол, вертикальный столбик
-  // Возвращает нижнюю Y-координату для размещения следующих элементов
-  #drawPerkIcons(ctx, safeTop) {
-    if (!this.#perkLevels) return safeTop + 46;
+  // Иконки перков — низ экрана, горизонтальная полоска
+  #drawPerkIcons(ctx, W, H) {
+    if (!this.#perkLevels) return;
 
     const PERKS = [
       { id: 'hook_range',   icon: '\u2197', color: '#00F5D4' },
@@ -380,18 +379,18 @@ export class HUDManager {
       { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },
     ];
 
-    const x = 8;
-    let y = safeTop + 46;
+    let x = 8;
+    const y = H - 16;
     const h = 18;
-    const gap = 3;
+    const gap = 4;
 
     for (const perk of PERKS) {
       const lvl = this.#perkLevels[perk.id];
       if (!lvl) continue;
 
       const label = `${perk.icon}${lvl}`;
-      ctx.font = `bold 13px ${FONT_MONO}`;
-      const tw = ctx.measureText(label).width + 12;
+      ctx.font = `bold 12px ${FONT_MONO}`;
+      const tw = ctx.measureText(label).width + 10;
 
       // Pill подложка
       ctx.globalAlpha = 0.5;
@@ -401,7 +400,7 @@ export class HUDManager {
       else ctx.rect(x, y - h / 2, tw, h);
       ctx.fill();
 
-      // Цветная рамка
+      // Рамка
       ctx.globalAlpha = 0.25;
       ctx.strokeStyle = perk.color;
       ctx.lineWidth = 1;
@@ -411,16 +410,15 @@ export class HUDManager {
       ctx.stroke();
 
       // Текст
-      ctx.globalAlpha = 0.9;
+      ctx.globalAlpha = 0.85;
       ctx.fillStyle = perk.color;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, x + 6, y);
+      ctx.fillText(label, x + 5, y);
 
-      y += h + gap; // Вертикально вниз
+      x += tw + gap;
     }
     ctx.globalAlpha = 1;
-    return y; // Нижняя граница для размещения следующих элементов
   }
 
   // Рисование одного HUD-сердца (full/half/empty)

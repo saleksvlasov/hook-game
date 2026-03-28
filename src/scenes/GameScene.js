@@ -177,14 +177,15 @@ export class GameScene extends Scene {
 
     this.eggs = new EasterEggs(this);
     this.eggs.onHeartBonus = () => {
-      if (this.hearts < HEARTS_MAX) {
-        // Восстановить все сердца
-        this.hearts = HEARTS_MAX;
-        this.maxHearts = HEARTS_MAX;
+      const baseMax = this.#effectiveConsts.startHearts;
+      if (this.hearts < baseMax) {
+        // Восстановить все сердца (с учётом Iron Heart)
+        this.hearts = baseMax;
+        this.maxHearts = baseMax;
       } else {
-        // Бонусное 4-е сердце на 40 секунд
-        this.maxHearts = HEARTS_MAX_BONUS;
-        this.hearts = HEARTS_MAX_BONUS;
+        // Бонусное сердце на 40 секунд
+        this.maxHearts = baseMax + 2;
+        this.hearts = baseMax + 2;
         this.heartBonusTimer = HEART_BONUS_DURATION;
       }
       this.hud.updateHearts(this.hearts, this.maxHearts, this.heartBonusTimer);
@@ -681,6 +682,12 @@ export class GameScene extends Scene {
     this.hunter.updateAnimation(
       delta, p.x, p.y, p.vx, p.vy,
       this.swingSpeed, this.swingAngle, this.isHooked
+    );
+
+    // 5.8b Визуальные эффекты перков
+    this.hunter.drawPerkEffects(
+      ctx, p.x, p.y, this.#effectiveConsts.perkLevels,
+      this.isHooked, this.swingSpeed
     );
 
     ctx.globalAlpha = p.alpha;
