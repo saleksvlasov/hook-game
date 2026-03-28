@@ -218,22 +218,22 @@ export const POWER_ARC_TIERS = [
 ];
 
 // ===== EMBER ECONOMY =====
-export const EMBER_RATE = 0.1;  // 1 ember за 10м высоты
+export const EMBER_RATE = 0.05;  // 1 ember за 20м высоты
 export const EMBER_MILESTONES = [
-  { height: 100, bonus: 30 },
-  { height: 500, bonus: 75 },
-  { height: 1000, bonus: 150 },
-  { height: 2000, bonus: 300 },
-  { height: 3000, bonus: 600 },
+  { height: 100, bonus: 15 },
+  { height: 500, bonus: 40 },
+  { height: 1000, bonus: 80 },
+  { height: 2000, bonus: 150 },
+  { height: 3000, bonus: 300 },
 ];
 
 export const UPGRADES = {
-  hook_range:   { maxLevel: 6,  effect: 0.05, baseCost: 50,  costScale: 1.50 },  // +30% max
-  swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 50,  costScale: 1.50 },
-  iron_heart:   { maxLevel: 3,  effect: 1,    costs: [200, 500, 1000] },
-  quick_hook:   { maxLevel: 3,  effect: 0.10, baseCost: 100, costScale: 1.55 },  // -30% max
-  bug_armor:    { maxLevel: 5,  effect: 0.10, baseCost: 100, costScale: 1.55 },
-  ember_magnet: { maxLevel: 5,  effect: 0.15, baseCost: 200, costScale: 1.55 },  // base 200
+  hook_range:   { maxLevel: 6,  effect: 0.05, baseCost: 80,  costScale: 1.60 },  // +30% max
+  swing_power:  { maxLevel: 10, effect: 0.03, baseCost: 80,  costScale: 1.60 },
+  iron_heart:   { maxLevel: 3,  effect: 1,    costs: [300, 800, 1800] },
+  quick_hook:   { maxLevel: 3,  effect: 0.10, baseCost: 150, costScale: 1.65 },  // -30% max
+  bug_armor:    { maxLevel: 5,  effect: 0.10, baseCost: 150, costScale: 1.65 },
+  ember_magnet: { maxLevel: 5,  effect: 0.10, baseCost: 250, costScale: 1.65 },  // +50% max
 };
 
 // Z-индексы убраны — порядок отрисовки определяется порядком вызовов draw() в update()
