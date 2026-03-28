@@ -382,8 +382,8 @@ export class HUDManager {
     if (!this.#perkLevels) return;
 
     const PERKS = [
-      { id: 'hook_range',   icon: '\u2197', color: '#00F5D4' },
-      { id: 'swing_power',  icon: '\u26A1', color: '#FFB800' },
+      { id: 'hook_range',   icon: '\u2295', color: '#00F5D4' }, // ⊕ (совпадает с canvas label и PerkGuideUI)
+      { id: 'swing_power',  icon: '\u21AF', color: '#FFB800' }, // ↯ zigzag (не emoji, следует fillStyle)
       { id: 'iron_heart',   icon: '\u2665', color: '#FF2E63' },
       { id: 'quick_hook',   icon: '\u21BB', color: '#00F5D4' },
       { id: 'ember_magnet', icon: '\u2742', color: '#FF6B35' },

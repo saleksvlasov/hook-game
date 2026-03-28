@@ -38,8 +38,8 @@ export class PerkGuideUI {
     const roundCards = document.createElement('div');
     roundCards.classList.add('perk-guide__cards');
     const roundPerks = [
-      { id: 'hook_range',   color: 'cyan',   label: '⚓', nameKey: 'perk_hook_range',   descKey: 'perk_hook_range_desc',   maxLvl: 6  },
-      { id: 'swing_power',  color: 'pink',   label: '⚡', nameKey: 'perk_swing_power',  descKey: 'perk_swing_power_desc',  maxLvl: 10 },
+      { id: 'hook_range',   color: 'cyan',   label: '\u2295', nameKey: 'perk_hook_range',   descKey: 'perk_hook_range_desc',   maxLvl: 6  }, // ⊕
+      { id: 'swing_power',  color: 'pink',   label: '\u21AF', nameKey: 'perk_swing_power',  descKey: 'perk_swing_power_desc',  maxLvl: 10 }, // ↯
       { id: 'quick_hook',   color: 'amber',  label: '◈', nameKey: 'perk_quick_hook',   descKey: 'perk_quick_hook_desc',   maxLvl: 3  },
       { id: 'ember_magnet', color: 'orange', label: '◉', nameKey: 'perk_ember_magnet', descKey: 'perk_ember_magnet_desc', maxLvl: 5  },
     ];
@@ -59,9 +59,10 @@ export class PerkGuideUI {
     const forgeCards = document.createElement('div');
     forgeCards.classList.add('perk-guide__cards');
     const forgeItems = [
-      { label: '❤', color: 'steel', nameKey: 'upgrade_iron_heart', descKey: 'upgrade_iron_heart_desc' },
-      { label: '🛡', color: 'steel', nameKey: 'shield_name',        descKey: 'shield_desc'             },
-      { label: '⚙', color: 'steel', nameKey: 'saw_name',            descKey: 'saw_desc'               },
+      { label: '\u2665', color: 'steel', nameKey: 'upgrade_iron_heart', descKey: 'upgrade_iron_heart_desc' }, // ♥ (text, не emoji)
+      { label: '\u25EF', color: 'steel', nameKey: 'shield_name',        descKey: 'shield_desc'             }, // ◯ (large circle)
+      { label: '\u2731', color: 'steel', nameKey: 'saw_name',            descKey: 'saw_desc'               }, // ✱ (heavy asterisk)
+
     ];
     for (const item of forgeItems) {
       forgeCards.appendChild(this.#makeCard(item.label, item.color, t(item.nameKey), t(item.descKey), null));

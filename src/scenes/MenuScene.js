@@ -616,9 +616,9 @@ export class MenuScene extends Scene {
       ctx.globalAlpha = ui.guideGfxAlpha;
       drawGlassButton(ctx, W / 2, ui.guideY, 120, 32);
     }
-    ctx.globalAlpha = ui.guideTextAlpha * 0.7; // немного тусклее — второстепенная кнопка
+    ctx.globalAlpha = ui.guideTextAlpha;
     ctx.font = `bold 14px ${NEON_FONT}`;
-    ctx.fillStyle = '#4A5580'; // Steel — не яркая
+    ctx.fillStyle = NEON_AMBER_STR; // Amber — ярко, читаемо, отличается от SKINS/TOP (cyan)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(t('guide_button'), W / 2, ui.guideTextY);
